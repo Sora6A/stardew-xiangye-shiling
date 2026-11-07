@@ -4,7 +4,7 @@
 
 ## 当前目标与状态
 
-11-07用户明确要求先上传目前文件。已将175份公共候选明确暂存并独立导出，catalog40/30、Python116、MachineCore115、两CLI构建、生产/SDK夹具构建及实际SDK适配CLI13均通过；检查均在导出树上运行，没有借未上传依赖。正在feat/p1-game-adapter形成首次累计基线并推送、创建面向main的PR；此提交前检查点尚无新提交/远程成功。全部源文件与历史维护记录保留，.local/artifacts/游戏DLL/存档/完整日志不进入提交；下一保存任务排在上传之后。
+11-07用户明确要求先上传目前文件。175份项目文件已实际提交并推送到feat/p1-game-adapter，首次完整基线为`baebea0b57a1edc51e5531bfaa909fb49e844de2`，已创建[PR #1](https://github.com/Sora6A/stardew-xiangye-shiling/pull/1)指向main，首次PR远程四项CI全部success。catalog40/30、Python116、MachineCore115、两CLI/生产/SDK夹具构建及适配CLI13已在索引独立导出树通过。当前补充上传记录/交接，作为同一PR的文档提交；本文为合并前已核检查点，最终合并状态从PR/Git核对。全部源文件与历史维护记录保留，.local/artifacts/游戏DLL/存档/完整日志未上传，下一保存任务排在上传之后。
 
 本轮单人两设备世界输入链完整20/20已通过，9004已不保存退出、游戏/SMAPI进程0；八份受保护存档未变、六目标配置原字节禁用、88项停止审计及禁用profile预检通过。原报告Step20/Completed=true/Passed20/Failure=null/Saved=false，详见[完整实测](validation/P1-world-ui-2026-11-06.md)。不用旧7/20拼接，不再重复此已通过且未变化的子集。
 
@@ -14,7 +14,7 @@
 
 ## 分支与工作区
 
-实际分支feat/p1-game-adapter，HEAD仍`8f2468d83b43fb805073f73bbc8b989cf716852e`。Git只跟踪README/DESIGN/DEVELOPMENT_PLAN三个文件，整个累计工程/测试/维护树仍未跟踪或未提交；没有commit/push/PR/merge或远程CI。来源已在各轮快照及[P1交付组织](P1_DELIVERY_UNITS.md)登记，禁止reset/clean或盲目暂存累计树。
+实际任务分支feat/p1-game-adapter，首次开发提交`baebea0b57a1edc51e5531bfaa909fb49e844de2`已推送，父基线为`8f2468d83b43fb805073f73bbc8b989cf716852e`。此前仅3文档受跟踪的问题已解决：175项目文件进入Git。本次后续文档提交会新增[上传记录](validation/P1-source-upload-2026-11-07.md)并更新交接等说明；自身SHA在提交后交付附件/Git记录读取，避免循环amend。PR未在本检查点合并，不强推、不直推main；合并前核最新head与实际CI。
 
 11-06实现阶段仅给WorldInteraction增加只读ControlState/最多32条有限键事件，并同步BUG024、索引、夹具说明与交付/交接文档；后续20步接续没有改代码。生产src/catalog/content/tools/共享纯判据/ZIP未改，无新增依赖或存档格式。首次盘点172公共文件清单在world-chain/delivery-inventory-before-doc.json，后来新增文档以本轮最终清单复核，不能照旧清单自动提交。
 
@@ -27,7 +27,7 @@
 
 ## 验证与限制
 
-11-07上传检查：本地证据在`.local/upload-2026-11-07`，各具名json/log及index-before-tests.txt记录导出索引。完整Python116、核心115、适配CLI13和catalog通过；两CLI/生产与GameHarness构建均0警告0错误。暂存检查发现.editorconfig/.gitignore/bugfix索引三处多余EOF空行，已仅清理空行；开发文档使用APPDATA路径示例，不含个人用户目录。源码/实机运行包未重部署、未启动游戏或保存；11-06实际20项继续保留原日期，不冒称今天重跑。最终提交信息与差异检查在首次commit前执行。
+11-07上传检查：本地证据在`.local/upload-2026-11-07`，各具名json/log及index-before-tests.txt记录导出索引。完整Python116、核心115、适配CLI13和catalog通过；两CLI/生产与GameHarness构建均0警告0错误。首次提交消息/暂存差异/UTF-8检查通过，提交后范围检查实际1个完整消息通过；push实际exit0，PR四项远程CI绑定baebea0b完整SHA全部success，详见[上传记录](validation/P1-source-upload-2026-11-07.md)。后续文档head须另核，不能复用旧绿。源码/实机运行包未重部署、未启动游戏或保存；11-06实际20项继续保留原日期。
 
 当前最终原报告SHA`ce6a7c6a535d2acea6f526396755682df45bc405eeafef6b1917dccd9ac7bc54`，位于`.local/p1-world-controls-2026-11-06/after-world-20/world-interaction-result.json`；同目录audit.json/SMAPI-latest.txt/profile-preflight.txt为收尾证据。完整阶段顺序/4次放置/2次同实体拾取/8工具阶段及9原生命中计数已核，有限键事件18/省略0/观测异常null。完成瞬间快照00a4328f…另存，不混作退出原文件。
 
@@ -45,10 +45,10 @@
 
 ## 下一步与验收
 
-1. 先核Git分支/HEAD/未提交来源、CIM0和world-controls/after-world-20/audit.json的88 afterHashes及完整新报告SHA；不要重新启动WorldInteraction或接续旧窗口。静态维护检查命令为`python tools/check_workflow.py`。
+1. 先核PR #1、远程main与当前分支/HEAD，读取[上传记录](validation/P1-source-upload-2026-11-07.md)及Git实际完整提交，完成本轮文档push/当前head CI/PR merge commit流程；已执行部分不重复创建PR或改写历史。再核游戏进程及world-controls/after-world-20/audit.json的88 afterHashes与新原报告；不要重启WorldInteraction。静态维护命令为`python tools/check_workflow.py`。
 2. 阅读[保存实测](validation/P1-persistence-2026-09-28.md)、[Persistence源码](../tests/GameHarness/PersistenceScenario.cs)及夹具README，核当前独立XYSP1Save/8624092801磁盘阶段与标记。先只读检查，勿直接重跑旧脚本、重置存档或覆盖已完成阶段；按当前真实状态决定复用或另建明确允许保存的测试副本，再记录新保存基线和配置。禁止在本轮XYSP1UI无保存准备里睡觉。
 3. 在当前生产DLL上补开工/完成/领取后的原生保存、标题重载和冷启动防重复领取；阶段时间/库存/raw与磁盘身份分别核。若发现真实缺陷，先补能揭示问题的回归，再修复及写bugfix。不重跑已通过且未变化的三店/厨房/赠礼/20步世界链，不转回网络超时循环。
-4. 按[P1交付组织](P1_DELIVERY_UNITS.md)冻结明确文件范围并复核完整提交树。提交/推送/PR合并按实际任务授权；若执行，提供完整commit正文/实际SHA/PR/合并结果。本轮没有远程动作。
+4. 后续按[P1交付组织](P1_DELIVERY_UNITS.md)在任务分支增量开发、复核完整提交树和受影响检查，使用完整commit正文并经PR merge commit保留历史。实际SHA/完整正文/PR/合并结果随每轮交付；本轮首次push和PR已成功，不沿用旧“没有远程动作”状态。
 
 ## 关联记录
 
