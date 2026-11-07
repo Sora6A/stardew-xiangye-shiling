@@ -1,0 +1,17 @@
+{
+  "Name": "Xiangye Shiling",
+  "Author": "Sora6A",
+  "Version": "0.1.0-alpha.2",
+  "Description": "P1 single-player prototype with shared processing machines and limited shop supplies.",
+  "UniqueID": "Sora6A.XiangyeShiling",
+  "EntryDll": "XiangyeShiling.dll",
+  "MinimumApiVersion": "4.4.0",
+  "Dependencies": [
+    {
+      "UniqueID": "Pathoschild.ContentPatcher",
+      "MinimumVersion": "2.9.0",
+      "IsRequired": true
+    }
+  ],
+  "UpdateKeys": []
+}

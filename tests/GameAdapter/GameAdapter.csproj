@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <SmapiPath Condition="'$(SmapiPath)' == ''">$(GamePath)</SmapiPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Compile against the actual adapter and local SDK; never copy game DLLs into test output. -->
+    <ProjectReference Include="../../src/XiangyeShiling/XiangyeShiling.csproj" Private="false" />
+    <Reference Include="StardewModdingAPI" HintPath="$(SmapiPath)/StardewModdingAPI.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(SmapiPath)/smapi-internal/0Harmony.dll" Private="false" />
+    <Reference Include="Stardew Valley" HintPath="$(GamePath)/Stardew Valley.dll" Private="false" />
+    <Reference Include="StardewValley.GameData" HintPath="$(GamePath)/StardewValley.GameData.dll" Private="false" />
+    <Reference Include="MonoGame.Framework" HintPath="$(GamePath)/MonoGame.Framework.dll" Private="false" />
+    <Reference Include="xTile" HintPath="$(GamePath)/xTile.dll" Private="false" />
+  </ItemGroup>
+</Project>

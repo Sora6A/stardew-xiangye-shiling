@@ -1,0 +1,2 @@
+# Match .editorconfig on all platforms; Git still detects binary assets automatically.
+* text=auto eol=lf

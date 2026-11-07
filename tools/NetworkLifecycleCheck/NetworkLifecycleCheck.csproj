@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Exact same acceptance policy as the SDK observer; no game/SMAPI assemblies. -->
+    <Compile Include="../../tests/GameHarness/NetworkLifecycleEvidence.cs" Link="NetworkLifecycleEvidence.cs" />
+    <Compile Include="../../src/XiangyeShiling/Networking/ProtocolDiagnostics.cs" Link="Networking/ProtocolDiagnostics.cs" />
+    <Compile Include="../../src/XiangyeShiling/Networking/ReadOnlyProtocolCodec.cs" Link="Networking/ReadOnlyProtocolCodec.cs" />
+    <Compile Include="../../src/XiangyeShiling/Networking/MachineRequestEnvelope.cs" Link="Networking/MachineRequestEnvelope.cs" />
+    <Compile Include="../../src/XiangyeShiling/Networking/MachineRequestCodec.cs" Link="Networking/MachineRequestCodec.cs" />
+  </ItemGroup>
+</Project>

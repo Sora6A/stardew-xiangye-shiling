@@ -1,0 +1,2864 @@
+{
+  "schemaVersion": 1,
+  "designVersion": "0.4",
+  "namespace": "Sora6A.XiangyeShiling",
+  "phase": "P1",
+  "notes": [
+    "P1 single-player prototype only: seven items, five recipes; remaining content stays planned.",
+    "Null numeric values require P1/P2 balancing; they are never executable recipe values.",
+    "Coal is a proposed reuse of vanilla smoker fuel and must be checked in P2.",
+    "Machine crafting inputs are provisional; Egg currently reserves the normal white egg ID, with category/large-egg support pending P1.",
+    "P1 prototype shops provide soybean/wheat at Pierre and Chinese toon at Gus year-round in limited quantities. Final crops/forage/restock rules await P2; these supplies are for the two P1 routes."
+  ],
+  "vanillaItems": [
+    {
+      "key": "Wheat",
+      "item": "(O)262"
+    },
+    {
+      "key": "HotPepper",
+      "item": "(O)260"
+    },
+    {
+      "key": "Egg",
+      "item": "(O)176"
+    },
+    {
+      "key": "Rice",
+      "item": "(O)423"
+    },
+    {
+      "key": "Sugar",
+      "item": "(O)245"
+    },
+    {
+      "key": "Oil",
+      "item": "(O)247"
+    },
+    {
+      "key": "Coal",
+      "item": "(O)382"
+    },
+    {
+      "key": "Wood",
+      "item": "(O)388"
+    },
+    {
+      "key": "Stone",
+      "item": "(O)390"
+    },
+    {
+      "key": "CopperBar",
+      "item": "(O)334"
+    }
+  ],
+  "items": [
+    {
+      "key": "BambooShoots",
+      "id": "Sora6A.XiangyeShiling_BambooShoots",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_BambooShoots",
+      "group": "forage",
+      "category": -81,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Bamboo Shoots",
+          "description": "Tender spring shoots for stir-fries and smoked pork."
+        },
+        "zh": {
+          "name": "竹笋",
+          "description": "嫩脆的春笋，适合清炒或搭配腊肉。"
+        }
+      },
+      "nameKey": "item.BambooShoots.name",
+      "descriptionKey": "item.BambooShoots.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 0,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "forage",
+          "seasons": [
+            "spring"
+          ],
+          "locations": [
+            "Forest",
+            "Mountain",
+            "BusStop"
+          ],
+          "validation": "pending-map-check"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "WildScallion",
+      "id": "Sora6A.XiangyeShiling_WildScallion",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_WildScallion",
+      "group": "forage",
+      "category": -81,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Wild Scallion",
+          "description": "Fragrant wild scallions, distinct from the valley's spring onions."
+        },
+        "zh": {
+          "name": "野葱",
+          "description": "带着清香的野葱，与山谷原有的大葱不同。"
+        }
+      },
+      "nameKey": "item.WildScallion.name",
+      "descriptionKey": "item.WildScallion.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 1,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "forage",
+          "seasons": [
+            "spring"
+          ],
+          "locations": [
+            "Forest",
+            "Mountain",
+            "BusStop"
+          ],
+          "validation": "pending-map-check"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "ChineseToon",
+      "id": "Sora6A.XiangyeShiling_ChineseToon",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_ChineseToon",
+      "group": "forage",
+      "category": -81,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Chinese Toon",
+          "description": "Fragrant toon shoots for Toon Tofu Salad. Limited supplies are sold by Gus at the Stardrop Saloon."
+        },
+        "zh": {
+          "name": "香椿",
+          "description": "鲜香椿可用于香椿拌豆腐。格斯的星之果实餐吧有少量出售。"
+        }
+      },
+      "nameKey": "item.ChineseToon.name",
+      "descriptionKey": "item.ChineseToon.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 2,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "forage",
+          "seasons": [
+            "spring"
+          ],
+          "locations": [
+            "Forest",
+            "Mountain",
+            "BusStop"
+          ],
+          "validation": "pending-map-check"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "prototype",
+        "price": 65,
+        "edibility": 5
+      },
+      "implementation": "prototype",
+      "prototypeArt": {
+        "Texture": "Maps/springobjects",
+        "SpriteIndex": 20
+      }
+    },
+    {
+      "key": "Mugwort",
+      "id": "Sora6A.XiangyeShiling_Mugwort",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_Mugwort",
+      "group": "forage",
+      "category": -81,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Mugwort",
+          "description": "Young aromatic leaves for steamed rice cakes."
+        },
+        "zh": {
+          "name": "艾草",
+          "description": "带有草木清香的嫩艾叶，可用来制作米糕。"
+        }
+      },
+      "nameKey": "item.Mugwort.name",
+      "descriptionKey": "item.Mugwort.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 3,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "forage",
+          "seasons": [
+            "spring"
+          ],
+          "locations": [
+            "Forest",
+            "Mountain",
+            "BusStop"
+          ],
+          "validation": "pending-map-check"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "Soybean",
+      "id": "Sora6A.XiangyeShiling_Soybean",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_Soybean",
+      "group": "crop",
+      "category": -75,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Soybean",
+          "description": "Plump soybeans for tofu and soy sauce. Limited supplies are sold at Pierre's General Store."
+        },
+        "zh": {
+          "name": "黄豆",
+          "description": "饱满的黄豆，可加工豆腐或酱油。皮埃尔的杂货店有少量出售。"
+        }
+      },
+      "nameKey": "item.Soybean.name",
+      "descriptionKey": "item.Soybean.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 4,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "crop",
+          "seed": "(O)Sora6A.XiangyeShiling_SoybeanSeeds",
+          "seasons": [
+            "summer",
+            "fall"
+          ],
+          "growthDays": null
+        },
+        {
+          "kind": "shop",
+          "shop": "SeedShop",
+          "seasons": [
+            "spring",
+            "winter"
+          ],
+          "dailyStock": null,
+          "price": null,
+          "role": "limited-off-season-restock"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "prototype",
+        "price": 40,
+        "edibility": -300
+      },
+      "implementation": "prototype",
+      "prototypeArt": {
+        "Texture": "Maps/springobjects",
+        "SpriteIndex": 188
+      }
+    },
+    {
+      "key": "NapaCabbage",
+      "id": "Sora6A.XiangyeShiling_NapaCabbage",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_NapaCabbage",
+      "group": "crop",
+      "category": -75,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Napa Cabbage",
+          "description": "Sweet napa cabbage for fermenting into sour cabbage."
+        },
+        "zh": {
+          "name": "大白菜",
+          "description": "清甜的大白菜，可在发酵缸腌成酸白菜。"
+        }
+      },
+      "nameKey": "item.NapaCabbage.name",
+      "descriptionKey": "item.NapaCabbage.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 5,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "crop",
+          "seed": "(O)Sora6A.XiangyeShiling_NapaCabbageSeeds",
+          "seasons": [
+            "fall"
+          ],
+          "growthDays": null
+        },
+        {
+          "kind": "shop",
+          "shop": "SeedShop",
+          "seasons": [
+            "spring",
+            "summer",
+            "winter"
+          ],
+          "dailyStock": null,
+          "price": null,
+          "role": "limited-off-season-restock"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "Pork",
+      "id": "Sora6A.XiangyeShiling_Pork",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_Pork",
+      "group": "shop_ingredient",
+      "category": -14,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Pork",
+          "description": "Pork sold by Gus for cooking or smoking."
+        },
+        "zh": {
+          "name": "猪肉",
+          "description": "从格斯处购买的猪肉，适合烹饪或烟熏。"
+        }
+      },
+      "nameKey": "item.Pork.name",
+      "descriptionKey": "item.Pork.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 6,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "shop",
+          "shop": "Saloon",
+          "seasons": [
+            "spring",
+            "summer",
+            "fall",
+            "winter"
+          ],
+          "dailyStock": -1,
+          "price": null
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "BroadBeans",
+      "id": "Sora6A.XiangyeShiling_BroadBeans",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_BroadBeans",
+      "group": "shop_ingredient",
+      "category": -75,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Broad Beans",
+          "description": "Broad beans sold by Gus for Sichuan chili bean paste."
+        },
+        "zh": {
+          "name": "蚕豆",
+          "description": "从格斯处购买的蚕豆，是川式豆瓣的原料。"
+        }
+      },
+      "nameKey": "item.BroadBeans.name",
+      "descriptionKey": "item.BroadBeans.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 7,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "shop",
+          "shop": "Saloon",
+          "seasons": [
+            "spring",
+            "summer",
+            "fall",
+            "winter"
+          ],
+          "dailyStock": -1,
+          "price": null
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SoyMilk",
+      "id": "Sora6A.XiangyeShiling_SoyMilk",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SoyMilk",
+      "group": "bean_product",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Soy Milk",
+          "description": "Plain soy milk made from ground and cooked soybeans."
+        },
+        "zh": {
+          "name": "豆浆",
+          "description": "石磨黄豆煮成的原味豆浆。"
+        }
+      },
+      "nameKey": "item.SoyMilk.name",
+      "descriptionKey": "item.SoyMilk.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 8,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SoyMilk"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "TofuPudding",
+      "id": "Sora6A.XiangyeShiling_TofuPudding",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_TofuPudding",
+      "group": "bean_product",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Tofu Pudding",
+          "description": "Soft, plain tofu pudding, ready to eat."
+        },
+        "zh": {
+          "name": "豆花",
+          "description": "细嫩的原味豆花，可以直接食用。"
+        }
+      },
+      "nameKey": "item.TofuPudding.name",
+      "descriptionKey": "item.TofuPudding.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 9,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_TofuPudding"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "Tofu",
+      "id": "Sora6A.XiangyeShiling_Tofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_Tofu",
+      "group": "bean_product",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Tofu",
+          "description": "Fresh tofu for salads, stews, and frying."
+        },
+        "zh": {
+          "name": "豆腐",
+          "description": "细腻的豆腐，可凉拌、炖煮或油炸。"
+        }
+      },
+      "nameKey": "item.Tofu.name",
+      "descriptionKey": "item.Tofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 10,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_Tofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "prototype",
+        "price": 90,
+        "edibility": 20
+      },
+      "implementation": "prototype",
+      "prototypeArt": {
+        "Texture": "Maps/springobjects",
+        "SpriteIndex": 424
+      }
+    },
+    {
+      "key": "Yuba",
+      "id": "Sora6A.XiangyeShiling_Yuba",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_Yuba",
+      "group": "bean_product",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Yuba",
+          "description": "Delicate sheets lifted from soy milk, ideal for soup."
+        },
+        "zh": {
+          "name": "油豆皮",
+          "description": "从豆浆表面揭起的薄皮，适合做汤。"
+        }
+      },
+      "nameKey": "item.Yuba.name",
+      "descriptionKey": "item.Yuba.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 11,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_Yuba"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "TofuSheets",
+      "id": "Sora6A.XiangyeShiling_TofuSheets",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_TofuSheets",
+      "group": "bean_product",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Pressed Tofu Sheets",
+          "description": "Thin pressed tofu sheets for rolls and braised tofu."
+        },
+        "zh": {
+          "name": "千张",
+          "description": "薄层压制的豆制品，可以卷肉或制作素鸡。"
+        }
+      },
+      "nameKey": "item.TofuSheets.name",
+      "descriptionKey": "item.TofuSheets.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 12,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_TofuSheets"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "DriedTofu",
+      "id": "Sora6A.XiangyeShiling_DriedTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_DriedTofu",
+      "group": "bean_product",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Firm Tofu",
+          "description": "Firm pressed tofu for stir-frying, braising, or smoking."
+        },
+        "zh": {
+          "name": "豆干",
+          "description": "压制紧实的豆干，适合酱炒、炸卤或烟熏。"
+        }
+      },
+      "nameKey": "item.DriedTofu.name",
+      "descriptionKey": "item.DriedTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 13,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_DriedTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "VegetarianChicken",
+      "id": "Sora6A.XiangyeShiling_VegetarianChicken",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_VegetarianChicken",
+      "group": "prepared_soy",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Braised Tofu Roll",
+          "description": "Rolled tofu sheets cooked with soy sauce."
+        },
+        "zh": {
+          "name": "素鸡",
+          "description": "千张卷制后用酱油烹调的豆制熟食。"
+        }
+      },
+      "nameKey": "item.VegetarianChicken.name",
+      "descriptionKey": "item.VegetarianChicken.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 14,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_VegetarianChicken"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "FriedTofu",
+      "id": "Sora6A.XiangyeShiling_FriedTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_FriedTofu",
+      "group": "prepared_soy",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Fried Tofu",
+          "description": "Golden fried tofu with a tender center."
+        },
+        "zh": {
+          "name": "油豆腐",
+          "description": "炸至金黄的豆腐，外松内嫩。"
+        }
+      },
+      "nameKey": "item.FriedTofu.name",
+      "descriptionKey": "item.FriedTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 15,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_FriedTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "OrchidTofu",
+      "id": "Sora6A.XiangyeShiling_OrchidTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_OrchidTofu",
+      "group": "prepared_soy",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Orchid-cut Tofu",
+          "description": "Scored firm tofu, fried and braised in soy sauce."
+        },
+        "zh": {
+          "name": "兰花干",
+          "description": "豆干切花炸卤，吸足了酱汁。"
+        }
+      },
+      "nameKey": "item.OrchidTofu.name",
+      "descriptionKey": "item.OrchidTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 16,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_OrchidTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SoySauce",
+      "id": "Sora6A.XiangyeShiling_SoySauce",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SoySauce",
+      "group": "fermented",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Soy Sauce",
+          "description": "A small cooking portion fermented from soybeans and wheat."
+        },
+        "zh": {
+          "name": "酱油",
+          "description": "黄豆与小麦发酵而成的调味品，每份供一次烹饪。"
+        }
+      },
+      "nameKey": "item.SoySauce.name",
+      "descriptionKey": "item.SoySauce.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 17,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SoySauce"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "prototype",
+        "price": 60,
+        "edibility": -300
+      },
+      "implementation": "prototype",
+      "prototypeArt": {
+        "Texture": "Maps/springobjects",
+        "SpriteIndex": 247
+      }
+    },
+    {
+      "key": "SoybeanPaste",
+      "id": "Sora6A.XiangyeShiling_SoybeanPaste",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SoybeanPaste",
+      "group": "fermented",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Soybean Paste",
+          "description": "A rich fermented soybean paste."
+        },
+        "zh": {
+          "name": "黄豆酱",
+          "description": "黄豆发酵成的浓香酱料。"
+        }
+      },
+      "nameKey": "item.SoybeanPaste.name",
+      "descriptionKey": "item.SoybeanPaste.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 18,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SoybeanPaste"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SichuanDouban",
+      "id": "Sora6A.XiangyeShiling_SichuanDouban",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SichuanDouban",
+      "group": "fermented",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Sichuan Chili Bean Paste",
+          "description": "Broad beans fermented with hot peppers for mapo tofu."
+        },
+        "zh": {
+          "name": "川式豆瓣",
+          "description": "蚕豆与辣椒发酵制成，适合麻婆豆腐。"
+        }
+      },
+      "nameKey": "item.SichuanDouban.name",
+      "descriptionKey": "item.SichuanDouban.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 19,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SichuanDouban"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SourCabbage",
+      "id": "Sora6A.XiangyeShiling_SourCabbage",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SourCabbage",
+      "group": "fermented",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Sour Napa Cabbage",
+          "description": "Fermented napa cabbage for a warming tofu stew."
+        },
+        "zh": {
+          "name": "酸菜",
+          "description": "用大白菜腌制的酸白菜，适合炖豆腐。"
+        }
+      },
+      "nameKey": "item.SourCabbage.name",
+      "descriptionKey": "item.SourCabbage.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 20,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SourCabbage"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SmokedPork",
+      "id": "Sora6A.XiangyeShiling_SmokedPork",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SmokedPork",
+      "group": "smoked",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Smoked Pork",
+          "description": "Pork cured and smoked in one batch."
+        },
+        "zh": {
+          "name": "腊肉",
+          "description": "腌制与烟熏合为一道工序的风味猪肉。"
+        }
+      },
+      "nameKey": "item.SmokedPork.name",
+      "descriptionKey": "item.SmokedPork.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 21,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SmokedPork"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SmokedTofu",
+      "id": "Sora6A.XiangyeShiling_SmokedTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SmokedTofu",
+      "group": "smoked",
+      "category": -26,
+      "type": "Basic",
+      "text": {
+        "en": {
+          "name": "Smoked Tofu",
+          "description": "Smoky firm tofu to stir-fry with wild scallions."
+        },
+        "zh": {
+          "name": "熏豆干",
+          "description": "带有烟熏香气的豆干，适合搭配野葱。"
+        }
+      },
+      "nameKey": "item.SmokedTofu.name",
+      "descriptionKey": "item.SmokedTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 22,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SmokedTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "StirFriedBamboo",
+      "id": "Sora6A.XiangyeShiling_StirFriedBamboo",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_StirFriedBamboo",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Stir-fried Bamboo Shoots",
+          "description": "A simple stir-fry highlighting tender bamboo shoots."
+        },
+        "zh": {
+          "name": "清炒竹笋",
+          "description": "简单清炒，保留春笋的脆嫩。"
+        }
+      },
+      "nameKey": "item.StirFriedBamboo.name",
+      "descriptionKey": "item.StirFriedBamboo.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 23,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "ScallionEggs",
+      "id": "Sora6A.XiangyeShiling_ScallionEggs",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_ScallionEggs",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Wild Scallion Omelet",
+          "description": "Eggs fried with fragrant wild scallions."
+        },
+        "zh": {
+          "name": "野葱煎蛋",
+          "description": "野葱与鸡蛋煎得香气四溢。"
+        }
+      },
+      "nameKey": "item.ScallionEggs.name",
+      "descriptionKey": "item.ScallionEggs.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 24,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_ScallionEggs"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "ToonEggs",
+      "id": "Sora6A.XiangyeShiling_ToonEggs",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_ToonEggs",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Toon Scrambled Eggs",
+          "description": "Eggs scrambled with aromatic toon shoots."
+        },
+        "zh": {
+          "name": "香椿炒蛋",
+          "description": "香椿芽与鸡蛋快炒而成。"
+        }
+      },
+      "nameKey": "item.ToonEggs.name",
+      "descriptionKey": "item.ToonEggs.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 25,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_ToonEggs"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "MugwortRiceCake",
+      "id": "Sora6A.XiangyeShiling_MugwortRiceCake",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_MugwortRiceCake",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Mugwort Rice Cake",
+          "description": "Sweet rice cakes scented with mugwort."
+        },
+        "zh": {
+          "name": "艾草米糕",
+          "description": "米香与艾草清香交织的甜米糕。"
+        }
+      },
+      "nameKey": "item.MugwortRiceCake.name",
+      "descriptionKey": "item.MugwortRiceCake.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 26,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "ToonTofu",
+      "id": "Sora6A.XiangyeShiling_ToonTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_ToonTofu",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Toon Tofu Salad",
+          "description": "A refreshing mix of toon and tofu. Learn the recipe from Gus, then cook it in a kitchen. Eat, gift, or sell it."
+        },
+        "zh": {
+          "name": "香椿拌豆腐",
+          "description": "香椿拌嫩豆腐做成的清爽小菜。在格斯处购买菜谱后于厨房制作，可食用、赠礼或出售。"
+        }
+      },
+      "nameKey": "item.ToonTofu.name",
+      "descriptionKey": "item.ToonTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 27,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_ToonTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "prototype",
+        "price": 240,
+        "edibility": 70
+      },
+      "implementation": "prototype",
+      "prototypeArt": {
+        "Texture": "Maps/springobjects",
+        "SpriteIndex": 196
+      },
+      "internalName": "Sora6A.XiangyeShiling_Recipe_ToonTofu"
+    },
+    {
+      "key": "BambooSmokedPork",
+      "id": "Sora6A.XiangyeShiling_BambooSmokedPork",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_BambooSmokedPork",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Bamboo Shoots with Smoked Pork",
+          "description": "Tender bamboo shoots stir-fried with smoky pork."
+        },
+        "zh": {
+          "name": "竹笋炒腊肉",
+          "description": "鲜嫩竹笋搭配醇香腊肉。"
+        }
+      },
+      "nameKey": "item.BambooSmokedPork.name",
+      "descriptionKey": "item.BambooSmokedPork.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 28,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "ScallionSmokedTofu",
+      "id": "Sora6A.XiangyeShiling_ScallionSmokedTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_ScallionSmokedTofu",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Scallions with Smoked Tofu",
+          "description": "Wild scallions paired with smoky firm tofu."
+        },
+        "zh": {
+          "name": "野葱炒熏干",
+          "description": "野葱清香与熏豆干的烟香相融。"
+        }
+      },
+      "nameKey": "item.ScallionSmokedTofu.name",
+      "descriptionKey": "item.ScallionSmokedTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 29,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SourCabbageTofu",
+      "id": "Sora6A.XiangyeShiling_SourCabbageTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SourCabbageTofu",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Sour Cabbage and Tofu Stew",
+          "description": "A homestyle stew of sour napa cabbage and tofu."
+        },
+        "zh": {
+          "name": "酸菜炖豆腐",
+          "description": "酸白菜与豆腐慢炖的家常菜。"
+        }
+      },
+      "nameKey": "item.SourCabbageTofu.name",
+      "descriptionKey": "item.SourCabbageTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 30,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "BraisedBamboo",
+      "id": "Sora6A.XiangyeShiling_BraisedBamboo",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_BraisedBamboo",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Soy-braised Bamboo Shoots",
+          "description": "Bamboo shoots braised with oil and soy sauce."
+        },
+        "zh": {
+          "name": "油焖笋",
+          "description": "竹笋用油和酱油焖至入味。"
+        }
+      },
+      "nameKey": "item.BraisedBamboo.name",
+      "descriptionKey": "item.BraisedBamboo.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 31,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_BraisedBamboo"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SaucedTofu",
+      "id": "Sora6A.XiangyeShiling_SaucedTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SaucedTofu",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Tofu with Soybean Paste",
+          "description": "Firm tofu coated in fragrant soybean paste."
+        },
+        "zh": {
+          "name": "酱香豆干",
+          "description": "豆干裹上浓香黄豆酱。"
+        }
+      },
+      "nameKey": "item.SaucedTofu.name",
+      "descriptionKey": "item.SaucedTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 32,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_SaucedTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "MapoTofu",
+      "id": "Sora6A.XiangyeShiling_MapoTofu",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_MapoTofu",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Mapo Tofu",
+          "description": "Tofu and pork cooked with Sichuan chili bean paste."
+        },
+        "zh": {
+          "name": "麻婆豆腐",
+          "description": "豆腐、猪肉和川式豆瓣烹成的下饭菜。"
+        }
+      },
+      "nameKey": "item.MapoTofu.name",
+      "descriptionKey": "item.MapoTofu.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 33,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_MapoTofu"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "TofuPorkRoll",
+      "id": "Sora6A.XiangyeShiling_TofuPorkRoll",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_TofuPorkRoll",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Tofu Sheet Pork Rolls",
+          "description": "Pork wrapped in tofu sheets and seasoned with soy sauce."
+        },
+        "zh": {
+          "name": "千张肉卷",
+          "description": "千张包裹猪肉，用酱油调味。"
+        }
+      },
+      "nameKey": "item.TofuPorkRoll.name",
+      "descriptionKey": "item.TofuPorkRoll.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 34,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "YubaSoup",
+      "id": "Sora6A.XiangyeShiling_YubaSoup",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_YubaSoup",
+      "group": "dish",
+      "category": -7,
+      "type": "Cooking",
+      "text": {
+        "en": {
+          "name": "Yuba and Egg Soup",
+          "description": "A light soup of yuba and eggs."
+        },
+        "zh": {
+          "name": "豆皮汤",
+          "description": "油豆皮与鸡蛋煮成的清汤。"
+        }
+      },
+      "nameKey": "item.YubaSoup.name",
+      "descriptionKey": "item.YubaSoup.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 35,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_YubaSoup"
+        }
+      ],
+      "terminalUses": [
+        "eat",
+        "gift",
+        "sell"
+      ],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "SoybeanSeeds",
+      "id": "Sora6A.XiangyeShiling_SoybeanSeeds",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_SoybeanSeeds",
+      "group": "seed",
+      "category": -74,
+      "type": "Seeds",
+      "text": {
+        "en": {
+          "name": "Soybean Seeds",
+          "description": "Soybean seeds for summer and fall; growth time is provisional."
+        },
+        "zh": {
+          "name": "黄豆种子",
+          "description": "夏秋播种的黄豆种子，生长天数待平衡。"
+        }
+      },
+      "nameKey": "item.SoybeanSeeds.name",
+      "descriptionKey": "item.SoybeanSeeds.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 36,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "shop",
+          "shop": "SeedShop",
+          "seasons": [
+            "summer",
+            "fall"
+          ],
+          "dailyStock": -1,
+          "price": null
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "NapaCabbageSeeds",
+      "id": "Sora6A.XiangyeShiling_NapaCabbageSeeds",
+      "qualifiedId": "(O)Sora6A.XiangyeShiling_NapaCabbageSeeds",
+      "group": "seed",
+      "category": -74,
+      "type": "Seeds",
+      "text": {
+        "en": {
+          "name": "Napa Cabbage Seeds",
+          "description": "Napa cabbage seeds for fall; growth time is provisional."
+        },
+        "zh": {
+          "name": "大白菜种子",
+          "description": "秋季播种的大白菜种子，生长天数待平衡。"
+        }
+      },
+      "nameKey": "item.NapaCabbageSeeds.name",
+      "descriptionKey": "item.NapaCabbageSeeds.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Objects",
+        "spriteIndex": 37,
+        "size": [
+          16,
+          16
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "shop",
+          "shop": "SeedShop",
+          "seasons": [
+            "fall"
+          ],
+          "dailyStock": -1,
+          "price": null
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "unbalanced",
+        "price": null,
+        "edibility": null
+      },
+      "implementation": "planned"
+    },
+    {
+      "key": "BeanWorkshop",
+      "id": "Sora6A.XiangyeShiling_BeanWorkshop",
+      "qualifiedId": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+      "group": "machine",
+      "category": -9,
+      "type": "Crafting",
+      "text": {
+        "en": {
+          "name": "Bean Workshop",
+          "description": "Buy the blueprint from Robin, then craft and place this machine. Interact to choose a soybean batch; its menu includes a getting-started guide."
+        },
+        "zh": {
+          "name": "豆坊",
+          "description": "在罗宾处购买图纸后制作并放置。靠近互动即可选择黄豆加工配方，菜单中可查看获取与制作指南。"
+        }
+      },
+      "nameKey": "item.BeanWorkshop.name",
+      "descriptionKey": "item.BeanWorkshop.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Machines",
+        "spriteIndex": 0,
+        "size": [
+          16,
+          32
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_BeanWorkshop"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "prototype",
+        "price": 500,
+        "edibility": null
+      },
+      "implementation": "prototype",
+      "prototypeArt": {
+        "Texture": "TileSheets/Craftables",
+        "SpriteIndex": 16
+      },
+      "internalName": "Sora6A.XiangyeShiling_Recipe_BeanWorkshop"
+    },
+    {
+      "key": "FermentationCrock",
+      "id": "Sora6A.XiangyeShiling_FermentationCrock",
+      "qualifiedId": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+      "group": "machine",
+      "category": -9,
+      "type": "Crafting",
+      "text": {
+        "en": {
+          "name": "Fermentation Crock",
+          "description": "Buy the blueprint from Robin, then craft and place this machine. Interact to ferment soybeans and wheat; its menu includes a getting-started guide."
+        },
+        "zh": {
+          "name": "发酵缸",
+          "description": "在罗宾处购买图纸后制作并放置。靠近互动可用黄豆和小麦酿制酱油，菜单中可查看获取与制作指南。"
+        }
+      },
+      "nameKey": "item.FermentationCrock.name",
+      "descriptionKey": "item.FermentationCrock.description",
+      "art": {
+        "asset": "Mods/Sora6A.XiangyeShiling/Machines",
+        "spriteIndex": 1,
+        "size": [
+          16,
+          32
+        ],
+        "status": "planned"
+      },
+      "sources": [
+        {
+          "kind": "recipe",
+          "recipe": "Sora6A.XiangyeShiling_Recipe_FermentationCrock"
+        }
+      ],
+      "terminalUses": [],
+      "balance": {
+        "status": "prototype",
+        "price": 500,
+        "edibility": null
+      },
+      "implementation": "prototype",
+      "prototypeArt": {
+        "Texture": "TileSheets/Craftables",
+        "SpriteIndex": 12
+      },
+      "internalName": "Sora6A.XiangyeShiling_Recipe_FermentationCrock"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SoyMilk",
+      "station": "bean_workshop",
+      "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SoyMilk",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_TofuPudding",
+      "station": "bean_workshop",
+      "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_TofuPudding",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_Tofu",
+      "station": "bean_workshop",
+      "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": 3,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_Tofu",
+        "quantity": 2
+      },
+      "minutes": 120,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
+      },
+      "balanceStatus": "prototype",
+      "implementation": "prototype"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_Yuba",
+      "station": "bean_workshop",
+      "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_Yuba",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_TofuSheets",
+      "station": "bean_workshop",
+      "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_TofuSheets",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_DriedTofu",
+      "station": "bean_workshop",
+      "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SoySauce",
+      "station": "fermentation_crock",
+      "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": 3,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)262",
+          "quantity": 2,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SoySauce",
+        "quantity": 4
+      },
+      "minutes": 240,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock"
+      },
+      "balanceStatus": "prototype",
+      "implementation": "prototype"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SoybeanPaste",
+      "station": "fermentation_crock",
+      "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Soybean",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SoybeanPaste",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SichuanDouban",
+      "station": "fermentation_crock",
+      "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_BroadBeans",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)260",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SichuanDouban",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SourCabbage",
+      "station": "fermentation_crock",
+      "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_NapaCabbage",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SourCabbage",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SmokedPork",
+      "station": "fish_smoker",
+      "machine": "(BC)FishSmoker",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Pork",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)382",
+          "quantity": null,
+          "role": "fuel"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SmokedPork",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)FishSmoker"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SmokedTofu",
+      "station": "fish_smoker",
+      "machine": "(BC)FishSmoker",
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)382",
+          "quantity": null,
+          "role": "fuel"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SmokedTofu",
+        "quantity": null
+      },
+      "minutes": null,
+      "unlock": {
+        "kind": "machine-available",
+        "machine": "(BC)FishSmoker"
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_VegetarianChicken",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_TofuSheets",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SoySauce",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)247",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_VegetarianChicken",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_FriedTofu",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Tofu",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)247",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_FriedTofu",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_OrchidTofu",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SoySauce",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)247",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_OrchidTofu",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_BambooShoots",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)247",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_StirFriedBamboo",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_ScallionEggs",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_WildScallion",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)176",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_ScallionEggs",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_ToonEggs",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_ChineseToon",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)176",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_ToonEggs",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Mugwort",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)423",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)245",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_MugwortRiceCake",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_ToonTofu",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_ChineseToon",
+          "quantity": 1,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Tofu",
+          "quantity": 1,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_ToonTofu",
+        "quantity": 1
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": 1000
+      },
+      "balanceStatus": "prototype",
+      "implementation": "prototype"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_BambooShoots",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SmokedPork",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_BambooSmokedPork",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_WildScallion",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SmokedTofu",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_ScallionSmokedTofu",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SourCabbage",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Tofu",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SourCabbageTofu",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_BraisedBamboo",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_BambooShoots",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SoySauce",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)247",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_BraisedBamboo",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_SaucedTofu",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SoybeanPaste",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_SaucedTofu",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_MapoTofu",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Tofu",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SichuanDouban",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Pork",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_MapoTofu",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_TofuSheets",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Pork",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)Sora6A.XiangyeShiling_SoySauce",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_TofuPorkRoll",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_YubaSoup",
+      "station": "kitchen",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)Sora6A.XiangyeShiling_Yuba",
+          "quantity": null,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)176",
+          "quantity": null,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(O)Sora6A.XiangyeShiling_YubaSoup",
+        "quantity": null
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Saloon",
+        "price": null
+      },
+      "balanceStatus": "unbalanced",
+      "implementation": "planned"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_BeanWorkshop",
+      "station": "crafting",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)388",
+          "quantity": 50,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)390",
+          "quantity": 20,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)334",
+          "quantity": 1,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+        "quantity": 1
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Carpenter",
+        "price": 1500
+      },
+      "balanceStatus": "prototype",
+      "implementation": "prototype"
+    },
+    {
+      "id": "Sora6A.XiangyeShiling_Recipe_FermentationCrock",
+      "station": "crafting",
+      "machine": null,
+      "inputs": [
+        {
+          "item": "(O)388",
+          "quantity": 30,
+          "role": "ingredient"
+        },
+        {
+          "item": "(O)390",
+          "quantity": 40,
+          "role": "ingredient"
+        }
+      ],
+      "output": {
+        "item": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+        "quantity": 1
+      },
+      "minutes": 0,
+      "unlock": {
+        "kind": "shop-recipe",
+        "shop": "Carpenter",
+        "price": 1500
+      },
+      "balanceStatus": "prototype",
+      "implementation": "prototype"
+    }
+  ],
+  "prototypeShops": {
+    "SeedShop": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Price": 60,
+        "AvailableStock": 10
+      },
+      {
+        "ItemId": "(O)262",
+        "Price": 25,
+        "AvailableStock": 10
+      }
+    ],
+    "Saloon": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_ChineseToon",
+        "Price": 100,
+        "AvailableStock": 5
+      },
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_ToonTofu",
+        "IsRecipe": true,
+        "Price": 1000
+      }
+    ],
+    "Carpenter": [
+      {
+        "ItemId": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+        "IsRecipe": true,
+        "Price": 1500
+      },
+      {
+        "ItemId": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+        "IsRecipe": true,
+        "Price": 1500
+      }
+    ]
+  }
+}

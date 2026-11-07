@@ -1,0 +1,59 @@
+name: Validate content and machine rules
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python tools/check_workflow.py
+
+  commit-messages:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Check complete messages and paired bugfix records
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python tools/check_workflow.py --commit-range "$BASE_REF..$HEAD_REF"
+
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python tools/catalog.py
+      - run: python -m unittest discover -s tests -v
+      # The game and SMAPI assemblies aren't redistributed to hosted runners.
+      # Build/load verification is performed on a local game installation.
+
+  machine-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          # The target game uses .NET 6; SDK 7 matches the local build baseline.
+          dotnet-version: |
+            6.0.x
+            7.0.x
+      - run: dotnet run --project tests/MachineCore/MachineCore.csproj -c Release
+      # These strict report tools share the tested gates and never reference game/SMAPI assemblies.
+      - run: dotnet build tools/NetworkLifecycleCheck/NetworkLifecycleCheck.csproj -c Release
+      - run: dotnet build tools/NetworkWelcomeReplayCheck/NetworkWelcomeReplayCheck.csproj -c Release
