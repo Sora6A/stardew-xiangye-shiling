@@ -1,0 +1,203 @@
+{
+  "Format": "2.9.0",
+  "Changes": [
+    {
+      "Action": "EditData",
+      "Target": "Data/Objects",
+      "Entries": {
+        "Sora6A.XiangyeShiling_ChineseToon": {
+          "Name": "Sora6A.XiangyeShiling_ChineseToon",
+          "DisplayName": "{{i18n: item.ChineseToon.name}}",
+          "Description": "{{i18n: item.ChineseToon.description}}",
+          "Price": 65,
+          "Texture": "Maps/springobjects",
+          "SpriteIndex": 20,
+          "Type": "Basic",
+          "Category": -81,
+          "Edibility": 5,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_Soybean": {
+          "Name": "Sora6A.XiangyeShiling_Soybean",
+          "DisplayName": "{{i18n: item.Soybean.name}}",
+          "Description": "{{i18n: item.Soybean.description}}",
+          "Price": 40,
+          "Texture": "Maps/springobjects",
+          "SpriteIndex": 188,
+          "Type": "Basic",
+          "Category": -75,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_Tofu": {
+          "Name": "Sora6A.XiangyeShiling_Tofu",
+          "DisplayName": "{{i18n: item.Tofu.name}}",
+          "Description": "{{i18n: item.Tofu.description}}",
+          "Price": 90,
+          "Texture": "Maps/springobjects",
+          "SpriteIndex": 424,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 20,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SoySauce": {
+          "Name": "Sora6A.XiangyeShiling_SoySauce",
+          "DisplayName": "{{i18n: item.SoySauce.name}}",
+          "Description": "{{i18n: item.SoySauce.description}}",
+          "Price": 60,
+          "Texture": "Maps/springobjects",
+          "SpriteIndex": 247,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_ToonTofu": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_ToonTofu",
+          "DisplayName": "{{i18n: item.ToonTofu.name}}",
+          "Description": "{{i18n: item.ToonTofu.description}}",
+          "Price": 240,
+          "Texture": "Maps/springobjects",
+          "SpriteIndex": 196,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 70,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        }
+      },
+      "LogName": "P1 prototype - Data/Objects"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/BigCraftables",
+      "Entries": {
+        "Sora6A.XiangyeShiling_BeanWorkshop": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_BeanWorkshop",
+          "DisplayName": "{{i18n: item.BeanWorkshop.name}}",
+          "Description": "{{i18n: item.BeanWorkshop.description}}",
+          "Price": 500,
+          "Texture": "TileSheets/Craftables",
+          "SpriteIndex": 16,
+          "Fragility": 0,
+          "CanBePlacedOutdoors": true,
+          "CanBePlacedIndoors": true
+        },
+        "Sora6A.XiangyeShiling_FermentationCrock": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_FermentationCrock",
+          "DisplayName": "{{i18n: item.FermentationCrock.name}}",
+          "Description": "{{i18n: item.FermentationCrock.description}}",
+          "Price": 500,
+          "Texture": "TileSheets/Craftables",
+          "SpriteIndex": 12,
+          "Fragility": 0,
+          "CanBePlacedOutdoors": true,
+          "CanBePlacedIndoors": true
+        }
+      },
+      "LogName": "P1 prototype - Data/BigCraftables"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/CraftingRecipes",
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_BeanWorkshop": "(O)388 50 (O)390 20 (O)334 1/Home/(BC)Sora6A.XiangyeShiling_BeanWorkshop 1/true/null/{{i18n: item.BeanWorkshop.name}}",
+        "Sora6A.XiangyeShiling_Recipe_FermentationCrock": "(O)388 30 (O)390 40/Home/(BC)Sora6A.XiangyeShiling_FermentationCrock 1/true/null/{{i18n: item.FermentationCrock.name}}"
+      },
+      "LogName": "P1 prototype - Data/CraftingRecipes"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/CookingRecipes",
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_ToonTofu": "(O)Sora6A.XiangyeShiling_ChineseToon 1 (O)Sora6A.XiangyeShiling_Tofu 1/1 10/(O)Sora6A.XiangyeShiling_ToonTofu 1/null/{{i18n: item.ToonTofu.name}}"
+      },
+      "LogName": "P1 prototype - Data/CookingRecipes"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "SeedShop",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_P1_SeedShop_0": {
+          "Id": "Sora6A.XiangyeShiling_P1_SeedShop_0",
+          "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+          "Price": 60,
+          "AvailableStock": 10,
+          "IgnoreShopPriceModifiers": true
+        },
+        "Sora6A.XiangyeShiling_P1_SeedShop_1": {
+          "Id": "Sora6A.XiangyeShiling_P1_SeedShop_1",
+          "ItemId": "(O)262",
+          "Price": 25,
+          "AvailableStock": 10,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "P1 prototype stock - SeedShop"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_P1_Saloon_0": {
+          "Id": "Sora6A.XiangyeShiling_P1_Saloon_0",
+          "ItemId": "(O)Sora6A.XiangyeShiling_ChineseToon",
+          "Price": 100,
+          "AvailableStock": 5,
+          "IgnoreShopPriceModifiers": true
+        },
+        "Sora6A.XiangyeShiling_P1_Saloon_1": {
+          "Id": "Sora6A.XiangyeShiling_P1_Saloon_1",
+          "ItemId": "(O)Sora6A.XiangyeShiling_ToonTofu",
+          "IsRecipe": true,
+          "Price": 1000,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "P1 prototype stock - Saloon"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Carpenter",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_P1_Carpenter_0": {
+          "Id": "Sora6A.XiangyeShiling_P1_Carpenter_0",
+          "ItemId": "(BC)Sora6A.XiangyeShiling_BeanWorkshop",
+          "IsRecipe": true,
+          "Price": 1500,
+          "IgnoreShopPriceModifiers": true
+        },
+        "Sora6A.XiangyeShiling_P1_Carpenter_1": {
+          "Id": "Sora6A.XiangyeShiling_P1_Carpenter_1",
+          "ItemId": "(BC)Sora6A.XiangyeShiling_FermentationCrock",
+          "IsRecipe": true,
+          "Price": 1500,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "P1 prototype stock - Carpenter"
+    }
+  ]
+}

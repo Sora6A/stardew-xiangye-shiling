@@ -1,0 +1,40 @@
+[
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_Tofu",
+    "Machine": "BeanWorkshop",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 3
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_Tofu",
+      "Quantity": 2,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 120
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_SoySauce",
+    "Machine": "FermentationCrock",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 3
+      },
+      {
+        "ItemId": "(O)262",
+        "Quantity": 2
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_SoySauce",
+      "Quantity": 4,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 240
+  }
+]

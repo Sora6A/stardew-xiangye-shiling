@@ -1,0 +1,21 @@
+type(scope): <具体变化>
+
+## 背景与目的
+<问题、触发条件或计划任务>
+
+## 变更内容
+<行为变化、主要模块和必要取舍>
+
+## 验证结果
+<实际命令、环境、结果；未执行的检查及原因>
+
+## 影响与风险
+<存档、ID、联机、依赖、兼容性及未覆盖范围>
+
+## 回滚方案
+<安全撤回步骤、备份和迁移影响>
+
+## 关联记录
+Plan: docs/DEVELOPMENT_PLAN.md
+Handoff: docs/HANDOFF.md
+<fix 提交必须增加 Bugfix: docs/bugfix/BUG-YYYY-NNN-topic.md；提交后在交付说明给出实际 SHA>

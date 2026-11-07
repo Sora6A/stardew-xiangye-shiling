@@ -1,0 +1,10 @@
+{
+  "Name": "Xiangye Shiling local integration harness",
+  "Author": "Sora6A",
+  "Version": "0.1.0",
+  "Description": "Opt-in, dedicated test farm only. Never ship in the development mod bundle.",
+  "UniqueID": "Sora6A.XiangyeShiling.GameHarness",
+  "EntryDll": "GameHarness.dll",
+  "MinimumApiVersion": "4.4.0",
+  "Dependencies": [{ "UniqueID": "Sora6A.XiangyeShiling", "MinimumVersion": "0.1.0-alpha.2", "IsRequired": true }]
+}

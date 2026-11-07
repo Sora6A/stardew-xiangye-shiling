@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../local.props" Condition="Exists('../../local.props')" />
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0-alpha.2</Version>
+    <AssemblyName>XiangyeShiling</AssemblyName>
+    <SmapiPath Condition="'$(SmapiPath)' == ''">$(GamePath)</SmapiPath>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="StardewModdingAPI" HintPath="$(SmapiPath)/StardewModdingAPI.dll" Private="false" />
+    <Reference Include="Stardew Valley" HintPath="$(GamePath)/Stardew Valley.dll" Private="false" />
+    <Reference Include="StardewValley.GameData" HintPath="$(GamePath)/StardewValley.GameData.dll" Private="false" />
+    <Reference Include="MonoGame.Framework" HintPath="$(GamePath)/MonoGame.Framework.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(SmapiPath)/smapi-internal/0Harmony.dll" Private="false" />
+    <Reference Include="xTile" HintPath="$(GamePath)/xTile.dll" Private="false" />
+    <Reference Include="SMAPI.Toolkit.CoreInterfaces" HintPath="$(SmapiPath)/smapi-internal/SMAPI.Toolkit.CoreInterfaces.dll" Private="false" />
+    <None Update="manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="i18n/**/*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="assets/**/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="ValidateGameReferences" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="'$(GamePath)' == ''" Text="Set GamePath to your Stardew Valley 1.6.15 directory (see docs/DEVELOPMENT.md)." />
+    <Error Condition="!Exists('$(GamePath)/Stardew Valley.dll')" Text="GamePath does not contain Stardew Valley.dll." />
+    <Error Condition="!Exists('$(GamePath)/StardewValley.GameData.dll')" Text="Stardew Valley 1.6 GameData assembly is missing." />
+    <Error Condition="!Exists('$(SmapiPath)/StardewModdingAPI.dll')" Text="SmapiPath must contain SMAPI 4.4.0 or later." />
+    <Error Condition="!Exists('$(SmapiPath)/smapi-internal/0Harmony.dll') Or !Exists('$(SmapiPath)/smapi-internal/SMAPI.Toolkit.CoreInterfaces.dll')" Text="SmapiPath must contain the complete SMAPI installation, including smapi-internal references." />
+    <GetAssemblyIdentity AssemblyFiles="$(SmapiPath)/StardewModdingAPI.dll" Condition="Exists('$(SmapiPath)/StardewModdingAPI.dll')">
+      <Output TaskParameter="Assemblies" ItemName="SmapiIdentity" />
+    </GetAssemblyIdentity>
+    <Error Condition="'@(SmapiIdentity)' != '' and $([MSBuild]::VersionLessThan('%(SmapiIdentity.Version)', '4.4.0.0'))" Text="SMAPI 4.4.0 or later is required; the selected reference is %(SmapiIdentity.Version)." />
+  </Target>
+</Project>
