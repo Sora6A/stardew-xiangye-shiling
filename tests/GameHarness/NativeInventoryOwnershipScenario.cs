@@ -18,6 +18,7 @@ internal sealed class NativeInventoryOwnershipScenario
     private const string MessageType = "NativeInventoryOwnershipV1";
     private const string OwnerCommitMessageType = "NativeInventoryOwnerCommitV1";
     private const string MarkerKey = HarnessId + "/InventoryOwnership";
+    private const string JournalKey = HarnessId + "/OwnerCommitJournal";
     private const string MarkerItem = "(O)388";
     private const string HostName = "XYSNETHost";
     private const int SlotIndex = 11;
@@ -160,6 +161,7 @@ internal sealed class NativeInventoryOwnershipScenario
         Require(!ReferenceEquals(host.Items, client.Items) && client.Items.Count > SlotIndex
             && client.MaxItems > SlotIndex && client.Items[SlotIndex] is null && client.CurrentToolIndex != SlotIndex,
             "The dedicated client must have an unused empty test slot inside its current capacity.");
+        Require(!this.CommitByOwner || !client.modData.ContainsKey(JournalKey), "The dedicated client already has a test journal.");
         this.Peer = peer;
         this.Status = this.Host ? Phase.WaitingConsent : Phase.WaitingPermit;
         this.Record("BoundNativeActors", client.Items[SlotIndex]);
@@ -200,13 +202,16 @@ internal sealed class NativeInventoryOwnershipScenario
             Require(this.IsMarker(client.Items[SlotIndex], ClientStack) && ReferenceEquals(client, Game1.player)
                 && client.CurrentToolIndex != SlotIndex, "The prepared client slot changed before its owner could commit.");
             this.WriteMarker(client, HostStack);
+            // Inventory and Farmer metadata can replicate on different ticks. The host verifies both.
+            client.modData[JournalKey] = this.MarkerToken;
             this.Status = Phase.WaitingOwnerVerification;
-            this.Record("ClientCommittedOwnSlot", client.Items[SlotIndex]);
+            this.Record("ClientCommittedOwnSlot", client.Items[SlotIndex], client.modData.GetValueOrDefault(JournalKey));
             return;
         }
         if (this.CommitByOwner && !this.Host && signal.Kind == "Verified" && this.Status == Phase.WaitingOwnerVerification)
         {
-            Require(this.IsMarker(client.Items[SlotIndex], HostStack), "Client inventory changed after its commit.");
+            Require(this.IsMarker(client.Items[SlotIndex], HostStack) && client.modData.GetValueOrDefault(JournalKey) == this.MarkerToken,
+                "Client inventory or journal changed after its commit.");
             this.Record("ClientReceivedHostVerification", client.Items[SlotIndex]);
             this.ClearOwnSlot(client);
             return;
@@ -251,10 +256,13 @@ internal sealed class NativeInventoryOwnershipScenario
                 this.Record("HostReplacedRemoteSlot", client.Items[SlotIndex]);
                 break;
             case Phase.WaitingOwnerCommit:
-                if (this.IsMarker(current, ClientStack)) break;
-                Require(this.IsMarker(current, HostStack), "The host did not observe the exact owner-committed item.");
+                string? journal = client.modData.GetValueOrDefault(JournalKey);
+                Require(journal is null || journal == this.MarkerToken, "The host observed an unrelated owner journal.");
+                Require(this.IsMarker(current, ClientStack) || this.IsMarker(current, HostStack),
+                    "The host did not observe the exact prepared or owner-committed item.");
+                if (journal is null || !this.IsMarker(current, HostStack)) break;
                 this.Status = Phase.WaitingClientClear;
-                this.Record("HostObservedOwnerNativeCommit", current);
+                this.Record("HostObservedOwnerNativeCommit", current, journal);
                 this.Send("Verified");
                 break;
             case Phase.WaitingHostItem when !this.CommitByOwner:
@@ -266,7 +274,7 @@ internal sealed class NativeInventoryOwnershipScenario
                 break;
             case Phase.WaitingClientClear:
                 Require(current is null || this.IsMarker(current, HostStack), "The remote test slot contains an unexpected item after the host write.");
-                if (current is not null || !this.ClientConfirmedReplacement) break;
+                if (current is not null || !this.ClientConfirmedReplacement || (this.CommitByOwner && client.modData.ContainsKey(JournalKey))) break;
                 this.Send("Finished");
                 this.Status = Phase.Completed;
                 this.Record("HostObservedClientNativeClear", null);
@@ -279,6 +287,7 @@ internal sealed class NativeInventoryOwnershipScenario
         Require(ReferenceEquals(client, Game1.player) && client.CurrentToolIndex != SlotIndex,
             "Only the local owner can clear the unused test slot.");
         client.Items[SlotIndex] = null;
+        if (this.CommitByOwner) Require(client.modData.Remove(JournalKey), "The client failed to clear the test journal.");
         Require(client.Items[SlotIndex] is null, "The client failed to restore the empty test slot.");
         this.Status = Phase.WaitingHostConfirmation;
         this.Record("ClientRestoredOwnSlot", null);
@@ -307,10 +316,10 @@ internal sealed class NativeInventoryOwnershipScenario
             modIDs: new[] { HarnessId }, playerIDs: new[] { peer.PlayerID });
     }
 
-    private void Record(string stage, Item? item)
+    private void Record(string stage, Item? item, string? journal = null)
     {
         string? token = item?.modData.GetValueOrDefault(MarkerKey);
-        this.Stages.Add(new Observation(stage, this.Clock.ElapsedMilliseconds, item?.QualifiedItemId, item?.Stack, item?.Quality, token));
+        this.Stages.Add(new Observation(stage, this.Clock.ElapsedMilliseconds, item?.QualifiedItemId, item?.Stack, item?.Quality, token, journal));
         this.Monitor.Log($"NativeInventoryOwnership {stage}.", LogLevel.Info);
         this.Report();
     }
@@ -338,7 +347,7 @@ internal sealed class NativeInventoryOwnershipScenario
 
     public sealed record Signal(string Kind, Guid RunId, Guid ReplyTo);
     private sealed record Observation(string Stage, long ElapsedMilliseconds, string? QualifiedItemId,
-        int? Stack, int? Quality, string? Token);
+        int? Stack, int? Quality, string? Token, string? Journal);
 
     private sealed class InventoryBaseline
     {
