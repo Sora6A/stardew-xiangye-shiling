@@ -2,7 +2,6 @@ using System.Text.Json;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewValley;
-using StardewValley.GameData.Shops;
 using StardewValley.Menus;
 using XiangyeShiling.GameIntegration;
 using XiangyeShiling.Machines;
@@ -106,7 +105,6 @@ internal sealed class PersistenceScenario
     {
         var slots = new Item[Player.MaxItems]; Array.Copy(items, slots, items.Length); Player.Items.OverwriteWith(slots);
     }
-    private static void Add(Item item) => Require(Player.addItemToInventory(item) is null, "Fixture inventory unexpectedly full");
     private static string Inventory() => JsonSerializer.Serialize(Player.Items.Select(i => i is null ? null : new { i.QualifiedItemId, i.Stack, i.Quality }));
     private SObject Machine(int index) => House.objects[new Vector2(this.State.Tiles[index][0], this.State.Tiles[index][1])];
     private static MachineState Read(SObject machine)
@@ -131,31 +129,6 @@ internal sealed class PersistenceScenario
         Player.removeItemFromInventory(carried);
         return placed!;
     }
-    private void Buy(string shopId, string qualifiedId, int quantity, bool recipe = false)
-    {
-        var data = this.Helper.GameContent.Load<Dictionary<string, ShopData>>("Data/Shops")[shopId];
-        var shop = new ShopMenu(shopId, data, data.Owners.First(), playOpenSound: false);
-        var item = shop.forSale.Single(i => i.QualifiedItemId == qualifiedId && i.IsRecipe == recipe);
-        int price = shop.itemPriceAndStock[item].Price;
-        this.Monitor.Log($"Purchase {qualifiedId}: {quantity} at {price}g.", LogLevel.Info);
-        int money = Player.Money;
-        var purchase = typeof(ShopMenu).GetMethod("tryToPurchaseItem", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-        purchase.Invoke(shop, new object?[] { item, null, quantity, 0, 0 });
-        Require(Player.Money == money - price * quantity, "Shop didn't debit expected amount");
-        if (recipe) Require(Player.knowsRecipe(((Item)item).Name), "Purchased recipe wasn't learned");
-        else
-        {
-            Require(shop.heldItem is Item held && held.QualifiedItemId == qualifiedId && held.Stack == quantity, "Wrong purchased stack");
-            Add((Item)shop.heldItem); shop.heldItem = null;
-        }
-    }
-    private static SObject Craft(string key, bool cooking = false)
-    {
-        var recipe = new CraftingRecipe(Id + "_Recipe_" + key, cooking);
-        Require(Player.knowsRecipe(recipe.name) && recipe.doesFarmerHaveIngredientsInInventory(), "Recipe unlearned or missing ingredients");
-        recipe.consumeIngredients(null);
-        var output = (SObject)recipe.createItem(); Add(output); return output;
-    }
     private void Setup()
     {
         Require(!House.objects.Values.Any(i => MachineService.TryGetKind(i, out _)), "Fixture already contains untracked machines");
@@ -169,17 +142,18 @@ internal sealed class PersistenceScenario
         Player.Money = 20000;
         this.Test("native shop purchase debits and learns three recipes", () =>
         {
-            this.Buy("SeedShop", ObjectId("Soybean"), 6); this.Buy("SeedShop", "(O)262", 2);
-            this.Buy("Saloon", ObjectId("ChineseToon"), 1);
-            this.Buy("Carpenter", "(BC)" + Id + "_BeanWorkshop", 1, true);
-            this.Buy("Carpenter", "(BC)" + Id + "_FermentationCrock", 1, true);
-            this.Buy("Saloon", ObjectId("ToonTofu"), 1, true);
+            NativeRouteActions.Buy(this.Helper, this.Monitor, "SeedShop", ObjectId("Soybean"), 6);
+            NativeRouteActions.Buy(this.Helper, this.Monitor, "SeedShop", "(O)262", 2);
+            NativeRouteActions.Buy(this.Helper, this.Monitor, "Saloon", ObjectId("ChineseToon"), 1);
+            NativeRouteActions.Buy(this.Helper, this.Monitor, "Carpenter", "(BC)" + Id + "_BeanWorkshop", 1, true);
+            NativeRouteActions.Buy(this.Helper, this.Monitor, "Carpenter", "(BC)" + Id + "_FermentationCrock", 1, true);
+            NativeRouteActions.Buy(this.Helper, this.Monitor, "Saloon", ObjectId("ToonTofu"), 1, true);
             Require(Player.Money == 15490, $"Expected 15490g after prototype purchases, got {Player.Money}g");
         });
         this.Test("native crafting consumes materials and placement creates fresh identity", () =>
         {
-            var bean = Place(Craft("BeanWorkshop"), Tile(0));
-            Place(Craft("FermentationCrock"), Tile(1));
+            var bean = Place(NativeRouteActions.Craft("BeanWorkshop"), Tile(0));
+            Place(NativeRouteActions.Craft("FermentationCrock"), Tile(1));
             Require(Player.Items.CountId("(O)388") == 0 && Player.Items.CountId("(O)390") == 0 && Player.Items.CountId("(O)334") == 0, "Wrong blueprint costs");
             Guid firstId = Read(bean).InstanceId;
             var pickup = House.removeObject(Tile(0), false);
@@ -195,7 +169,7 @@ internal sealed class PersistenceScenario
             Require(this.Operate(this.Machine(1), "SoySauce").Applied, "Sauce start failed");
             Game1.timeOfDay = 1000;
             Require(this.Operate(this.Machine(0), null).Applied && this.Operate(this.Machine(1), null).Applied, "Route collection failed");
-            Craft("ToonTofu", true);
+            NativeRouteActions.Craft("ToonTofu", true);
             Require(Player.Items.CountId(ObjectId("Tofu")) == 1 && Player.Items.CountId(ObjectId("ToonTofu")) == 1
                 && Player.Items.CountId(ObjectId("SoySauce")) == 4 && Player.Items.CountId(ObjectId("Soybean")) == 0
                 && Player.Items.CountId(ObjectId("ChineseToon")) == 0 && Player.Items.CountId("(O)262") == 0, "Route conservation failed");

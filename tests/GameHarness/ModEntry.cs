@@ -27,6 +27,7 @@ public sealed class Config
 /// Interaction 模式为真实界面输入准备并核对内存现场，不保存，也不承诺恢复本次内存。
 /// WorldInteraction 为原生鼠标工具/自然拾取准备现场，同样不保存或恢复本次内存。
 /// InputObservation只被动采样专用主机输入，不加载、不准备、不改变玩家/时间或发送网络探针。
+/// NaturalClock 在专用档准备设备和背包，用生产事务与原生 TimeChanged 验证自然工时，不写时钟或存档。
 /// 模式契约不能混用，配置与复跑步骤见本目录 README；禁止在正式存档启用。
 /// </summary>
 public sealed class ModEntry : Mod
@@ -46,6 +47,27 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.Scenario == "AutomatedRoute")
+        {
+            var route = new AutomatedRouteScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => route.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => route.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => route.Tick();
+            helper.Events.GameLoop.TimeChanged += (_, e) => route.OnTimeChanged(e.OldTime, e.NewTime);
+            helper.Events.GameLoop.Saving += (_, _) => route.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => route.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == "NaturalClock")
+        {
+            var clock = new NaturalClockScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.SaveLoaded += (_, _) => clock.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => clock.Tick();
+            helper.Events.GameLoop.TimeChanged += (_, e) => clock.OnTimeChanged(e.OldTime, e.NewTime);
+            helper.Events.GameLoop.Saving += (_, _) => clock.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => clock.OnReturnedToTitle();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == "WorldShopInteraction")
         {
             this.WorldShops = new(helper, this.Monitor, this.Settings);
@@ -173,6 +195,12 @@ public sealed class ModEntry : Mod
         string recipe = Id + "_Recipe_SoySauce";
         void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
         void Test(string name, Action action) { action(); passed.Add(name); this.Monitor.Log("PASS " + name, LogLevel.Info); }
+        Rectangle RecipeActionBounds(MachineMenu menu) => this.Helper.Reflection.GetMethod(menu, "ActionBounds").Invoke<Rectangle>(0);
+        void ClickRecipe(MachineMenu menu)
+        {
+            Point center = RecipeActionBounds(menu).Center;
+            menu.receiveLeftClick(center.X, center.Y);
+        }
         void Stock(params Item[] items)
         {
             var slots = new Item[player.MaxItems];
@@ -277,9 +305,8 @@ public sealed class ModEntry : Mod
                     var menu = Game1.activeClickableMenu as XiangyeShiling.Menus.MachineMenu;
                     Check(menu is not null, "Machine menu wasn't opened");
                     // BUG-2026-007：同一按钮坐标上的第二个鼠标点击仍属于领取意图，不能成为新开工。
-                    int x = menu!.xPositionOnScreen + 500, y = menu.yPositionOnScreen + 170;
-                    menu.receiveLeftClick(x, y);
-                    menu.receiveLeftClick(x, y);
+                    ClickRecipe(menu!);
+                    ClickRecipe(menu!);
                     Check(State().CanMove && player.Items.CountId(Soy) == 3 && player.Items.CountId(Tofu) == 2,
                         "Collection double click unexpectedly consumed the next batch");
                 }
@@ -306,18 +333,18 @@ public sealed class ModEntry : Mod
                     bool Open() => this.Helper.Reflection.GetField<bool>(menu, "GuideOpen").GetValue();
                     int Page() => this.Helper.Reflection.GetField<int>(menu, "GuidePage").GetValue();
                     Click("GuideBounds"); Check(Open() && Page() == 0, "Guide did not open at sources");
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     Click("NextBounds"); Check(Open() && Page() == 1, "Recipe guide page missing");
                     Click("PreviousBounds"); Check(Page() == 0, "Guide back navigation failed");
                     Click("GuideBounds"); Check(!Open() && ReferenceEquals(Game1.activeClickableMenu, menu), "Guide replaced the operation session");
                     Check(Raw() == before && player.Items.SequenceEqual(items) && player.Items.CountId(Soy) == 6
                         && this.Helper.Reflection.GetField<Request?>(session, "Pending").GetValue() is null,
                         "Guide navigation acquired a request or changed inventory/state");
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     string started = Raw(); Check(session.IsComplete && player.Items.CountId(Soy) == 3, "Normal start after guide failed");
                     Click("GuideBounds"); Check(Open(), "Completed menu cannot read guide");
                     Click("NextBounds"); Click("GuideBounds");
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     Check(session.IsComplete && Raw() == started && player.Items.CountId(Soy) == 3, "Guide return unlocked a second operation");
                 }
                 finally { Game1.activeClickableMenu = previousMenu; }
@@ -332,18 +359,77 @@ public sealed class ModEntry : Mod
                     var menu = Game1.activeClickableMenu as MachineMenu
                         ?? throw new InvalidOperationException("Native interaction did not create the production menu.");
                     var session = this.Helper.Reflection.GetField<MenuActionSession>(menu, "Session").GetValue();
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     string feedback = this.Helper.Reflection.GetField<string>(menu, "Feedback").GetValue();
                     Check(feedback.Contains(ItemRegistry.GetDataOrErrorItem(Soy).DisplayName) && feedback.Contains("3")
                         && Raw() == before && player.Items.SequenceEqual(items) && !session.IsComplete
                         && this.Helper.Reflection.GetField<Request?>(session, "Pending").GetValue() is null,
                         "Missing preview omitted the actual deficit or acquired/mutated an operation");
                     Stock(ItemRegistry.Create(Soy, 3));
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     Check(session.IsComplete && player.Items.CountId(Soy) == 0 && Raw() != before,
                         "A read-only shortage preview prevented same-menu retry");
                 }
                 finally { Game1.activeClickableMenu = previousMenu; }
+            });
+            Test("machine menu fits a narrow UI viewport and preserves its open session on resize", () =>
+            {
+                Fresh("BeanWorkshop"); Stock(ItemRegistry.Create(Soy, 3));
+                var previousMenu = Game1.activeClickableMenu;
+                var viewport = Game1.uiViewport;
+                Game1.activeClickableMenu = null;
+                try
+                {
+                    void SetViewport(int width, int height)
+                    {
+                        var resized = viewport;
+                        resized.Width = width;
+                        resized.Height = height;
+                        Game1.uiViewport = resized;
+                    }
+                    SetViewport(1000, 680);
+                    machine!.checkForAction(player);
+                    var menu = Game1.activeClickableMenu as MachineMenu
+                        ?? throw new InvalidOperationException("Native interaction did not create the production menu.");
+                    Rectangle Bounds(string name) => this.Helper.Reflection.GetProperty<Rectangle>(menu, name).GetValue();
+                    void Click(Rectangle bounds) => menu.receiveLeftClick(bounds.Center.X, bounds.Center.Y);
+                    void Resize(Rectangle oldBounds, Rectangle newBounds)
+                    {
+                        SetViewport(newBounds.Width, newBounds.Height);
+                        menu.gameWindowSizeChanged(oldBounds, newBounds);
+                        var panel = new Rectangle(menu.xPositionOnScreen, menu.yPositionOnScreen, menu.width, menu.height);
+                        foreach (Rectangle control in new[] { panel, menu.upperRightCloseButton.bounds, Bounds("GuideBounds"),
+                            Bounds("PreviousBounds"), Bounds("NextBounds"), RecipeActionBounds(menu) })
+                            Check(control.Width > 0 && control.Height > 0 && newBounds.Contains(control),
+                                $"Machine menu or control {control} lies outside the UI viewport {newBounds}.");
+                    }
+                    Click(Bounds("GuideBounds"));
+                    Click(Bounds("NextBounds"));
+                    var normal = new Rectangle(0, 0, 1000, 680);
+                    var small = new Rectangle(0, 0, 540, 300);
+                    var narrow = new Rectangle(0, 0, 480, 440);
+                    Resize(normal, small);
+                    Check(this.Helper.Reflection.GetField<bool>(menu, "GuideOpen").GetValue()
+                        && this.Helper.Reflection.GetField<int>(menu, "GuidePage").GetValue() == 1,
+                        "Resize reset the open guide page.");
+                    Click(Bounds("PreviousBounds"));
+                    Check(this.Helper.Reflection.GetField<int>(menu, "GuidePage").GetValue() == 0,
+                        "The visible guide navigation button missed after resize.");
+                    Click(Bounds("GuideBounds"));
+                    ClickRecipe(menu);
+                    Check(State().Batch is not null && player.Items.CountId(Soy) == 0, "Scaled start button missed or did not debit the input.");
+                    string started = Raw();
+                    Game1.timeOfDay += 200;
+                    Resize(small, narrow);
+                    ClickRecipe(menu);
+                    Check(Raw() == started && player.Items.CountId(Tofu) == 0, "Resize unlocked a second operation in the same menu.");
+                    Resize(narrow, normal);
+                    Check(menu.width == 720 && menu.height == 460, "Returning to a large viewport did not restore full menu size.");
+                    Resize(normal, small);
+                    Click(menu.upperRightCloseButton.bounds);
+                    Check(Game1.activeClickableMenu is null, "The visible close button missed after resize.");
+                }
+                finally { Game1.uiViewport = viewport; Game1.activeClickableMenu = previousMenu; }
             });
             Test("full inventory collection retries in the same menu and locks after success", () =>
             {
@@ -357,33 +443,43 @@ public sealed class ModEntry : Mod
                 string before = Raw(); Item[] fullBefore = player.Items.ToArray();
                 int[] quantitiesBefore = fullBefore.Select(i => i.Stack).ToArray();
                 var previousMenu = Game1.activeClickableMenu;
+                var viewport = Game1.uiViewport;
                 Game1.activeClickableMenu = null;
                 try
                 {
                     machine!.checkForAction(player);
-                    var menu = Game1.activeClickableMenu as XiangyeShiling.Menus.MachineMenu;
-                    Check(menu is not null, "Retry machine menu wasn't opened");
-                    int x = menu!.xPositionOnScreen + 500, y = menu.yPositionOnScreen + 170;
-                    menu.receiveLeftClick(x, y);
+                    var menu = Game1.activeClickableMenu as MachineMenu
+                        ?? throw new InvalidOperationException("Retry machine menu wasn't opened.");
+                    ClickRecipe(menu);
                     Check(Raw() == before && State().PhaseAt(MachineService.Now()) == MachinePhase.Ready
                         && player.Items.SequenceEqual(fullBefore) && player.Items.Select(i => i.Stack).SequenceEqual(quantitiesBefore)
                         && player.Items.CountId(Tofu) == 0, "Full inventory menu click changed the batch or inventory");
-                    // 模拟玩家释放一个槽位；保持同一菜单和原请求，不能用重新打开掩盖永久锁定。
+                    var session = this.Helper.Reflection.GetField<MenuActionSession>(menu, "Session").GetValue();
+                    var pending = this.Helper.Reflection.GetField<Request?>(session, "Pending");
+                    var request = pending.GetValue() ?? throw new InvalidOperationException("Rejected collection lost its request.");
+                    var compact = viewport;
+                    compact.Width = 540;
+                    compact.Height = 300;
+                    Game1.uiViewport = compact;
+                    menu.gameWindowSizeChanged(new Rectangle(0, 0, viewport.Width, viewport.Height), new Rectangle(0, 0, 540, 300));
+                    Check(ReferenceEquals(request, pending.GetValue()) && Raw() == before && !session.IsComplete,
+                        "Resize changed the rejected collection request or batch.");
+                    // 模拟玩家释放一个槽位；调整尺寸后仍在同一菜单提交原请求。
                     player.Items[player.MaxItems - 1] = null!;
                     Check(ReferenceEquals(Game1.activeClickableMenu, menu), "Failed collection replaced the menu");
-                    menu.receiveLeftClick(x, y);
+                    ClickRecipe(menu);
                     Check(State().CanMove && player.Items.CountId(Tofu) == 2 && player.Items.CountId(Soy) == 3
-                        && player.Items.CountId("(O)388") == (player.MaxItems - 2) * 999,
+                        && player.Items.CountId("(O)388") == (player.MaxItems - 2) * 999 && State().LastRequestId == request.Id,
                         "Same-menu retry didn't collect the whole batch exactly once");
                     string collected = Raw(); Item[] after = player.Items.ToArray();
                     int[] quantitiesAfter = after.Select(i => i.Stack).ToArray();
-                    menu.receiveLeftClick(x, y);
+                    ClickRecipe(menu);
                     Check(Raw() == collected && State().CanMove && player.Items.SequenceEqual(after)
                         && player.Items.Select(i => i.Stack).SequenceEqual(quantitiesAfter)
                         && player.Items.CountId(Soy) == 3 && player.Items.CountId(Tofu) == 2,
                         "Successful retry allowed another debit or collection in the same menu");
                 }
-                finally { Game1.activeClickableMenu = previousMenu; }
+                finally { Game1.uiViewport = viewport; Game1.activeClickableMenu = previousMenu; }
             });
             Test("real inventory callback failure compensates both sides", () =>
             {

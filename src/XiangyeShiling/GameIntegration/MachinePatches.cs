@@ -1,5 +1,6 @@
 using HarmonyLib;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
 using XiangyeShiling.Menus;
@@ -29,6 +30,10 @@ internal static class MachinePatches
             var placement = AccessTools.Method(typeof(SObject), "placementAction");
             harmony.Patch(placement, new HarmonyMethod(typeof(MachinePatches), nameof(BeforePlace)),
                 new HarmonyMethod(typeof(MachinePatches), nameof(AfterPlace)));
+            var drawOnTile = AccessTools.Method(typeof(SObject), nameof(SObject.draw),
+                new[] { typeof(SpriteBatch), typeof(int), typeof(int), typeof(float) })
+                ?? throw new MissingMethodException(typeof(SObject).FullName, nameof(SObject.draw));
+            harmony.Patch(drawOnTile, postfix: new HarmonyMethod(typeof(ReadyMachineMarker), nameof(ReadyMachineMarker.Draw)));
         }
         catch { harmony.UnpatchAll(id); throw; }
         void Patch(Type type, string method, string prefix, Type[]? parameters = null) => harmony.Patch(

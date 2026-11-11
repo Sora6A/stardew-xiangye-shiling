@@ -1,4 +1,5 @@
 using XiangyeShiling.Machines;
+using XiangyeShiling.Menus;
 
 const string Soy = "(O)Sora6A.XiangyeShiling_Soybean";
 const string Wheat = "(O)262";
@@ -26,6 +27,23 @@ void Reject(Decision decision, Rejection expected)
     Assert(!decision.Accepted && decision.Rejection == expected && decision.Transaction is null,
         $"Expected {expected} with no inventory or machine mutation, got {decision.Rejection}.");
 }
+
+Test("menu completion follows the clock across midnight and the overnight gap", () =>
+{
+    const int day = 27;
+    const long midnight = day * 1440L;
+    Assert(BatchCompletion.FromDeadline(midnight + 13 * 60, day) == new BatchCompletion(0, 1300),
+        "Daytime deadline displayed at the wrong time.");
+    var tonight = BatchCompletion.FromDeadline(midnight + 24 * 60 + 13, day);
+    Assert(tonight.IsTonight && tonight.Clock == 20, "A deadline after midnight needs the next ten-minute tick tonight.");
+    Assert(BatchCompletion.FromDeadline(midnight + 25 * 60 + 51, day) == new BatchCompletion(1, 600)
+        && BatchCompletion.FromDeadline(midnight + 29 * 60 + 50, day) == new BatchCompletion(1, 600),
+        "The menu offered collection before the player could interact again.");
+    Assert(BatchCompletion.FromDeadline(midnight + 30 * 60 + 1, day) == new BatchCompletion(1, 610),
+        "Rounding should continue after the morning begins.");
+    Assert(BatchCompletion.FromDeadline(midnight + 2 * 1440 + 17 * 60, day) == new BatchCompletion(2, 1700)
+        && BatchCompletion.FromDeadline(long.MaxValue, day).DaysAhead > 2, "Stored future deadlines must remain representable.");
+});
 
 Test("multi-input shortage yields no partial deduction", () =>
 {

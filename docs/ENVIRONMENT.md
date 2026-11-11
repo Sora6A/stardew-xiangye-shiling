@@ -1,5 +1,7 @@
 # 开发与验证环境记录
 
+2026-11-07 新机器接手：Windows x64（build 22000）、Steam 游戏 1.6.15/build 24356、SMAPI 4.4.0、[作者发行的 Content Patcher 2.9.0](https://www.curseforge.com/stardewvalley/mods/content-patcher/files/7448774)。SDK 7.0.302 使用 6.0.16 引用包构建，C# 回归使用 .NET 6.0.36 运行时；Python 3.12.14 使用工作区临时目录。只读版本预检无问题，116 项 Python、115 项 MachineCore、13 项 GameAdapter 通过；生产模块、GameHarness 和两个报告 CLI 的 Release 构建均为 0 警告/0 错误。游戏和 Mods 副本已准备，游戏未启动，未执行新机器实机验收；路径、入口及后续任务见[当前交接](HANDOFF.md)。下方为原机器的历史验证记录。
+
 环境版本检查日期：2026-09-28；验证进展更新至 2026-10-01。游戏与 Mods 使用工作区副本；源游戏安装没有升级或覆盖。历史加载见 [P0 实测](validation/P0-2026-09-25.md)，历史单人事务见 [P1 实测](validation/P1-2026-09-28.md)，本轮界面进展见 [UI 实测](validation/P1-ui-2026-09-30.md)。本轮更新验证状态不表示重新核对了下表全部环境版本。
 
 | 项目 | 实际观测 | 状态 |

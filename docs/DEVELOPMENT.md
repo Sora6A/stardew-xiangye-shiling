@@ -38,6 +38,14 @@
 
 ## 工具链
 
+在 Windows 使用工作区内的 SDK 时，把 SDK 6.0.408 和 7.0.302 放到同一个 `.local/dotnet-sdk` 目录。SDK 7.0.302 用于构建；SDK 6.0.408 提供离线还原所需的 **6.0.16** 引用包和运行时。较新的 6.0 SDK 可以提供运行时，但其引用包不一定是 7.0.302 所请求的版本。可以使用 [Microsoft 的 dotnet-install 脚本](https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script)，分别指定 `-Version`、`-InstallDir .local/dotnet-sdk` 和 `-NoPath`，先安装 6，再安装 7。确保 PATH 中有 Python 3.10+；入口也可复用 Codex 已安装的 Python。
+
+```powershell
+. ./tools/enter-dev.ps1
+```
+
+在每个需要开发工具的新 PowerShell 会话中运行一次。入口仅设置当前会话的 PATH 和缓存位置，并用工作区 `.local/tmp` 避开 Windows 用户临时目录的 8.3 短路径别名。裸命令受系统 PATH 和 TEMP 影响。
+
 - 目标验证基线：Windows x64、游戏 1.6.15、SMAPI 4.4.0、Content Patcher 2.9.0。
 - C# 项目目标 `net6.0` / x64，SDK 本次实际使用 7.0.302；`global.json` 允许较新 SDK。须有 .NET 6 targeting pack。
 - Python 3.10+，只用标准库。
