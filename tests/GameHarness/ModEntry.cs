@@ -19,6 +19,7 @@ public sealed class Config
     public string Scenario { get; set; } = "Memory";
     public ulong SaveFixtureId { get; set; }
     public string NetworkRole { get; set; } = "Observe";
+    public bool EnableNativeInventoryOwnership { get; set; }
 }
 
 /// <summary>
@@ -47,6 +48,23 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.Scenario == "NativeInventoryOwnership")
+        {
+            var bootstrap = new NativeNetworkBootstrap(this.Monitor, this.Settings);
+            var ownership = new NativeInventoryOwnershipScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => bootstrap.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) =>
+            {
+                bootstrap.Tick();
+                if (bootstrap.Failure is string failure) ownership.OnBootstrapFailed(failure);
+                else ownership.Tick(bootstrap.Ready);
+                if (ownership.Completed || ownership.Failure is not null) bootstrap.RestoreOptions();
+            };
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => ownership.OnMessageReceived(e);
+            helper.Events.GameLoop.Saving += (_, _) => ownership.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => { ownership.OnReturnedToTitle(); bootstrap.RestoreOptions(); };
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == "AutomatedRoute")
         {
             var route = new AutomatedRouteScenario(helper, this.Monitor, this.Settings);
@@ -541,6 +559,12 @@ public sealed class ModEntry : Mod
             });
             PlacementScenarios.Run(player, location, tile, service, Test);
             ToolRemovalScenarios.Run(player, location, tile, service, Test);
+            Test("machine menu supports keyboard and gamepad navigation without a second transaction", () =>
+            {
+                Fresh("BeanWorkshop");
+                Stock(ItemRegistry.Create(Soy, 6));
+                MachineMenuNavigationScenarios.Run(this.Helper, player, machine!);
+            });
         }
         catch (Exception error) { failure = error.ToString(); this.Monitor.Log(failure, LogLevel.Error); }
         finally

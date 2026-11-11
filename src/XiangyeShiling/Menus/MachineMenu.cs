@@ -19,6 +19,11 @@ public sealed class MachineMenu : IClickableMenu
     private const int PanelWidth = 720;
     private const int PanelHeight = 460;
     private const int ViewportMargin = 16;
+    private const int GuideId = 1;
+    private const int CloseId = 2;
+    private const int PreviousId = 3;
+    private const int NextId = 4;
+    private const int FirstRecipeId = 10;
     private readonly MachineService Service;
     private readonly SObject Machine;
     private readonly ITranslationHelper Text;
@@ -30,6 +35,7 @@ public sealed class MachineMenu : IClickableMenu
     private readonly MenuActionSession Session = new();
     private Point LayoutViewport;
     private float LayoutScale = 1f;
+    private int LastClickTick = -1;
     public MachineMenu(MachineService service, SObject machine, ITranslationHelper text)
         : base(0, 0, PanelWidth, PanelHeight, true)
     {
@@ -39,6 +45,8 @@ public sealed class MachineMenu : IClickableMenu
         MachineService.TryGetKind(machine, out var kind);
         this.Recipes = service.Recipes.Where(r => r.Machine == kind).ToArray();
         this.FitViewport();
+        if (Game1.options.snappyMenus && Game1.options.gamepadControls)
+            this.snapToDefaultClickableComponent();
     }
 
     // 视口使用游戏 UI 单位。重排只更新几何，保留同一菜单的指南页和事务请求。
@@ -59,6 +67,9 @@ public sealed class MachineMenu : IClickableMenu
             close.bounds = this.BoundsAt(PanelWidth - 36, -8, 48, 48);
             close.baseScale = close.scale = 4f * this.LayoutScale;
         }
+        this.populateClickableComponentList();
+        if (Game1.options.gamepadControls)
+            this.snapCursorToCurrentSnappedComponent();
     }
 
     public override void gameWindowSizeChanged(Rectangle oldBounds, Rectangle newBounds) => this.FitViewport();
@@ -77,6 +88,76 @@ public sealed class MachineMenu : IClickableMenu
     private Rectangle GuideBounds => this.BoundsAt(PanelWidth - 224, 40, 180, 46);
     private Rectangle PreviousBounds => this.BoundsAt(44, PanelHeight - 74, 150, 46);
     private Rectangle NextBounds => this.BoundsAt(PanelWidth - 194, PanelHeight - 74, 150, 46);
+
+    public override void populateClickableComponentList()
+    {
+        int? selected = this.currentlySnappedComponent?.myID;
+        int first = this.GuideOpen ? (this.GuidePage == 0 ? NextId : PreviousId)
+            : this.Recipes.Count > 0 ? FirstRecipeId : -1;
+        var guide = new ClickableComponent(this.GuideBounds, "Guide")
+        {
+            myID = GuideId, rightNeighborID = CloseId, downNeighborID = first
+        };
+        this.allClickableComponents = new() { guide };
+        if (this.upperRightCloseButton is { } close)
+        {
+            close.myID = CloseId;
+            close.leftNeighborID = GuideId;
+            close.downNeighborID = first;
+            this.allClickableComponents.Add(close);
+        }
+
+        // 指南只暴露本页控件。键盘与手柄都走点击入口，由页码和事务会话决定能否执行。
+        if (this.GuideOpen)
+        {
+            this.allClickableComponents.Add(new(this.PreviousBounds, "Previous")
+            { myID = PreviousId, upNeighborID = GuideId, rightNeighborID = NextId });
+            this.allClickableComponents.Add(new(this.NextBounds, "Next")
+            { myID = NextId, upNeighborID = GuideId, leftNeighborID = PreviousId });
+        }
+        else
+        {
+            for (int i = 0; i < this.Recipes.Count; i++)
+                this.allClickableComponents.Add(new(this.ActionBounds(i), this.Recipes[i].Id)
+                {
+                    myID = FirstRecipeId + i,
+                    upNeighborID = i == 0 ? GuideId : FirstRecipeId + i - 1,
+                    downNeighborID = i + 1 < this.Recipes.Count ? FirstRecipeId + i + 1 : -1
+                });
+        }
+
+        this.currentlySnappedComponent = selected.HasValue ? this.getComponentWithID(selected.Value) ?? guide : null;
+    }
+
+    public override void snapToDefaultClickableComponent()
+    {
+        if (this.allClickableComponents is null)
+            this.populateClickableComponentList();
+        this.currentlySnappedComponent = this.getComponentWithID(GuideId);
+        this.snapCursorToCurrentSnappedComponent();
+    }
+
+    public override void applyMovementKey(int direction)
+    {
+        this.FitViewport();
+        base.applyMovementKey(direction);
+    }
+
+    private void SetGuideOpen(bool open)
+    {
+        this.GuideOpen = open;
+        if (open) this.GuidePage = 0;
+        this.populateClickableComponentList();
+        if (Game1.options.gamepadControls)
+            this.snapCursorToCurrentSnappedComponent();
+    }
+
+    private void TurnGuidePage(int page)
+    {
+        this.GuidePage = page;
+        this.populateClickableComponentList();
+    }
+
     private IReadOnlyList<(Ingredient Ingredient, int Missing)> Missing(MachineRecipe recipe) => recipe.Inputs
         .Select(input => (Ingredient: input, Missing: Math.Max(0, input.Quantity - Game1.player.Items.CountId(input.ItemId))))
         .Where(value => value.Missing > 0).ToArray();
@@ -84,13 +165,14 @@ public sealed class MachineMenu : IClickableMenu
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
         this.FitViewport();
+        this.LastClickTick = Game1.ticks;
         if (this.upperRightCloseButton?.containsPoint(x, y) == true) { this.exitThisMenu(); return; }
         // 先处理只读导航，不能让指南上的点击落到背后的加工/领取按钮；成功锁定也不能阻止查看说明。
-        if (this.GuideBounds.Contains(x, y)) { this.GuideOpen = !this.GuideOpen; this.GuidePage = 0; return; }
+        if (this.GuideBounds.Contains(x, y)) { this.SetGuideOpen(!this.GuideOpen); return; }
         if (this.GuideOpen)
         {
-            if (this.PreviousBounds.Contains(x, y) && this.GuidePage > 0) this.GuidePage--;
-            if (this.NextBounds.Contains(x, y) && this.GuidePage < 1) this.GuidePage++;
+            if (this.PreviousBounds.Contains(x, y) && this.GuidePage > 0) this.TurnGuidePage(0);
+            if (this.NextBounds.Contains(x, y) && this.GuidePage < 1) this.TurnGuidePage(1);
             return;
         }
         if (this.Session.IsComplete) return;
@@ -123,13 +205,36 @@ public sealed class MachineMenu : IClickableMenu
     }
     public override void receiveKeyPress(Keys key)
     {
-        if (this.GuideOpen && key == Keys.Escape) { this.GuideOpen = false; return; }
-        base.receiveKeyPress(key);
+        if (key == Keys.None) return;
+        this.FitViewport();
+        // 原版先把手柄 A 当作光标处点击，再发送绑定的键。如果绑定 Enter 或 Space，同帧只确认一次。
+        if (Game1.options.gamepadControls && this.LastClickTick == Game1.ticks
+            && key == Utility.mapGamePadButtonToKey(Buttons.A)) return;
+        if (key == Keys.Escape || Game1.options.doesInputListContain(Game1.options.menuButton, key))
+        {
+            if (this.GuideOpen) this.SetGuideOpen(false);
+            else base.receiveKeyPress(key);
+            return;
+        }
+        if (key is Keys.Enter or Keys.Space)
+        {
+            if (this.currentlySnappedComponent is null)
+                this.snapToDefaultClickableComponent();
+            if (this.currentlySnappedComponent is { } target)
+                this.receiveLeftClick(target.bounds.Center.X, target.bounds.Center.Y);
+            return;
+        }
+        int direction = key switch { Keys.Up => 0, Keys.Right => 1, Keys.Down => 2, Keys.Left => 3, _ => -1 };
+        if (direction >= 0) this.applyMovementKey(direction);
+        else this.applyMovementKey(key);
     }
 
     private void Button(SpriteBatch b, Rectangle bounds, string label, bool enabled = true)
     {
-        this.DrawBox(b, bounds, enabled ? Color.White : Color.Gray);
+        Color color = enabled ? Color.White : Color.Gray;
+        if (this.currentlySnappedComponent?.bounds == bounds)
+            color = Color.Lerp(color, Color.Goldenrod, 0.3f);
+        this.DrawBox(b, bounds, color);
         Vector2 size = Game1.smallFont.MeasureString(label);
         float scale = Math.Min(this.LayoutScale, (bounds.Width - 24 * this.LayoutScale) / Math.Max(1f, size.X));
         Utility.drawTextWithShadow(b, label, Game1.smallFont,

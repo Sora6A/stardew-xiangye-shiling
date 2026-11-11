@@ -1,5 +1,7 @@
 # P1 主机请求核心与只读传输契约
 
+2026-11-11 NET03 使用原版局域网完成专用双端背包归属测试。客户端写入由主机看见，主机替换远端 Farmer 的库存格后，客户端未看到相同变更，双方报告超时。不能以主机副本的写后读取作为远端提交证据。见[双端实测](validation/P1-native-inventory-2026-11-11.md)。
+
 2026-11-02新增独立旧Welcome诊断入口，线上格式和机器写入禁用不变。112核心/构建/人工CLI正负例及停止部署通过，真实重放仍待，见[本轮记录](validation/P1-welcome-replay-2026-11-02.md)。`WelcomeReplayBuffer`只保留本进程当前主机世界已真实发送的相邻两连接Welcome；`TryReplayPreviousNetworkWelcome(expectedConnectionId)`要求专用世界、主线程、唯一新Ready客户端、一次取用及共享探针预算，不接收payload或目标。Reset清内存，无持久化字段。
 
 WelcomeRejected只表示实际读取了合法Welcome后本地未准入，保留其challenge用于观测；不是网络拒绝回复。WelcomeReplayAttempt只表示固定旧载荷尝试，必须紧接当前连接的SendAttempt并由客户端实际读取拒绝配对；新枚举追加，原数值不变。独立schema1重放报告嵌套重放前三检查点，冻结区间的ProbeSent=false不外推到主动阶段。严格CLI只计算OldWelcomeReplayRejected，广义OldPacketReplayVerified/Full仍false。
