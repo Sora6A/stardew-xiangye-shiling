@@ -7,3 +7,9 @@
 原报告及核对结果保存在 `.local/p1-net03-native/native`。两端报告 `Completed=false`、`SavingObserved=false`。退出审计 `IntegrityPassed=true`、`ScenarioPassed=false`，47 个存档文件无差异，隔离夹具已禁用，旧游戏进程仍在。原版进程改写了共享的 `default_options` 和 `startup_preferences`，本轮只有文件哈希的前后证据。下轮隔离测试应在启动前保留原始字节。
 
 后续协议需遵循背包所有者在其本机执行扣料和入包、主机权威更新设备的边界。先用专用双端档验证准备、确认、断线与恢复的守恒，再决定可写实现。单凭握手和主机本地副本写后核对，无法证明双人事务成功。
+
+## 2026-11-12 由库存所有者提交
+
+两端沿用同一专用世界和隔离启动器，在 `NativeInventoryOwnership` 配置中同时设置 `NativeInventoryCommitByOwner=true`，以独立消息类型区分此次验证。客户端先放入带本轮标记的木材 3 个。主机从原版远端 Farmer 读到该格后，两次发出同一提交请求。客户端在本地只提交一次，将原格替换为同一标记的木材 2 个。主机从原版库存读到该变更才发确认。客户端清空测试格，主机在原版库存读到清空后完成验证。
+
+实际主机 PID 21284 与客户端 PID 27892 均报告完成，提交阶段各有一条记录，标记与数量一致。两端未保存，隔离夹具已禁用。退出审计的 `IntegrityPassed` 与 `ScenarioPassed` 均为 true，47 个存档文件哈希一致，原进程 16668 保留。原版写回了共享启动偏好，启动前的字节与审计均留在 `.local/p1-net03-native/owner-commit`。本场景证明在线原版库存同步和重复指令下的本地一次执行，断线、保存恢复和正式机器事务留待 NET03/04。

@@ -16,6 +16,7 @@ internal sealed class NativeInventoryOwnershipScenario
 {
     private const string HarnessId = "Sora6A.XiangyeShiling.GameHarness";
     private const string MessageType = "NativeInventoryOwnershipV1";
+    private const string OwnerCommitMessageType = "NativeInventoryOwnerCommitV1";
     private const string MarkerKey = HarnessId + "/InventoryOwnership";
     private const string MarkerItem = "(O)388";
     private const string HostName = "XYSNETHost";
@@ -27,12 +28,13 @@ internal sealed class NativeInventoryOwnershipScenario
     private enum Phase
     {
         Connecting, WaitingConsent, WaitingPermit, WaitingClientItem, WaitingHostItem,
-        WaitingClientClear, WaitingHostConfirmation, Completed, Failed
+        WaitingOwnerCommit, WaitingOwnerVerification, WaitingClientClear, WaitingHostConfirmation, Completed, Failed
     }
 
     private readonly IModHelper Helper;
     private readonly IMonitor Monitor;
     private readonly bool Host;
+    private readonly bool CommitByOwner;
     private readonly Stopwatch Clock = Stopwatch.StartNew();
     private readonly Guid RunId = Guid.NewGuid();
     private readonly ConcurrentQueue<Signal> Inbox = new();
@@ -59,7 +61,10 @@ internal sealed class NativeInventoryOwnershipScenario
         this.Helper = helper;
         this.Monitor = monitor;
         this.Host = config.NetworkRole == "Host";
+        this.CommitByOwner = config.NativeInventoryCommitByOwner;
     }
+
+    private string SignalType => this.CommitByOwner ? OwnerCommitMessageType : MessageType;
 
     /// <summary>由主线程调用。connected 仅代表引导完成，仍逐帧验证实际连接及角色。</summary>
     internal void Tick(bool connected)
@@ -94,7 +99,7 @@ internal sealed class NativeInventoryOwnershipScenario
     internal void OnMessageReceived(ModMessageReceivedEventArgs args)
     {
         if (this.Peer is not { } peer || this.Completed || this.Failure is not null
-            || args.FromModID != HarnessId || args.Type != MessageType || args.FromPlayerID != peer.PlayerID
+            || args.FromModID != HarnessId || args.Type != this.SignalType || args.FromPlayerID != peer.PlayerID
             || this.Inbox.Count >= InboxCapacity) return;
         try
         {
@@ -190,6 +195,22 @@ internal sealed class NativeInventoryOwnershipScenario
         }
 
         if (signal.RunId != this.PeerRunId) return;
+        if (this.CommitByOwner && !this.Host && signal.Kind == "Commit" && this.Status == Phase.WaitingHostItem)
+        {
+            Require(this.IsMarker(client.Items[SlotIndex], ClientStack) && ReferenceEquals(client, Game1.player)
+                && client.CurrentToolIndex != SlotIndex, "The prepared client slot changed before its owner could commit.");
+            this.WriteMarker(client, HostStack);
+            this.Status = Phase.WaitingOwnerVerification;
+            this.Record("ClientCommittedOwnSlot", client.Items[SlotIndex]);
+            return;
+        }
+        if (this.CommitByOwner && !this.Host && signal.Kind == "Verified" && this.Status == Phase.WaitingOwnerVerification)
+        {
+            Require(this.IsMarker(client.Items[SlotIndex], HostStack), "Client inventory changed after its commit.");
+            this.Record("ClientReceivedHostVerification", client.Items[SlotIndex]);
+            this.ClearOwnSlot(client);
+            return;
+        }
         if (this.Host && signal.Kind == "Observed" && this.Status == Phase.WaitingClientClear)
             this.ClientConfirmedReplacement = true;
         else if (!this.Host && signal.Kind == "Finished" && this.Status == Phase.WaitingHostConfirmation)
@@ -216,21 +237,32 @@ internal sealed class NativeInventoryOwnershipScenario
                     && !this.Production.ReadNetworkDiagnostics().WritesEnabled,
                     "The host target is no longer the dedicated remote farmer with production writes disabled.");
                 this.Record("HostObservedClientNativeItem", current);
+                if (this.CommitByOwner)
+                {
+                    this.Status = Phase.WaitingOwnerCommit;
+                    this.Send("Commit");
+                    this.Send("Commit");
+                    this.Record("HostSentOwnerCommitTwice", current);
+                    break;
+                }
                 this.WriteMarker(client, HostStack);
                 Require(!ReferenceEquals(current, client.Items[SlotIndex]), "The host did not replace the remote slot reference.");
                 this.Status = Phase.WaitingClientClear;
                 this.Record("HostReplacedRemoteSlot", client.Items[SlotIndex]);
                 break;
-            case Phase.WaitingHostItem:
+            case Phase.WaitingOwnerCommit:
+                if (this.IsMarker(current, ClientStack)) break;
+                Require(this.IsMarker(current, HostStack), "The host did not observe the exact owner-committed item.");
+                this.Status = Phase.WaitingClientClear;
+                this.Record("HostObservedOwnerNativeCommit", current);
+                this.Send("Verified");
+                break;
+            case Phase.WaitingHostItem when !this.CommitByOwner:
                 if (this.IsMarker(current, ClientStack)) break;
                 Require(this.IsMarker(current, HostStack) && ReferenceEquals(client, Game1.player)
                     && client.CurrentToolIndex != SlotIndex, "The client did not observe the expected native host replacement.");
                 this.Record("ClientObservedHostNativeReplacement", current);
-                client.Items[SlotIndex] = null;
-                Require(client.Items[SlotIndex] is null, "The client failed to restore the empty test slot.");
-                this.Status = Phase.WaitingHostConfirmation;
-                this.Record("ClientRestoredOwnSlot", null);
-                this.Send("Observed");
+                this.ClearOwnSlot(client);
                 break;
             case Phase.WaitingClientClear:
                 Require(current is null || this.IsMarker(current, HostStack), "The remote test slot contains an unexpected item after the host write.");
@@ -240,6 +272,17 @@ internal sealed class NativeInventoryOwnershipScenario
                 this.Record("HostObservedClientNativeClear", null);
                 break;
         }
+    }
+
+    private void ClearOwnSlot(Farmer client)
+    {
+        Require(ReferenceEquals(client, Game1.player) && client.CurrentToolIndex != SlotIndex,
+            "Only the local owner can clear the unused test slot.");
+        client.Items[SlotIndex] = null;
+        Require(client.Items[SlotIndex] is null, "The client failed to restore the empty test slot.");
+        this.Status = Phase.WaitingHostConfirmation;
+        this.Record("ClientRestoredOwnSlot", null);
+        this.Send("Observed");
     }
 
     private string MarkerToken => (this.Host ? this.PeerRunId : this.RunId).ToString("N");
@@ -260,7 +303,7 @@ internal sealed class NativeInventoryOwnershipScenario
     private void Send(string kind)
     {
         var peer = this.Peer ?? throw new InvalidOperationException("No bound test peer.");
-        this.Helper.Multiplayer.SendMessage(new Signal(kind, this.RunId, this.PeerRunId), MessageType,
+        this.Helper.Multiplayer.SendMessage(new Signal(kind, this.RunId, this.PeerRunId), this.SignalType,
             modIDs: new[] { HarnessId }, playerIDs: new[] { peer.PlayerID });
     }
 
@@ -290,7 +333,7 @@ internal sealed class NativeInventoryOwnershipScenario
         NetworkRole = this.Host ? "Host" : "Client", HostPlayerId = this.HostInventory?.ActorId,
         ClientPlayerId = this.ClientInventory?.ActorId, SlotIndex, ClientCapacity = this.ClientInventory?.Capacity,
         ClientSlotCount = this.ClientInventory?.SlotCount, this.Completed, Status = this.Status.ToString(),
-        this.Failure, this.SavingObserved, this.Stages
+        this.CommitByOwner, this.Failure, this.SavingObserved, this.Stages
     });
 
     public sealed record Signal(string Kind, Guid RunId, Guid ReplyTo);

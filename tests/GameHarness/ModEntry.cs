@@ -20,6 +20,7 @@ public sealed class Config
     public ulong SaveFixtureId { get; set; }
     public string NetworkRole { get; set; } = "Observe";
     public bool EnableNativeInventoryOwnership { get; set; }
+    public bool NativeInventoryCommitByOwner { get; set; }
 }
 
 /// <summary>
