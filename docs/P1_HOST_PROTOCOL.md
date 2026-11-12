@@ -123,6 +123,14 @@ SaveLoaded、ReturnedToTitle 先递增世界 generation 再清队列/会话/发�
 
 ## 适配顺序与具体下一步
 
+### NET-03/04 所有者提交与恢复决策
+
+2026-11-12 实现纯层 `OwnerInventoryWriteSet` 与 `OwnerCommitRecovery`。主机计划记录背包容量及受影响格的精确前后指纹；写集拒绝重复/越界格、无变化和无效指纹。观察只比较计划格，分类为全旧、全新、部分同步或冲突。游戏适配 `OwnerInventoryFingerprint` 在本机游戏线程读取实际 Farmer。空格与无法读取分别表达，非空格要求原版普通对象可由注册表重建同一 ID、数量、品质和完整有界 XML，随后对 UTF-8 表示计算 SHA-256。带额外数据、变体或无法确认等价的对象拒绝纳入计划。配方许可与玩家所有权仍由调用方校验。
+
+单笔持久化预留绑定同一世界、请求、所有者和机器实例。主机见到背包全新且农工日志匹配时，机器仍为精确旧值则可提交，为精确新值则只补写回执。部分同步或仅见一个证据时等待。只有旧授权已失效，且机器、库存和日志来自同一权威检查点，才能按可证明未动用的旧值取消。已提交或已取消的预留只在观察相符时重放，矛盾状态隔离。超时与断线本身不构成退款或重新执行依据。纯层返回动作决策；持久化预留、连接隔离、机器/背包入口、日志寿命和实际执行均待接入。
+
+局域网接收路径核对使用游戏 1.6.15.24356 和 SMAPI 4.4.0。原版 `LidgrenServer.parseDataMessageFromClient` 可从 `NetIncomingMessage.SenderConnection` 反查已接受的农工，SMAPI 模组事件只携带其解析的声明字段。普通 SMAPI 农工发送路径的原版消息头使用主机 ID，不能将该字段与模组正文的发送者 ID 作等值准入。后续先验证实际接收作用域内的连接身份以及断线后失效，再将该证据接入主机准入。Steam/Galaxy 对应传输路径尚待验证。[SMAPI 4.4.0 接收与转发源码](https://github.com/Pathoschild/SMAPI/blob/4.4.0/src/SMAPI/Framework/SMultiplayer.cs#L437)
+
 未来**可写**调用链必须顺序执行：严格 reader → 主线程可信 actor/target 快照与 Gate → 账本 TryBegin → 主机查配方/解锁/库存/时钟 → MachineRules → CommitCoordinator 的写前/写后/补偿核验 → Complete → 回执。Replayed 分支在本次规则和提交前返回；未得到 lease 的任何分支都不能准备或写入。NET-02 当前只读桥不接这条调用链，不能把其握手 Ready 当成 Authorized，也不能把拒绝响应当成功账本回执。
 
 `P1-NET-01` 的纯模块和内存集成场景已完成，生产构建通过。后续工作包：

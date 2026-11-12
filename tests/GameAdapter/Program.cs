@@ -213,6 +213,7 @@ internal static class Program
             {
                 Kind = state.Kind == MachineKind.BeanWorkshop ? MachineKind.FermentationCrock : MachineKind.BeanWorkshop
             }));
+        OwnerInventoryFingerprintScenarios.Run(Test);
         Console.WriteLine($"RESULT {passed} passed, {failed} failed; no game process or save was opened.");
         return failed == 0 ? 0 : 1;
     }

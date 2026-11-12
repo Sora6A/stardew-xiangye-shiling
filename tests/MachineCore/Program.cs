@@ -238,6 +238,8 @@ CommitScenarios.Run(Test);
 ProtocolScenarios.Run(Test);
 LedgerScenarios.Run(Test);
 HostPipelineScenarios.Run(Test);
+OwnerInventoryWriteSetScenarios.Run(Test);
+OwnerCommitRecoveryScenarios.Run(Test);
 InboxScenarios.Run(Test);
 ReadOnlyCodecScenarios.Run(Test);
 ReadOnlyTransportScenarios.Run(Test);
