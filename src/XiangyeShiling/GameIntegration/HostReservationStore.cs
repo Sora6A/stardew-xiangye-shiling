@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using StardewModdingAPI;
 using StardewValley;
 using XiangyeShiling.Networking;
@@ -13,6 +14,8 @@ namespace XiangyeShiling.GameIntegration;
 internal sealed class HostReservationStore
 {
     internal const string Key = MachineService.Prefix + "/HostReservation";
+
+    internal sealed record Receipt(Guid RequestId, string Seen);
 
     private readonly IMonitor Monitor;
     private readonly int GameThread = Environment.CurrentManagedThreadId;
@@ -29,6 +32,13 @@ internal sealed class HostReservationStore
     {
         this.Saving = false;
         this.Quarantined = false;
+    }
+
+    internal void Isolate(string reason)
+    {
+        if (this.Quarantined) return;
+        this.Quarantined = true;
+        this.Monitor.Log("Host reservation isolated: " + reason, LogLevel.Warn);
     }
 
     internal bool TryRead(out OwnerCommitReservation? reservation)
@@ -56,7 +66,7 @@ internal sealed class HostReservationStore
             || !IsSameWorld(host, reservation) || host.modData.ContainsKey(Key)) return false;
 
         // An existing value, even an unknown or terminal one, owns this slot until reconciled.
-        return this.TryWrite(host, null, reservation);
+        return this.TryWrite(host, Key, null, OwnerCommitReservationCodec.Write(reservation));
     }
 
     internal bool TryRecordTerminal(OwnerCommitReservation reservation, OwnerReservationStatus status)
@@ -67,8 +77,47 @@ internal sealed class HostReservationStore
             return false;
 
         // The caller reconciles the exact inventory, journal and machine observations before recording a result.
-        return this.TryWrite(host, currentRaw, current.WithTerminalStatus(status));
+        return this.TryWrite(host, Key, currentRaw, OwnerCommitReservationCodec.Write(current.WithTerminalStatus(status)));
     }
+
+    /// <summary>Publish the result before releasing the reservation. The owner can clear its marker after reload.</summary>
+    internal bool TryRetire(OwnerCommitReservation plan, string seen)
+    {
+        if (plan.Status == OwnerReservationStatus.Reserved || seen != OwnerInventoryCommit.SeenJournal(plan)
+            || !this.TryGetHost(out Farmer? host) || !TryRead(host, out string? currentRaw, out var current)
+            || current is null || current.PlanKey != plan.PlanKey || current.Status != plan.Status
+            || !TryReadReceipt(host, plan.Request.ActorId, out _))
+            return false;
+
+        string key = ReceiptKey(plan.Request.ActorId);
+        string next = FormattableString.Invariant($"1|{plan.WorldId}|{plan.HostId}|{plan.Request.RequestId:D}|{seen}");
+        string? old = host.modData.GetValueOrDefault(key);
+        return (old == next || this.TryWrite(host, key, old, next)) && this.TryWrite(host, Key, currentRaw, null);
+    }
+
+    internal static bool TryReadReceipt(Farmer host, long actorId, out Receipt? receipt)
+    {
+        receipt = null;
+        if (!host.modData.TryGetValue(ReceiptKey(actorId), out string raw)) return true;
+        if (raw is not { Length: <= 192 }) return false;
+        string[] fields = raw.Split('|');
+        if (fields.Length != 5 || fields[0] != "1" || fields[1] != Game1.uniqueIDForThisGame.ToString(CultureInfo.InvariantCulture)
+            || fields[2] != host.UniqueMultiplayerID.ToString(CultureInfo.InvariantCulture)
+            || !Guid.TryParseExact(fields[3], "D", out Guid requestId) || requestId == Guid.Empty)
+            return false;
+
+        string seen = fields[4];
+        if (seen.Length != 106 || !Guid.TryParseExact(seen.AsSpan(0, 36), "D", out Guid grantId) || grantId == Guid.Empty
+            || seen[36] != ':' || !seen.EndsWith(":Seen", StringComparison.Ordinal)) return false;
+        foreach (char c in seen.AsSpan(37, 64))
+            if (c is not (>= '0' and <= '9' or >= 'a' and <= 'f')) return false;
+
+        receipt = new(requestId, seen);
+        return true;
+    }
+
+    private static string ReceiptKey(long actorId) => MachineService.Prefix + "/OwnerReceipt/"
+        + actorId.ToString(CultureInfo.InvariantCulture);
 
     private bool TryGetHost([NotNullWhen(true)] out Farmer? host)
     {
@@ -97,16 +146,16 @@ internal sealed class HostReservationStore
         return true;
     }
 
-    private bool TryWrite(Farmer host, string? expectedRaw, OwnerCommitReservation next)
+    private bool TryWrite(Farmer host, string key, string? expectedRaw, string? next)
     {
-        string raw = OwnerCommitReservationCodec.Write(next);
-        if (host.modData.GetValueOrDefault(Key) != expectedRaw) return false;
+        if (host.modData.GetValueOrDefault(key) != expectedRaw) return false;
 
         this.Writing = true;
         try
         {
-            host.modData[Key] = raw;
-            if (host.modData.GetValueOrDefault(Key) == raw) return true;
+            if (next is null) host.modData.Remove(key);
+            else host.modData[key] = next;
+            if (next is null ? !host.modData.ContainsKey(key) : host.modData.GetValueOrDefault(key) == next) return true;
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {

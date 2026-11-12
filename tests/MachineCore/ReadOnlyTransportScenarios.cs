@@ -12,6 +12,35 @@ internal static class ReadOnlyTransportScenarios
 
     public static void Run(Action<string, Action> test)
     {
+        test("native-authorized intent binds ready connection actor session and shared quota", () =>
+        {
+            Guid session = Guid.NewGuid(), connection = Guid.NewGuid();
+            var host = Host(session);
+            var peer = ClientPeer with { ConnectionId = connection };
+            host.SynchronizePeers(new[] { peer }, 0);
+            var request = Request(session);
+            string exact = "\n" + MachineRequestCodec.Write(request);
+            int reads = 0;
+            bool Read(Guid id, string json, long now = 0) => host.TryReadMachineIntent(ClientId, id,
+                () => { reads++; return json; }, now, out _, out _);
+            Assert(!Read(connection, exact) && reads == 0, "An intent read before the peer became ready.");
+            var hello = ReadOnlyProtocolCodec.Write(new ProtocolHello(1, Guid.NewGuid(), ClientId));
+            host.Receive(ClientId, ModId, ReadOnlyProtocolCodec.HelloType, () => hello, 0);
+            Assert(!Read(Guid.NewGuid(), exact) && reads == 0, "An intent accepted a foreign connection.");
+            Assert(!Read(connection, MachineRequestCodec.Write(request with { ActorId = 30 }))
+                && !Read(connection, MachineRequestCodec.Write(request with { SessionId = Guid.NewGuid() })),
+                "An intent accepted a different actor or session.");
+            Assert(host.TryReadMachineIntent(ClientId, connection, () => exact, 0, out var raw, out var intent)
+                && raw == exact && intent == request, "The authorized intent lost the exact request.");
+            for (int i = 0; i < 4; i++) Assert(Read(connection, exact), "The shared quota rejected a valid intent early.");
+            Assert(!Read(connection, exact) && reads == 6, "A rate limited intent read its body.");
+            Guid replacement = Guid.NewGuid();
+            host.SynchronizePeers(new[] { peer with { ConnectionId = replacement } }, 1000);
+            host.Receive(ClientId, ModId, ReadOnlyProtocolCodec.HelloType, () => hello, 1000);
+            Assert(!Read(connection, exact, 1000) && Read(replacement, exact, 1000) && reads == 7,
+                "An old connection ticket survived reconnect.");
+        });
+
         test("read-only paired handshake rejects valid start and collect with writes disabled", () =>
         {
             Pair pair = Connect();

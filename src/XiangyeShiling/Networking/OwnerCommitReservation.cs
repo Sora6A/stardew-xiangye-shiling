@@ -87,7 +87,7 @@ internal sealed class OwnerCommitReservation
         catch (EncoderFallbackException) { return false; }
     }
 
-    private static bool TryReadMachine(string? raw, [NotNullWhen(true)] out MachineState? state)
+    internal static bool TryReadMachine(string? raw, [NotNullWhen(true)] out MachineState? state)
     {
         state = null;
         if (!IsBoundedText(raw, MaxMachineUtf8Bytes)) return false;

@@ -26,9 +26,9 @@ public sealed class ModEntry : Mod
         var recipes = helper.Data.ReadJsonFile<List<MachineRecipe>>("assets/machine-recipes.json")
             ?? throw new InvalidOperationException("Missing generated machine recipes.");
         this.Machines = new MachineService(this.Monitor, helper.Translation, recipes);
-        // Read-only handshake/rejection only; this service has no reference to Machines or its transaction API.
+        // Ordinary peers use only the read-only protocol; the separate machine intent is bound to an isolated test world.
         this.Machines.BindNetworkDiagnostics(new ReadOnlyProtocolService(helper, this.Monitor, this.ModManifest,
-            helper.ReadConfig<NetworkDiagnosticOptions>()));
+            helper.ReadConfig<NetworkDiagnosticOptions>(), this.Machines));
         MachinePatches.Install(this.ModManifest.UniqueID, this.Machines, helper.Translation);
         helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
@@ -51,6 +51,7 @@ public sealed class ModEntry : Mod
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
     {
         this.Machines.Reservations.Reset();
+        this.Machines.CaptureLoadedReservation();
         this.CheckContentOnce();
         foreach (GameLocation location in Game1.locations) this.InitializeLocation(location);
         this.InitializeLocation(Game1.currentLocation);

@@ -9,4 +9,5 @@ public sealed class NetworkDiagnosticOptions
     public bool EnableReadOnlyNetworkProbes { get; set; }
     public string NetworkProbeFarmName { get; set; } = "XYSNET02";
     public ulong NetworkProbeSaveFixtureId { get; set; }
+    public bool EnableLanTransactionFixture { get; set; }
 }

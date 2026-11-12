@@ -215,6 +215,7 @@ internal static class Program
             }));
         OwnerInventoryFingerprintScenarios.Run(Test);
         LanTransportObservationScenarios.Run(Test);
+        RemoteHostPlanPreparationScenarios.Run(Test);
         Console.WriteLine($"RESULT {passed} passed, {failed} failed; no game process or save was opened.");
         return failed == 0 ? 0 : 1;
     }

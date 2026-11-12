@@ -157,6 +157,32 @@ public sealed class ReadOnlyProtocolSession
         new(actorId, ReadOnlyProtocolCodec.RejectedType,
             ReadOnlyProtocolCodec.Write(new ProtocolRejected(1, this.HostSessionId, requestId, actorId, reason)));
 
+    /// <summary>
+    /// Read a separate native-authorized machine intent on the host. The caller obtains the actor and connection
+    /// from the transport before calling. A successful read binds this envelope, but does not reserve a machine.
+    /// The diagnostic Request type continues to go through Receive and always rejects writes.
+    /// </summary>
+    internal bool TryReadMachineIntent(long authenticatedActorId, Guid connectionId, Func<string?> readBody,
+        long now, out string? raw, out MachineRequestEnvelope? intent)
+    {
+        this.RequireOwner();
+        raw = null;
+        intent = null;
+        if (!this.IsHost || connectionId == Guid.Empty || !this.AdvanceClock(now)
+            || !this.Peers.TryGetValue(authenticatedActorId, out var peer) || !peer.Ready
+            || peer.Snapshot.ConnectionId != connectionId || !peer.TakeQuota(now).Allowed)
+            return false;
+
+        string? value = readBody();
+        if (!MachineRequestCodec.TryRead(value, out var parsed) || parsed!.ActorId != authenticatedActorId
+            || parsed.SessionId != this.HostSessionId)
+            return false;
+
+        raw = value;
+        intent = parsed;
+        return true;
+    }
+
     private bool AdvanceClock(long now)
     {
         if (now < 0 || now < this.LastClock) return false;

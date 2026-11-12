@@ -58,6 +58,16 @@ public sealed class ModEntry : Mod
                 || this.Settings.FarmName != OwnerInventoryFingerprintScenarios.FarmName
                 || this.Settings.SaveFixtureId != OwnerInventoryFingerprintScenarios.WorldId))
             throw new InvalidOperationException("Reservation validation requires the exact XYSP1Menu Memory fixture.");
+        if (this.Settings.Enabled && this.Settings.Scenario == "LanMachineTransaction")
+        {
+            var transaction = new LanMachineTransactionScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => transaction.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => transaction.Tick();
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => transaction.OnMessage(e);
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => transaction.OnReturnedToTitle();
+            helper.Events.GameLoop.Saving += (_, _) => transaction.OnSaving();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == "LanTransportObservation")
         {
             var observation = new LanTransportObservationScenario(helper, this.Monitor, this.Settings);

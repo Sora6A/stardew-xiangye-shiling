@@ -30,6 +30,7 @@ internal sealed class LanTransportActorObservation
 
     private readonly bool Configured;
     private readonly bool HookInstalled;
+    internal bool Available => this.HookInstalled;
     private long Confirmed, MissingScope, ActorMismatch, StaleConnection;
     private LanTransportEvidence? LastConfirmed;
 
@@ -90,10 +91,10 @@ internal sealed class LanTransportActorObservation
         if (ticket is not null) this.StaleConnection++;
     }
 
-    internal void Confirm(IngressTicket? ticket, long claim, string messageType, long worldGeneration,
+    internal bool TryConfirm(IngressTicket? ticket, long claim, string messageType, long worldGeneration,
         long connectionGeneration, Guid connectionId)
     {
-        if (ticket is null) return;
+        if (ticket is null) return false;
         var scope = ticket.Scope;
         try
         {
@@ -104,14 +105,16 @@ internal sealed class LanTransportActorObservation
                 || !Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == actor))
             {
                 this.StaleConnection++;
-                return;
+                return false;
             }
             this.Confirmed++;
             this.LastConfirmed = new(actor, messageType, scope.WorldId, worldGeneration, connectionGeneration, connectionId);
+            return true;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             this.StaleConnection++;
+            return false;
         }
     }
 

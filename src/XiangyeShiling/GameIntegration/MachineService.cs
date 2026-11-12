@@ -36,6 +36,9 @@ public sealed class MachineService
         ?? throw new InvalidOperationException("LAN transport diagnostics are unavailable.");
     /// <summary>固定合成只读probe，另需主模块显式配置及专用世界；不委托Execute，true不表示对端收到。</summary>
     public bool TrySendNetworkProbe(ProtocolProbeKind kind, Guid requestId) => this.Network?.TrySendProbe(kind, requestId) ?? false;
+    internal bool TryQueueLanFixtureOperation(SObject machine, Request request, string? recipeId)
+        => this.Network?.TryQueueFixtureOperation(machine, request, recipeId) ?? false;
+    internal void CaptureLoadedReservation() => this.Network?.CaptureLoadedReservation();
     /// <summary>默认禁用、主线程、专用世界的固定旧Welcome重放；不能传入载荷或目标，true不表示对端拒绝。</summary>
     public bool TryReplayPreviousNetworkWelcome(Guid expectedConnectionId) => this.Network?.TryReplayPreviousWelcome(expectedConnectionId) ?? false;
 

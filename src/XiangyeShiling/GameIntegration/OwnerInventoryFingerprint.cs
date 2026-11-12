@@ -36,7 +36,11 @@ internal static class OwnerInventoryFingerprint
         => TryRead(item, static (id, stack, quality) => ItemRegistry.Create(id, stack, quality, allowNull: true),
             out fingerprint);
 
-    private static bool TryRead(Item? item, Func<string, int, int, Item?> createCanonical, out string? fingerprint)
+    // Only compare this digest with an existing write set from canonical plan preparation. Observation must
+    // not create registry objects: the native Object constructor advances the shared game RNG.
+    internal static bool TryReadObserved(Item? item, out string? fingerprint) => TryRead(item, null, out fingerprint);
+
+    private static bool TryRead(Item? item, Func<string, int, int, Item?>? createCanonical, out string? fingerprint)
     {
         fingerprint = null;
         if (item is null) return true;
@@ -53,14 +57,16 @@ internal static class OwnerInventoryFingerprint
             // ID/quantity/quality alone cannot restore preserve types, mutable native fields or other mod data.
             // Matching the persisted Object fields other than sprite orientation proves the registry can
             // reconstruct the ordinary inventory item used in the write set.
-            Item? canonical = createCanonical(id, native.Stack, native.Quality);
-            if (canonical is not SObject prototype || prototype.GetType() != typeof(SObject)
-                || ReferenceEquals(native, prototype) || prototype.modData.Pairs.Any() || prototype.heldObject.Value is not null
-                || prototype.QualifiedItemId != id || prototype.Stack != native.Stack || prototype.Quality != native.Quality)
-                return false;
-
             byte[] xml = WriteNativeXml(native);
-            if (!xml.AsSpan().SequenceEqual(WriteNativeXml(prototype))) return false;
+            if (createCanonical is not null)
+            {
+                Item? canonical = createCanonical(id, native.Stack, native.Quality);
+                if (canonical is not SObject prototype || prototype.GetType() != typeof(SObject)
+                    || ReferenceEquals(native, prototype) || prototype.modData.Pairs.Any() || prototype.heldObject.Value is not null
+                    || prototype.QualifiedItemId != id || prototype.Stack != native.Stack || prototype.Quality != native.Quality
+                    || !xml.AsSpan().SequenceEqual(WriteNativeXml(prototype)))
+                    return false;
+            }
             fingerprint = Convert.ToHexString(SHA256.HashData(xml)).ToLowerInvariant();
             return true;
         }

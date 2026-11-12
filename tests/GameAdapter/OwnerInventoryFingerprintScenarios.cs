@@ -14,6 +14,7 @@ internal static class OwnerInventoryFingerprintScenarios
         const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
         Type digest = typeof(string).MakeByRefType();
         MethodInfo read = RequireMethod("TryRead", typeof(Item), digest);
+        MethodInfo readObserved = RequireMethod("TryReadObserved", typeof(Item), digest);
         MethodInfo readSlot = RequireMethod("TryReadSlot", typeof(Farmer), typeof(int), digest);
         MethodInfo readWithFactory = RequireMethod("TryRead", typeof(Item), typeof(Func<string, int, int, Item>), digest);
         string soy = "(O)" + MachineService.Prefix + "_Soybean";
@@ -90,6 +91,22 @@ internal static class OwnerInventoryFingerprintScenarios
             canonical.price.Value = 9876;
             Check(WithCanonical(wheat, (_, _, _) => canonical) == (false, null),
                 "Visual normalization must not mask a price difference.");
+        });
+        test("native observation matches a prepared slot digest without a registry", () =>
+        {
+            var item = Plain("(O)262", 3, 2);
+            var expected = WithCanonical(item);
+            Check(expected.Success && Observe(readObserved, item, null) == expected,
+                "Observation must match the prepared digest in a CLI without a loaded item registry.");
+            item.flipped.Value = true;
+            Check(Observe(readObserved, item, null) == expected, "The cosmetic orientation cannot hide a matching slot.");
+            item.price.Value = 9876;
+            var changed = Observe(readObserved, item, null);
+            Check(changed.Success && changed.Fingerprint != expected.Fingerprint && !WithCanonical(item).Success,
+                "An observed native override cannot match the prepared digest or qualify for a new plan.");
+            Check(Observe(readObserved, null, null) == (true, null), "A known empty slot must remain distinct.");
+            item.modData["Other.Mod/marker"] = "preserve";
+            Check(Observe(readObserved, item, null) == (false, null), "Unsupported metadata cannot certify either side.");
         });
     }
 

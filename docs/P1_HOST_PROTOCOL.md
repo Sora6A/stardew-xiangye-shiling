@@ -131,11 +131,19 @@ SaveLoaded、ReturnedToTitle 先递增世界 generation 再清队列/会话/发�
 
 `OwnerCommitReservationCodec` 定义独立的存档记录 v1，每个世界只保留一笔待处理或待确认的预留。记录持有世界、主机和授权 ID、完整请求原文、设备前后原文、背包容量与槽位前后摘要、预留阶段。读取校验严格字段、版本、256 KiB 总上限、至多 128 格、设备身份和修订递增、请求及动作一致性。原始请求和设备字符串按原字节等值核对。`PlanKey` 对不可变计划生成版本化摘要，与 GrantId 组成预期农工日志。阶段变化不改变该值。历史回执仍需另外保留，已确认后的新库存和机器状态不能用于验证过去已完成的动作。未知、损坏或异世界的记录由适配层保留原值并拒绝写入。
 
-`HostReservationStore` 使用主机 Farmer 的 `Sora6A.XiangyeShiling/HostReservation` 键。仅游戏主线程、已加载世界的主屏主机可读写，值绑定当前世界和主机。旧档缺键视为空，任一现有值都占用该键。写前比较精确原值、写后回读；回调错误或写后冲突隔离到下次加载，保留实际原文。`Saving` 到 `Saved` 冻结操作，事件本身不证明农工提交或旧授权失效。已识别设备在记录损坏或本设备仍被预留时禁止原生移除与操作，合作农工暂不允许本地移除自定义设备。生产没有发出授权或写入预留的游戏入口。隔离 Memory 已验证原生移除保护、原版 Farmer XML 内存往返与阶段冻结；正常联机就寝的正式预留与回执仍待接入验收。
+`HostReservationStore` 使用主机 Farmer 的 `Sora6A.XiangyeShiling/HostReservation` 键。仅游戏主线程、已加载世界的主屏主机可读写，值绑定当前世界和主机。旧档缺键视为空，任一现有值都占用该键。写前比较精确原值、写后回读；回调错误或写后冲突隔离到下次加载，保留实际原文。`Saving` 到 `Saved` 冻结操作，事件本身不证明农工提交或旧授权失效。已识别设备在记录损坏或本设备仍被预留时禁止原生移除与操作，合作农工暂不允许本地移除自定义设备。隔离 Memory 已验证原生移除保护、原版 Farmer XML 内存往返与阶段冻结；正常联机就寝的正式预留与回执仍待验收。
 
 局域网接收路径核对使用游戏 1.6.15.24356 和 SMAPI 4.4.0。原版 `LidgrenServer.parseDataMessageFromClient` 可从 `NetIncomingMessage.SenderConnection` 反查已接受的农工，SMAPI 模组事件只携带其解析的声明字段。普通 SMAPI 农工发送路径的原版消息头使用主机 ID，不能将该字段与模组正文的发送者 ID 作等值准入。后续先验证实际接收作用域内的连接身份以及断线后失效，再将该证据接入主机准入。Steam/Galaxy 对应传输路径尚待验证。[SMAPI 4.4.0 接收与转发源码](https://github.com/Pathoschild/SMAPI/blob/4.4.0/src/SMAPI/Framework/SMultiplayer.cs#L437)
 
 `LanTransportActorObservation` 为显式开启诊断的专用世界提供只读来源观测。仅在核对过的 Windows 游戏及 SMAPI 程序集哈希、版本和私有签名均匹配时安装。主线程 SMAPI 接收作用域从原生定向发送回调取实际 Lidgren 连接，反向与正向核对主机批准的农工 ID，再比较事件声明。出队复核原生连接、当前在线 Farmer、SDK peer 和世界/断连代次。`ReadLanTransportDiagnostics` 只暴露观测，保留原有 `WritesDisabled`。SDK CLI 覆盖签名、无作用域、身份不符和代次过期。实际 LAN 双端已用正常探针验证来源匹配和断连失效。Steam/Galaxy 和其他构建待验证。见[实测](validation/P1-native-inventory-2026-11-11.md#2026-11-12-原生局域网来源观测)。
+
+### 原生 LAN 机器事务夹具
+
+`EnableLanTransactionFixture` 默认关闭。当前只接受明确配置的 `XYSNET05_620261116`、主屏多人世界和已验证的 LAN 接收能力。普通菜单、放置、原有 `XYS/Request/1` 仍保留原门禁。内部夹具入口从实际农工和地图对象生成 `XYS/MachineIntent/1`，沿用严格请求格式。主机先核对当前连接和代次，再按已握手 peer 的同一频率预算读取正文。请求只能定位设备、携带修订与配方 ID，投入、产量、品质、时间及原生堆叠均由主机实际对象计算。
+
+主机先将单笔预留写入原生 Farmer，农工从实际主机的复制 Farmer 读取。新扣料或领取需要与同一活跃连接的本地待处理请求完全相符，并核对原生设备引用所处格、类型和状态、背包写集与日志。农工只写本机受影响格和自己的 `OwnerCommitJournal`。主机从原版 Farmer 同时看到写集结果和匹配日志后才写设备；写入前后核对设备原值及实际库存证据。冲突保留原值并隔离。终态由农工标记 `Seen`，主机在释放预留前写入绑定世界和主机的每农工最近回执，再由农工清理精确匹配的本地日志。当前世界会话另保留至多 256 个已完成请求 ID，冷启动原会话意图由新会话栅栏拒绝。
+
+专用双端已完成豆坊实际开工和领取，每种意图重复发送一次仍只推进两次修订、扣黄豆 3 和给豆腐 2。失败后客户端的请求退出、原生菜单中的库存操作约束、同一会话的长期回执、生产设备放置、争用、实际机器保存与冷恢复仍需验收。普通游玩入口保持关闭。见[豆坊双端实测](validation/P1-native-inventory-2026-11-11.md#2026-11-12-真实豆坊开工和领取)。
 
 未来**可写**调用链必须顺序执行：严格 reader → 主线程可信 actor/target 快照与 Gate → 账本 TryBegin → 主机查配方/解锁/库存/时钟 → MachineRules → CommitCoordinator 的写前/写后/补偿核验 → Complete → 回执。Replayed 分支在本次规则和提交前返回；未得到 lease 的任何分支都不能准备或写入。NET-02 当前只读桥不接这条调用链，不能把其握手 Ready 当成 Authorized，也不能把拒绝响应当成功账本回执。
 
