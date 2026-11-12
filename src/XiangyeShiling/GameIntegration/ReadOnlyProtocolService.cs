@@ -20,7 +20,7 @@ namespace XiangyeShiling.GameIntegration;
 internal sealed class ReadOnlyProtocolService
 {
     private const int MaximumWorkPerTick = 16;
-    private const string MachineIntentType = "XYS/MachineIntent/1";
+    private const string MachineIntentType = "XYS/MachineIntent/2";
     private readonly IModHelper Helper;
     private readonly IMonitor Monitor;
     private readonly string ModId;
@@ -165,13 +165,15 @@ internal sealed class ReadOnlyProtocolService
                 var args = pending.Args;
                 if (args.Type == MachineIntentType)
                 {
+                    Guid nonce = Guid.Empty;
                     if (this.IsHost && this.MachineFixtureAllowed() && this.Session.ActiveSessionId is Guid activeSession
                         && ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(args.FromPlayerID))
                         && this.LanTransport.TryConfirm(pending.LanProvenance, args.FromPlayerID, args.Type,
                             this.Generation, Volatile.Read(ref this.ConnectionGeneration), pending.ConnectionId)
-                        && this.Session.TryReadMachineIntent(args.FromPlayerID, pending.ConnectionId, () => ReadBody(args),
+                        && this.Session.TryReadMachineIntent(args.FromPlayerID, pending.ConnectionId,
+                            () => OwnerIntentRefusal.TryReadIntent(ReadBody(args), out nonce, out string? requestRaw) ? requestRaw : null,
                             now, out string? raw, out var intent))
-                        this.HostTransactions!.TryReserve(activeSession, args.FromPlayerID, raw!, intent!);
+                        this.HostTransactions!.ReceiveIntent(activeSession, args.FromPlayerID, nonce, raw!, intent!);
                     continue;
                 }
                 if (pending.LanProvenance is not null && this.IsHost && this.ProbesAllowed()
@@ -282,7 +284,8 @@ internal sealed class ReadOnlyProtocolService
 
     private bool MachineFixtureAllowed() => this.Options.EnableLanTransactionFixture && this.LanTransport.Available && !this.Faulted
         && Context.IsWorldReady && Context.IsMultiplayer && !Context.IsSplitScreen && Context.ScreenId == 0
-        && Game1.uniqueIDForThisGame == 620261116 && Game1.player.farmName.Value == "XYSNET05";
+        && (Game1.uniqueIDForThisGame == 620261116 && Game1.player.farmName.Value == "XYSNET05"
+            || Game1.uniqueIDForThisGame == 620261118 && Game1.player.farmName.Value == "XYSNET06");
 
     internal bool TryQueueFixtureOperation(SObject machine, Request request, string? recipeId)
     {
@@ -302,7 +305,8 @@ internal sealed class ReadOnlyProtocolService
             recipeId is null ? MachineRequestAction.Collect : MachineRequestAction.Start, recipeId);
         if (!MachineRequestCodec.IsValid(intent)) return false;
         string json = MachineRequestCodec.Write(intent);
-        return this.OwnerTransactions!.TryRemember(intent, host.ConnectionId) && this.Send(new(host.PlayerId, MachineIntentType, json));
+        return this.OwnerTransactions!.TryRemember(intent, host.ConnectionId, out Guid nonce)
+            && this.Send(new(host.PlayerId, MachineIntentType, OwnerIntentRefusal.WriteIntent(nonce, json)));
     }
 
     /// <summary>

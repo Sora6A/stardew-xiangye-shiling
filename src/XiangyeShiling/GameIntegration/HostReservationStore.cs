@@ -80,6 +80,23 @@ internal sealed class HostReservationStore
         return this.TryWrite(host, Key, currentRaw, OwnerCommitReservationCodec.Write(current.WithTerminalStatus(status)));
     }
 
+    internal bool TryPublishRefusal(OwnerIntentRefusal refusal)
+    {
+        if (!this.TryGetHost(out Farmer? host) || refusal.WorldId != Game1.uniqueIDForThisGame || refusal.HostId != host.UniqueMultiplayerID
+            || !TryRead(host, out _, out var current)
+            || (current?.Request.ActorId == refusal.ActorId && current.Request.RequestId == refusal.RequestId))
+            return false;
+
+        string key = OwnerIntentRefusal.MarkerKey(MachineService.Prefix, refusal.ActorId);
+        string? old = host.modData.GetValueOrDefault(key);
+        if (host.modData.ContainsKey(key) && (!OwnerIntentRefusal.TryRead(old, out var previous)
+            || previous.WorldId != refusal.WorldId || previous.HostId != refusal.HostId || previous.ActorId != refusal.ActorId))
+            return false;
+
+        string next = refusal.Encode();
+        return old == next || this.TryWrite(host, key, old, next);
+    }
+
     /// <summary>Publish the result before releasing the reservation. The owner can clear its marker after reload.</summary>
     internal bool TryRetire(OwnerCommitReservation plan, string seen)
     {

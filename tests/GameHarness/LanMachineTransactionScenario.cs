@@ -21,14 +21,15 @@ internal sealed class LanMachineTransactionScenario
     private const string Id = MachineService.Prefix;
     private const string HarnessId = Id + ".GameHarness";
     private const string ReadyType = "LanMachineTransactionFixtureReady";
-    private const string ReservationKey = Id + "/HostReservation";
-    private const string JournalKey = Id + "/OwnerCommitJournal";
-    private const string ReceiptKey = Id + "/OwnerReceipt/-5889529773947908937";
-    private const string Soybean = "(O)" + Id + "_Soybean";
-    private const string Tofu = "(O)" + Id + "_Tofu";
-    private const string Recipe = Id + "_Recipe_Tofu";
-    private const int InputSlot = 11;
-    private static readonly Vector2 Below = new(0, 1);
+    internal const string ReservationKey = Id + "/HostReservation";
+    internal const string JournalKey = Id + "/OwnerCommitJournal";
+    internal const string ReceiptKey = Id + "/OwnerReceipt/-5889529773947908937";
+    private const string RefusalKey = Id + "/OwnerRefusal/-5889529773947908937";
+    internal const string Soybean = "(O)" + Id + "_Soybean";
+    internal const string Tofu = "(O)" + Id + "_Tofu";
+    internal const string Recipe = Id + "_Recipe_Tofu";
+    internal const int InputSlot = 11;
+    internal static readonly Vector2 Below = new(0, 1);
 
     private readonly IModHelper Helper;
     private readonly IMonitor Monitor;
@@ -39,13 +40,13 @@ internal sealed class LanMachineTransactionScenario
     private MachineService? Service;
     private SObject? PreparedMachine;
     private Slot?[]? HostInventory, Before, Started, Collected;
-    private Request? StartRequest, CollectRequest;
+    private Request? RefusedRequest, ProposedStart, StartRequest, CollectRequest;
     private string? Failure;
     private ReadySignal? Ready;
     private Evidence? LastEvidence;
     private int PreparedRevision = -1;
     private int? ReadyClock;
-    private bool Positioned, Completed, SavingObserved;
+    private bool Positioned, Completed, SavingObserved, RefusalObserved;
     private Guid InstanceId;
     private ProtocolDiagnosticSnapshot? Protocol;
     private LanTransportDiagnosticSnapshot? Lan;
@@ -90,7 +91,7 @@ internal sealed class LanMachineTransactionScenario
 
             Farmer host = Game1.MasterPlayer;
             Require(host.UniqueMultiplayerID == NativeNetworkBootstrap.HostId, "Unexpected native host.");
-            if (this.Host && this.PreparedMachine is null) this.PrepareMachine(host);
+            if (this.Host && this.PreparedMachine is null) this.PreparedMachine = PrepareMachine(host);
             long expectedPeer = this.Host ? NativeNetworkBootstrap.ClientId : NativeNetworkBootstrap.HostId;
             if (!this.Protocol.Peers.Any(peer => peer.PlayerId == expectedPeer && peer.IsHost != this.Host && peer.Ready)) return;
             Farmer? owner = this.Host ? Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: true) : Game1.player;
@@ -104,7 +105,7 @@ internal sealed class LanMachineTransactionScenario
                 "The replicated device does not have a readable bean workshop state.");
             if (this.InstanceId == Guid.Empty) this.InstanceId = state!.InstanceId;
             Require(state!.InstanceId == this.InstanceId, "The native machine instance changed.");
-            if (!this.Host && !this.Positioned) this.PrepareOwner(owner, farm, machine);
+            if (!this.Host && !this.Positioned) this.Positioned = PrepareOwner(owner, farm, machine);
             if (!ReferenceEquals(owner.currentLocation, farm) || owner.Tile != machine.TileLocation + Below) return;
 
             if (this.HostInventory is null) this.HostInventory = Snapshot(host);
@@ -124,7 +125,7 @@ internal sealed class LanMachineTransactionScenario
         }
     }
 
-    private void PrepareMachine(Farmer host)
+    internal static SObject PrepareMachine(Farmer host)
     {
         GameLocation farm = Game1.getFarm();
         Require(!farm.objects.Values.Any(item => MachineService.TryGetKind(item, out _))
@@ -137,13 +138,12 @@ internal sealed class LanMachineTransactionScenario
                         select candidate).First();
         var machine = ItemRegistry.Create<SObject>("(BC)" + Id + "_BeanWorkshop");
         machine.TileLocation = tile;
-        this.InstanceId = Guid.NewGuid();
-        machine.modData[MachineService.StateKey] = MachineStateCodec.Write(MachineState.Empty(this.InstanceId, MachineKind.BeanWorkshop));
+        machine.modData[MachineService.StateKey] = MachineStateCodec.Write(MachineState.Empty(Guid.NewGuid(), MachineKind.BeanWorkshop));
         farm.objects.Add(tile, machine);
-        this.PreparedMachine = machine;
+        return machine;
     }
 
-    private void PrepareOwner(Farmer owner, GameLocation farm, SObject machine)
+    internal static bool PrepareOwner(Farmer owner, GameLocation farm, SObject machine)
     {
         Require(ReferenceEquals(owner, Game1.player) && owner.Items.Count > InputSlot && owner.Items[InputSlot] is null
             && owner.Items.CountId(Soybean) == 0 && owner.Items.CountId(Tofu) == 0 && !owner.modData.ContainsKey(JournalKey),
@@ -153,12 +153,12 @@ internal sealed class LanMachineTransactionScenario
         {
             if (!Game1.isWarping && !Game1.fadeToBlack)
                 Game1.warpFarmer(farm.NameOrUniqueName, (int)standing.X, (int)standing.Y, 0);
-            return;
+            return false;
         }
-        if (Game1.isWarping || Game1.fadeToBlack || Game1.eventUp || !Context.IsPlayerFree) return;
+        if (Game1.isWarping || Game1.fadeToBlack || Game1.eventUp || !Context.IsPlayerFree) return false;
         owner.setTileLocation(standing);
         owner.Items[InputSlot] = ItemRegistry.Create(Soybean, 6);
-        this.Positioned = true;
+        return true;
     }
 
     private void CaptureExpectedInventory(Farmer owner)
@@ -182,6 +182,15 @@ internal sealed class LanMachineTransactionScenario
             this.SendReady(0);
             return;
         }
+        if (!this.RefusalObserved && state.Revision == 0 && !host.modData.ContainsKey(ReservationKey)
+            && host.modData.TryGetValue(RefusalKey, out string rawRefusal) && this.ReadRefusedRequest(rawRefusal) is Guid refused)
+        {
+            Require(state.Batch is null && Snapshot(owner).SequenceEqual(this.Before!) && !owner.modData.ContainsKey(JournalKey),
+                "The native refusal changed the initial device or inventory.");
+            this.RefusedRequest = new Request(refused, this.InstanceId, 0, owner.UniqueMultiplayerID);
+            this.RefusalObserved = true;
+            this.Report();
+        }
         if (state.Revision == 1 && this.PreparedRevision == 0 && IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyStarted(owner, state);
@@ -202,6 +211,7 @@ internal sealed class LanMachineTransactionScenario
         if (state.Revision == 2 && this.PreparedRevision == 1 && IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyCollected(owner, state);
+            Require(this.RefusalObserved, "The host did not observe a no-grant refusal before actual machine work.");
             this.Finish(null);
         }
         Require(state.Revision is >= 0 and <= 2, "Unexpected extra machine transaction.");
@@ -212,8 +222,22 @@ internal sealed class LanMachineTransactionScenario
         if (this.StartRequest is null && this.Ready is { Revision: 0 } start && start.InstanceId == this.InstanceId)
         {
             Require(state.Revision == 0 && Snapshot(owner).SequenceEqual(this.Before!), "Native client state differed before sending Start.");
-            this.StartRequest = new Request(Guid.NewGuid(), this.InstanceId, 0, owner.UniqueMultiplayerID);
-            this.SendTwice(machine, this.StartRequest, Recipe);
+            if (this.RefusedRequest is null)
+            {
+                this.RefusedRequest = new Request(Guid.NewGuid(), this.InstanceId, 0, owner.UniqueMultiplayerID);
+                Require(this.Send(machine, this.RefusedRequest, Recipe + "_Unknown"), "Production did not send the no-grant fixture intent.");
+                this.Report();
+                return;
+            }
+            if (!host.modData.TryGetValue(RefusalKey, out string raw) || this.ReadRefusedRequest(raw) != this.RefusedRequest.Id) return;
+            Require(!host.modData.ContainsKey(ReservationKey) && !owner.modData.ContainsKey(JournalKey),
+                "The native no-grant reply came with a reservation or owner journal.");
+            this.ProposedStart ??= new Request(Guid.NewGuid(), this.InstanceId, 0, owner.UniqueMultiplayerID);
+            if (!this.Send(machine, this.ProposedStart, Recipe)) return;
+            this.RefusalObserved = true;
+            this.StartRequest = this.ProposedStart;
+            Require(this.Send(machine, this.StartRequest, Recipe), "Production did not send the duplicate Start after a refusal.");
+            this.Report();
             return;
         }
         if (this.StartRequest is { } started && this.CollectRequest is null && this.Ready is { Revision: 1 } collect
@@ -260,13 +284,28 @@ internal sealed class LanMachineTransactionScenario
 
     private void SendTwice(SObject machine, Request request, string? recipe)
     {
-        var send = typeof(MachineService).GetMethod("TryQueueLanFixtureOperation", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("The isolated production transaction entry is unavailable.");
-        object?[] arguments = { machine, request, recipe };
-        Require(send.Invoke(this.Service, arguments) is true && send.Invoke(this.Service, arguments) is true,
+        Require(this.Send(machine, request, recipe) && this.Send(machine, request, recipe),
             "Production declined to send the exact duplicate transaction intent.");
         this.Monitor.Log($"Sent the same production revision {request.ExpectedRevision} intent twice.", LogLevel.Info);
         this.Report();
+    }
+
+    private bool Send(SObject machine, Request request, string? recipe)
+    {
+        var send = typeof(MachineService).GetMethod("TryQueueLanFixtureOperation", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("The isolated production transaction entry is unavailable.");
+        return send.Invoke(this.Service, new object?[] { machine, request, recipe }) is true;
+    }
+
+    private Guid? ReadRefusedRequest(string raw)
+    {
+        string prefix = FormattableString.Invariant($"1|{NativeNetworkBootstrap.TransactionFixtureId}|{NativeNetworkBootstrap.HostId}|{NativeNetworkBootstrap.ClientId}|");
+        string[] fields = raw.Split('|');
+        return raw.StartsWith(prefix, StringComparison.Ordinal) && fields.Length == 8
+            && Guid.TryParseExact(fields[4], "D", out Guid session) && session == this.Protocol?.SessionId
+            && Guid.TryParseExact(fields[5], "D", out Guid nonce) && nonce != Guid.Empty
+            && Guid.TryParseExact(fields[6], "D", out Guid request) && request != Guid.Empty && fields[7].Length == 64
+            ? request : null;
     }
 
     internal void OnMessage(ModMessageReceivedEventArgs args)
@@ -326,7 +365,8 @@ internal sealed class LanMachineTransactionScenario
     {
         SchemaVersion = 1, ProcessId = Environment.ProcessId, FixtureId = NativeNetworkBootstrap.TransactionFixtureId,
         NetworkRole = this.Host ? "Host" : "Client", this.Completed, this.Failure, this.SavingObserved, this.InstanceId,
-        this.PreparedRevision, this.ReadyClock, this.Positioned, StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
+        this.PreparedRevision, this.ReadyClock, this.Positioned, this.RefusalObserved, RefusedRequest = this.RefusedRequest?.Id,
+        StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
         this.Stages, this.Protocol, this.Lan
     });
 

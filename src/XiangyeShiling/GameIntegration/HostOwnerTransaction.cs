@@ -11,10 +11,11 @@ namespace XiangyeShiling.GameIntegration;
 /// </summary>
 internal sealed class HostOwnerTransaction
 {
-    private const int MaxReceiptsPerSession = 256;
+    private const int MaxIntentResultsPerSession = 256;
     private readonly HostReservationStore Store;
     private readonly RemoteHostPlanPreparation Planner;
     private readonly HashSet<(long Actor, Guid Request)> Completed = new();
+    private readonly HashSet<(long Actor, Guid Request)> Refused = new();
     private string? ColdPlanKey;
 
     internal HostOwnerTransaction(MachineService machines)
@@ -27,6 +28,7 @@ internal sealed class HostOwnerTransaction
     {
         this.ColdPlanKey = null;
         this.Completed.Clear();
+        this.Refused.Clear();
     }
 
     internal void CaptureLoadedRecord()
@@ -37,21 +39,48 @@ internal sealed class HostOwnerTransaction
             this.ColdPlanKey = plan.PlanKey;
     }
 
-    internal bool TryReserve(Guid sessionId, long verifiedActor, string raw, MachineRequestEnvelope intent)
+    internal void ReceiveIntent(Guid sessionId, long verifiedActor, Guid nonce, string raw, MachineRequestEnvelope intent)
     {
-        if (!this.Store.TryRead(out var existing)) return false;
-        if (existing is not null)
-            return existing.Request.ActorId == verifiedActor && existing.RequestRaw == raw;
+        if (!this.Store.TryRead(out var existing) || intent.ActorId != verifiedActor || intent.SessionId != sessionId
+            || !OwnerIntentRefusal.TryCreate(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, raw, out var refusal)
+            || !refusal.Matches(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, intent, raw))
+            return;
+
+        var key = (verifiedActor, intent.RequestId);
+        // A live grant always wins. A changed retry cannot replace it or publish a no-grant result.
+        if (existing?.Request.ActorId == verifiedActor && existing.Request.RequestId == intent.RequestId) return;
+        if (this.Refused.Contains(key))
+        {
+            this.Store.TryPublishRefusal(refusal);
+            return;
+        }
+        if (this.Completed.Count + this.Refused.Count >= MaxIntentResultsPerSession) return;
+
+        if (existing is not null || this.Completed.Contains(key))
+        {
+            Refuse();
+            return;
+        }
 
         Farmer? owner = Game1.GetPlayer(verifiedActor, onlyOnline: true);
-        if (owner is null || owner.modData.ContainsKey(OwnerInventoryCommit.JournalKey) || this.Completed.Count >= MaxReceiptsPerSession
-            || this.Completed.Contains((verifiedActor, intent.RequestId))
-            || !HostReservationStore.TryReadReceipt(Game1.player, verifiedActor, out var previous) || previous?.RequestId == intent.RequestId
-            || !this.Planner.TryPrepare(Game1.uniqueIDForThisGame, verifiedActor, sessionId, raw, out var plan)
-            || plan is null || plan.Request != intent)
-            return false;
+        // A prior owner marker can still be leaving the replica. Let the same pending intent retry later.
+        if (owner is null || owner.modData.ContainsKey(OwnerInventoryCommit.JournalKey)
+            || !HostReservationStore.TryReadReceipt(Game1.player, verifiedActor, out var previous)) return;
+        if (previous?.RequestId == intent.RequestId || !this.Planner.TryPrepare(Game1.uniqueIDForThisGame, verifiedActor,
+            sessionId, raw, out var plan) || plan is null || plan.Request != intent)
+        {
+            Refuse();
+            return;
+        }
 
-        return this.Store.TryReserve(plan);
+        // A failed native setter can leave a real record. Only pre-write decisions can publish refusal.
+        this.Store.TryReserve(plan);
+
+        void Refuse()
+        {
+            this.Refused.Add(key);
+            this.Store.TryPublishRefusal(refusal);
+        }
     }
 
     internal void Advance(Guid sessionId)
