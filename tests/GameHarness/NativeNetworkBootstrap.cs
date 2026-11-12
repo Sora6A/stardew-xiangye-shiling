@@ -39,7 +39,8 @@ internal sealed class NativeNetworkBootstrap
     {
         bool ownership = config.Scenario == "NativeInventoryOwnership" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
         bool recovery = config.Scenario == "NativeInventoryRecovery" && config.FarmName == RecoveryFarmName && config.SaveFixtureId == RecoveryFixtureId;
-        if (!config.Enabled || !config.EnableNativeInventoryOwnership || config.OpenPreview || (!ownership && !recovery)
+        bool observation = config.Scenario == "LanTransportObservation" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
+        if (!config.Enabled || config.OpenPreview || (!observation && (!config.EnableNativeInventoryOwnership || (!ownership && !recovery)))
             || config.NetworkRole is not ("Host" or "Client"))
             throw new InvalidOperationException("Native network bootstrap requires a dedicated fixture and Host or Client role.");
 

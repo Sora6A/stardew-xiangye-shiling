@@ -27,3 +27,9 @@ Verify 轮主机 PID 18764 在农工上线前从磁盘加载的离线 Farmer 读
 两轮审计的 `IntegrityPassed`、`ScenarioPassed`、`DiskCommitMatches` 均为 true。Write 轮只更新两个副本主文件并创建两个原版备份，Verify 轮全部 51 个存档文件哈希一致。两轮隔离夹具均禁用，四个测试进程均已退出，原普通进程 16668 保留。游戏原版写回共享启动偏好，前后哈希与启动前字节留在两轮证据中。
 
 Write 轮直接推进原版存档迭代器，`SavingObserved=false`、`SavedObserved=false`。写盘以主 XML、原版备份和下一进程冷重载证明。生产实现仍需在正常就寝保存中验证 SMAPI 生命周期，并覆盖主机预留、部分同步、两人争用及真实设备提交。标记木材仅用于此场景识别同一测试栈，生产指纹实测需使用普通无标记物品。
+
+## 2026-11-12 原生局域网来源观测
+
+在 `XYSNET02` 的隔离主机与实际农工启用 `LanTransportObservation` 及只读探针配置。主机 PID 22572、客户端 PID 33080。农工正常发送固定只读开工探针。主机从原版 Lidgren 已批准的连接识别农工，两次原生派发通过来源核对，其中开工探针与同一 SDK 连接、同一请求的拒绝配对。两端均记录 `WritesDisabled`。客户端实际返回标题后，主机断连代次从 0 递增到 1，旧 `LastConfirmed` 失效。
+
+生产 DLL `1A077F962A9D81BA85395E0FE3AE2C4056FB38D1FFC8F7F192BF699304EFB3D0`，夹具 DLL `E525F06CBD0F03F675DD66CFB70680DD25691ACD87FCD1E3B7939FB45FB1874F`。双方完成，未发生保存，53 个文件哈希一致；关闭两测试进程、禁用配置，保留原普通进程 16668。原版改写了 `startup_preferences`。报告、构建和审计保存在 `.local/p1-net03-lan/native`。本轮范围为指定 Windows 1.6.15.24356、SMAPI 4.4.0 和 LAN 接收来源，Steam/Galaxy 和实际写权限另验。

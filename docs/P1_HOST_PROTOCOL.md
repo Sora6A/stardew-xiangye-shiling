@@ -133,7 +133,7 @@ SaveLoaded、ReturnedToTitle 先递增世界 generation 再清队列/会话/发�
 
 局域网接收路径核对使用游戏 1.6.15.24356 和 SMAPI 4.4.0。原版 `LidgrenServer.parseDataMessageFromClient` 可从 `NetIncomingMessage.SenderConnection` 反查已接受的农工，SMAPI 模组事件只携带其解析的声明字段。普通 SMAPI 农工发送路径的原版消息头使用主机 ID，不能将该字段与模组正文的发送者 ID 作等值准入。后续先验证实际接收作用域内的连接身份以及断线后失效，再将该证据接入主机准入。Steam/Galaxy 对应传输路径尚待验证。[SMAPI 4.4.0 接收与转发源码](https://github.com/Pathoschild/SMAPI/blob/4.4.0/src/SMAPI/Framework/SMultiplayer.cs#L437)
 
-`LanTransportActorObservation` 为显式开启诊断的专用世界提供只读来源观测。仅在核对过的 Windows 游戏及 SMAPI 程序集哈希、版本和私有签名均匹配时安装。主线程 SMAPI 接收作用域从原生定向发送回调取实际 Lidgren 连接，反向与正向核对主机批准的农工 ID，再比较事件声明。出队复核原生连接、当前在线 Farmer、SDK peer 和世界/断连代次。`ReadLanTransportDiagnostics` 只暴露观测，保留原有 `WritesDisabled`。SDK CLI 覆盖签名、无作用域、身份不符、代次过期，真实 LAN 双端待验；其他构建和传输没有能力证明。
+`LanTransportActorObservation` 为显式开启诊断的专用世界提供只读来源观测。仅在核对过的 Windows 游戏及 SMAPI 程序集哈希、版本和私有签名均匹配时安装。主线程 SMAPI 接收作用域从原生定向发送回调取实际 Lidgren 连接，反向与正向核对主机批准的农工 ID，再比较事件声明。出队复核原生连接、当前在线 Farmer、SDK peer 和世界/断连代次。`ReadLanTransportDiagnostics` 只暴露观测，保留原有 `WritesDisabled`。SDK CLI 覆盖签名、无作用域、身份不符和代次过期。实际 LAN 双端已用正常探针验证来源匹配和断连失效。Steam/Galaxy 和其他构建待验证。见[实测](validation/P1-native-inventory-2026-11-11.md#2026-11-12-原生局域网来源观测)。
 
 未来**可写**调用链必须顺序执行：严格 reader → 主线程可信 actor/target 快照与 Gate → 账本 TryBegin → 主机查配方/解锁/库存/时钟 → MachineRules → CommitCoordinator 的写前/写后/补偿核验 → Complete → 回执。Replayed 分支在本次规则和提交前返回；未得到 lease 的任何分支都不能准备或写入。NET-02 当前只读桥不接这条调用链，不能把其握手 Ready 当成 Authorized，也不能把拒绝响应当成功账本回执。
 

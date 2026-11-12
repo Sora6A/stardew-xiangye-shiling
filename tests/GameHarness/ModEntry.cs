@@ -56,6 +56,16 @@ public sealed class ModEntry : Mod
                 || this.Settings.FarmName != OwnerInventoryFingerprintScenarios.FarmName
                 || this.Settings.SaveFixtureId != OwnerInventoryFingerprintScenarios.WorldId))
             throw new InvalidOperationException("Owner fingerprint validation requires the exact XYSP1Menu Memory fixture.");
+        if (this.Settings.Enabled && this.Settings.Scenario == "LanTransportObservation")
+        {
+            var observation = new LanTransportObservationScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => observation.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => observation.Tick();
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => observation.OnMessage(e);
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => observation.OnReturnedToTitle();
+            helper.Events.GameLoop.Saving += (_, _) => observation.OnSaving();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == "NativeInventoryRecovery")
         {
             var recovery = new NativeInventoryRecoveryScenario(helper, this.Monitor, this.Settings);
