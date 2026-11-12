@@ -22,6 +22,7 @@ public sealed class Config
     public bool EnableNativeInventoryOwnership { get; set; }
     public bool NativeInventoryCommitByOwner { get; set; }
     public string NativeRecoveryPhase { get; set; } = "";
+    public bool VerifyOwnerInventoryFingerprints { get; set; }
 }
 
 /// <summary>
@@ -50,6 +51,11 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.VerifyOwnerInventoryFingerprints
+            && (this.Settings.Scenario != "Memory" || this.Settings.OpenPreview
+                || this.Settings.FarmName != OwnerInventoryFingerprintScenarios.FarmName
+                || this.Settings.SaveFixtureId != OwnerInventoryFingerprintScenarios.WorldId))
+            throw new InvalidOperationException("Owner fingerprint validation requires the exact XYSP1Menu Memory fixture.");
         if (this.Settings.Enabled && this.Settings.Scenario == "NativeInventoryRecovery")
         {
             var recovery = new NativeInventoryRecoveryScenario(helper, this.Monitor, this.Settings);
@@ -201,6 +207,14 @@ public sealed class ModEntry : Mod
             if (!this.Pending || !Context.IsWorldReady) return;
             this.Pending = false;
             if (!this.Settings.Enabled || Context.IsMultiplayer || Game1.player.farmName.Value != this.Settings.FarmName) return;
+            if (this.Settings.VerifyOwnerInventoryFingerprints
+                && (!Context.IsMainPlayer || Context.IsSplitScreen || Context.ScreenId != 0
+                    || Game1.uniqueIDForThisGame != OwnerInventoryFingerprintScenarios.WorldId
+                    || Constants.SaveFolderName != OwnerInventoryFingerprintScenarios.SaveFolder))
+            {
+                this.Monitor.Log("Owner fingerprint validation refused the loaded world.", LogLevel.Error);
+                return;
+            }
             this.Run();
         };
     }
@@ -579,6 +593,12 @@ public sealed class ModEntry : Mod
                 Stock(ItemRegistry.Create(Soy, 6));
                 MachineMenuNavigationScenarios.Run(this.Helper, player, machine!);
             });
+            if (this.Settings.VerifyOwnerInventoryFingerprints)
+                Test("live owner fingerprints survive native Farmer XML", () =>
+                {
+                    Stock(ItemRegistry.Create(Soy, 3, 2), ItemRegistry.Create("(O)262", 2));
+                    OwnerInventoryFingerprintScenarios.Run(player);
+                });
         }
         catch (Exception error) { failure = error.ToString(); this.Monitor.Log(failure, LogLevel.Error); }
         finally

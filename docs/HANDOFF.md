@@ -1,5 +1,11 @@
 # 当前开发交接
 
+## 2026-11-12 原版配方物品指纹实机检查点
+
+分支 `codex/first-stable-release`，本轮基线 `dbf815363557bd0547870118662477facee54b57`。新增默认关闭的 GameHarness 实机检查，SDK Release 构建零警告、零错误。专用 `XYSP1Menu` 实际加载一次，普通 Memory 20 项通过；新增检查通过黄豆的原版 Farmer XML 内存往返，在普通小麦初次取指纹失败。生产代码与开发包沿用上轮。见 [BUG-2026-027](bugfix/BUG-2026-027-native-wheat-fingerprint.md)。
+
+测试进程 23472 已退出，夹具禁用，内存恢复，51 个存档文件哈希一致，无原生保存。原进程 16668 保留。原报告、启动配置、偏好备份及审计在 `.local/p1-net03-fingerprint`。下一步定位小麦的原生类型或 XML 重建差异，修复后完整重跑，再验证实际两端指纹及可信 LAN 连接。当前尚无正式版、PR 或新远程操作。
+
 ## 2026-11-12 NET03 冷重载试验检查点
 
 分支 `codex/first-stable-release`，本轮起点 `e2dd31c4b2f717dd7b9f5991b2d716e96317ddf9`，库存写集、恢复决策和指纹已提交 `e69c31a0d4a3f055f57a019c494afc063ea7e45f`。本检查点仅包含合作存档复制工具、默认禁用的 GameHarness 恢复夹具及验收文档，最终提交以分支头为准。Python 119 项、MachineCore 123 项、GameAdapter 16 项、catalog 40/30、维护检查通过，生产与夹具 Release 均零警告、零错误。开发 ZIP 已刷新，新 DLL `B44245E9B433D970689B2876D85F816C5E0D8B89D35B866A9BD117B20932F144`；实机旧包与两端报告一同归档。

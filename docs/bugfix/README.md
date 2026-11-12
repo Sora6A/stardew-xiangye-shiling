@@ -30,5 +30,6 @@
 | [BUG-2026-024](BUG-2026-024-world-movement-investigation.md) | 世界输入场景操作者D移动无响应、Esc菜单可用 | 旧根因调查中；新9004人工四方向/菜单正常并完整20项通过、已退出审计；只读诊断不等于移动修复 | 原失败/新输入报告独立保留；根因回归未编写，不将新进程正常回填旧失败 |
 | [BUG-2026-025](BUG-2026-025-machine-menu-small-viewport.md) | 设备菜单在小逻辑视口裁切 | 旧包实机失败，新包 19 项通过，中文窗口最大化和还原实测通过 | GameHarness 缩放命中、指南和操作锁，满包请求保留 |
 | [BUG-2026-026](BUG-2026-026-machine-menu-navigation.md) | 设备菜单缺少键盘和手柄焦点 | 旧包实机复现，新包 20 项后台游戏回归通过 | GameHarness 键盘与原版手柄菜单回调、缩放、指南和操作锁 |
+| [BUG-2026-027](BUG-2026-027-native-wheat-fingerprint.md) | 普通小麦的库存格指纹不可用 | 已复现，根因调查中，修复后待验 | GameHarness `live owner fingerprints survive native Farmer XML` |
 
 状态为“待验证”的记录必须说明缺少什么证据；已合并记录附真实PR/提交，不以计划分支代替。索引保留历史，不将开发审查发现的缺陷包装成线上事故。
