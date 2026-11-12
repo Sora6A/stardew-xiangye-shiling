@@ -74,6 +74,8 @@ internal static class OwnerCommitReservationScenarios
 
         test("host reservation plan key binds exact content and ignores slot ordering", () =>
         {
+            // Freeze the on-disk journal identity independently of same-version writer/reader round trips.
+            Assert(plan.PlanKey == "586f88a156f4309dc8f7d3e325d339451f6b62d5e0131edd682c9766d4296bf5");
             var reordered = Create(startRaw, idleRaw, batchRaw, OwnerInventoryWriteSet.Create(3, changed.Reverse().ToArray())!);
             Assert(reordered.PlanKey == plan.PlanKey);
             Assert(Create(startRaw, idleRaw.TrimStart(), batchRaw, cost).PlanKey != plan.PlanKey);

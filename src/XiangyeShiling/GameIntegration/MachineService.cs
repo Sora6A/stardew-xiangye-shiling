@@ -22,6 +22,7 @@ public sealed class MachineService
     private readonly ITranslationHelper Text;
     private CommitCoordinator Coordinator = new();
     private readonly int MainThread = Environment.CurrentManagedThreadId;
+    internal HostReservationStore Reservations { get; }
     public IReadOnlyList<MachineRecipe> Recipes { get; }
     private ReadOnlyProtocolService? Network;
 
@@ -43,9 +44,14 @@ public sealed class MachineService
         this.Monitor = monitor;
         this.Text = text;
         this.Recipes = recipes;
+        this.Reservations = new(monitor);
     }
 
-    public void ResetSession() => this.Coordinator = new();
+    public void ResetSession()
+    {
+        this.Coordinator = new();
+        this.Reservations.Reset();
+    }
     /// <summary>
     /// 只识别本模块两种设备；原生 NPC 清路会将空格查询得到的 null 传到移除补丁。
     /// 空对象/其他物品返回 false 且不写状态，成功时才保证 item 非空；失败的 kind 不可使用。
@@ -96,7 +102,8 @@ public sealed class MachineService
             || !actor.currentLocation.objects.TryGetValue(machine.TileLocation, out SObject current) || !ReferenceEquals(current, machine)
             || Math.Abs(actor.Tile.X - machine.TileLocation.X) > 1 || Math.Abs(actor.Tile.Y - machine.TileLocation.Y) > 1)
             return Fail("machine.out-of-range");
-        if (!TryRead(machine, out MachineState? state)) return Fail("machine.invalid-state");
+        if (this.Reservations.BlocksMachine(machine) || !TryRead(machine, out MachineState? state))
+            return Fail("machine.invalid-state");
 
         string beforeJson = machine.modData[StateKey];
         MachineRecipe? recipe = recipeId is null ? null : this.Recipes.SingleOrDefault(r => r.Id == recipeId);

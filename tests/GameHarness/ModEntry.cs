@@ -23,6 +23,7 @@ public sealed class Config
     public bool NativeInventoryCommitByOwner { get; set; }
     public string NativeRecoveryPhase { get; set; } = "";
     public bool VerifyOwnerInventoryFingerprints { get; set; }
+    public bool VerifyHostReservationStore { get; set; }
 }
 
 /// <summary>
@@ -51,11 +52,12 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
-        if (this.Settings.Enabled && this.Settings.VerifyOwnerInventoryFingerprints
+        bool boundMemory = this.Settings.VerifyOwnerInventoryFingerprints || this.Settings.VerifyHostReservationStore;
+        if (this.Settings.Enabled && boundMemory
             && (this.Settings.Scenario != "Memory" || this.Settings.OpenPreview
                 || this.Settings.FarmName != OwnerInventoryFingerprintScenarios.FarmName
                 || this.Settings.SaveFixtureId != OwnerInventoryFingerprintScenarios.WorldId))
-            throw new InvalidOperationException("Owner fingerprint validation requires the exact XYSP1Menu Memory fixture.");
+            throw new InvalidOperationException("Reservation validation requires the exact XYSP1Menu Memory fixture.");
         if (this.Settings.Enabled && this.Settings.Scenario == "LanTransportObservation")
         {
             var observation = new LanTransportObservationScenario(helper, this.Monitor, this.Settings);
@@ -217,12 +219,12 @@ public sealed class ModEntry : Mod
             if (!this.Pending || !Context.IsWorldReady) return;
             this.Pending = false;
             if (!this.Settings.Enabled || Context.IsMultiplayer || Game1.player.farmName.Value != this.Settings.FarmName) return;
-            if (this.Settings.VerifyOwnerInventoryFingerprints
+            if (boundMemory
                 && (!Context.IsMainPlayer || Context.IsSplitScreen || Context.ScreenId != 0
                     || Game1.uniqueIDForThisGame != OwnerInventoryFingerprintScenarios.WorldId
                     || Constants.SaveFolderName != OwnerInventoryFingerprintScenarios.SaveFolder))
             {
-                this.Monitor.Log("Owner fingerprint validation refused the loaded world.", LogLevel.Error);
+                this.Monitor.Log("Reservation validation refused the loaded world.", LogLevel.Error);
                 return;
             }
             this.Run();
@@ -608,6 +610,12 @@ public sealed class ModEntry : Mod
                 {
                     Stock(ItemRegistry.Create(Soy, 3, 2), ItemRegistry.Create("(O)262", 2));
                     OwnerInventoryFingerprintScenarios.Run(player);
+                });
+            if (this.Settings.VerifyHostReservationStore)
+                Test("host reservation protects native removal and survives Farmer XML", () =>
+                {
+                    Fresh("BeanWorkshop");
+                    HostReservationStoreScenarios.Run(player, machine!, service);
                 });
         }
         catch (Exception error) { failure = error.ToString(); this.Monitor.Log(failure, LogLevel.Error); }

@@ -32,6 +32,8 @@ public sealed class ModEntry : Mod
         MachinePatches.Install(this.ModManifest.UniqueID, this.Machines, helper.Translation);
         helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
+        helper.Events.GameLoop.Saving += (_, _) => this.Machines.Reservations.OnSaving();
+        helper.Events.GameLoop.Saved += (_, _) => this.Machines.Reservations.OnSaved();
         helper.Events.GameLoop.DayStarted += this.OnDayStarted;
         helper.Events.GameLoop.ReturnedToTitle += (_, _) => { this.HasCheckedContent = false; this.Machines.ResetSession(); };
         helper.Events.World.ObjectListChanged += (_, e) => { foreach (var pair in e.Added) MachineService.Initialize(pair.Value); };
@@ -48,6 +50,7 @@ public sealed class ModEntry : Mod
 
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
     {
+        this.Machines.Reservations.Reset();
         this.CheckContentOnce();
         foreach (GameLocation location in Game1.locations) this.InitializeLocation(location);
         this.InitializeLocation(Game1.currentLocation);
