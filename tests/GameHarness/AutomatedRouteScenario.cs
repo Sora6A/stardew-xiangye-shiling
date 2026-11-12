@@ -18,12 +18,16 @@ namespace GameHarness;
 internal sealed class AutomatedRouteScenario
 {
     private const string FarmName = "XYSP1Route";
+    internal const string PurchasedRouteScenario = "NativeShopWalkComplete";
+    internal const string PurchasedRouteFarm = "XYSP1WalkChain";
+    internal const ulong PurchasedRouteFixtureId = 620261119;
     private const string Id = MachineService.Prefix;
     private const string Wheat = "(O)262";
     private static readonly Vector2 Below = new(0, 1);
     private readonly IModHelper Helper;
     private readonly IMonitor Monitor;
     private readonly Config Settings;
+    private readonly bool ContinueAfterPurchases;
     private readonly Stopwatch Watch = new();
     private readonly List<string> Passed = new();
     private FarmHouse House = null!;
@@ -38,7 +42,9 @@ internal sealed class AutomatedRouteScenario
     private Options? ChangedOptions;
     private bool OriginalPauseSetting;
     private static Farmer Player => Game1.player;
-    private string SaveName => $"{FarmName}_{this.Settings.SaveFixtureId}";
+    private string SaveName => $"{this.Settings.FarmName}_{this.Settings.SaveFixtureId}";
+    internal bool IsFinished => this.Finished;
+    internal string? Failure { get; private set; }
     private enum KitchenStep { None, Preflight, Cook }
 
     public AutomatedRouteScenario(IModHelper helper, IMonitor monitor, Config settings)
@@ -46,21 +52,24 @@ internal sealed class AutomatedRouteScenario
         this.Helper = helper;
         this.Monitor = monitor;
         this.Settings = settings;
-        Require(settings.FarmName == FarmName && settings.SaveFixtureId != 0 && !settings.OpenPreview,
-            "AutomatedRoute requires an explicitly bound XYSP1Route fixture.");
+        this.ContinueAfterPurchases = settings.Scenario == PurchasedRouteScenario;
+        Require(settings.Enabled && settings.SaveFixtureId != 0 && !settings.OpenPreview
+            && (this.ContinueAfterPurchases ? settings.FarmName == PurchasedRouteFarm && settings.SaveFixtureId == PurchasedRouteFixtureId
+                : settings.Scenario == "AutomatedRoute" && settings.FarmName == FarmName),
+            "Bind the processing route to its dedicated single-player fixture.");
     }
 
     public void QueueLoad() => this.LoadDelay = 180;
     public void OnLoaded() => this.Loaded = true;
     private bool MatchesWorld() => Context.IsWorldReady && Context.IsMainPlayer && !Context.IsMultiplayer
         && Constants.SaveFolderName == this.SaveName && Game1.uniqueIDForThisGame == this.Settings.SaveFixtureId
-        && Player.farmName.Value == FarmName;
+        && Player.farmName.Value == this.Settings.FarmName;
 
     public void Tick()
     {
         if (this.Finished)
         {
-            Game1.game1.Exit();
+            if (!this.ContinueAfterPurchases) Game1.game1.Exit();
             return;
         }
         this.Guard(() =>
@@ -126,6 +135,37 @@ internal sealed class AutomatedRouteScenario
             "Saloon purchases or payment differ.");
         this.Pass("Saloon supplied 1 toon and taught its dish for 1100g");
 
+        this.CraftAndRequestKitchen();
+
+        void Buy(string shop, string id, int quantity, bool recipe = false) =>
+            NativeRouteActions.Buy(this.Helper, this.Monitor, shop, id, quantity, recipe);
+    }
+
+    /// <summary>Continue in the same loaded farmhouse with the previously purchased items and learned recipes.</summary>
+    internal void BeginPurchasedRoute(int moneyBeforeShopping)
+    {
+        Require(this.ContinueAfterPurchases && !this.Watch.IsRunning && this.MatchesWorld() && Context.IsPlayerFree,
+            "Only the finished walking and purchase stage can start the continuation.");
+        this.House = Player.currentLocation as FarmHouse ?? throw new InvalidOperationException("Return to the farmhouse before processing.");
+        Require(!this.House.objects.Values.Any(item => MachineService.TryGetKind(item, out _))
+            && new[] { "BeanWorkshop", "FermentationCrock", "ToonTofu" }.All(key => Player.knowsRecipe(RecipeId(key)))
+            && Player.Money == moneyBeforeShopping - 4510 && Count("Soybean") == 6 && Player.Items.CountId(Wheat) == 2
+            && Count("ChineseToon") == 1 && Player.Items.Count(item => item is not null) == 3,
+            "The farmhouse inventory, recipes or funds differ from the six purchases.");
+        this.StartingMoney = moneyBeforeShopping;
+        this.Watch.Start();
+        // Add only the construction supplies. Purchased materials stay in their existing inventory slots.
+        AddMaterial("(O)388", 80);
+        AddMaterial("(O)390", 60);
+        AddMaterial("(O)334", 1);
+        this.CraftAndRequestKitchen();
+
+        static void AddMaterial(string id, int stack) => Require(Player.addItemToInventory(ItemRegistry.Create(id, stack)) is null,
+            "The purchased-route fixture has no room for construction supplies.");
+    }
+
+    private void CraftAndRequestKitchen()
+    {
         this.Bean = this.Place(NativeRouteActions.Craft("BeanWorkshop"));
         this.Crock = this.Place(NativeRouteActions.Craft("FermentationCrock"));
         Require(State(this.Bean).InstanceId != State(this.Crock).InstanceId
@@ -134,9 +174,6 @@ internal sealed class AutomatedRouteScenario
         this.Pass("crafted and placed both purchased devices through the game APIs");
         (this.Stove, this.StoveStanding) = this.FindStove();
         this.RequestKitchen(KitchenStep.Preflight);
-
-        void Buy(string shop, string id, int quantity, bool recipe = false) =>
-            NativeRouteActions.Buy(this.Helper, this.Monitor, shop, id, quantity, recipe);
     }
 
     private void StartBatches()
@@ -350,13 +387,22 @@ internal sealed class AutomatedRouteScenario
     private void Finish(string? failure)
     {
         this.Finished = true;
+        this.Failure = failure;
         this.Waiting = this.Eating = false;
         if (this.ChangedOptions is not null) this.ChangedOptions.pauseWhenOutOfFocus = this.OriginalPauseSetting;
         this.Report(failure is null, failure);
         this.Monitor.Log(failure ?? "AutomatedRoute completed.", failure is null ? LogLevel.Info : LogLevel.Error);
     }
 
-    private void Report(bool completed, string? failure) => this.Helper.Data.WriteJsonFile("automated-route-result.json", new
+    private void Report(bool completed, string? failure)
+    {
+        if (!this.ContinueAfterPurchases)
+            this.Helper.Data.WriteJsonFile("automated-route-result.json", this.CreateEvidence(completed, failure));
+    }
+
+    internal object ReadPurchasedEvidence() => this.CreateEvidence(this.Finished && this.Failure is null, this.Failure);
+
+    private object CreateEvidence(bool completed, string? failure) => new
     {
         SchemaVersion = 1, ProcessId = Environment.ProcessId, FixtureId = this.Settings.SaveFixtureId,
         Completed = completed, Failure = failure, this.SavingObserved, this.Passed, this.StartClock,
@@ -365,7 +411,7 @@ internal sealed class AutomatedRouteScenario
         Tofu = this.MatchesWorld() ? Count("Tofu") : 0,
         SoySauce = this.MatchesWorld() ? Count("SoySauce") : 0,
         Dish = this.MatchesWorld() ? Count("ToonTofu") : 0
-    });
+    };
 
     private static void Require(bool condition, string message)
     {

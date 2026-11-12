@@ -4,6 +4,7 @@ using HarmonyLib;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewValley;
+using StardewValley.Buildings;
 using StardewValley.Menus;
 using StardewValley.Pathfinding;
 using StardewValley.Util;
@@ -24,6 +25,7 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
     private static readonly string[] PierreMaps = { "FarmHouse", "Farm", "BusStop", "Town", "SeedShop" };
     private static readonly string[] ThreeShopMaps = { "FarmHouse", "Farm", "BusStop", "Town", "SeedShop", "Town",
         "Mountain", "ScienceHouse", "Mountain", "Town", "Saloon" };
+    private static readonly string[] CompleteMaps = ThreeShopMaps.Concat(new[] { "Town", "BusStop", "Farm", "FarmHouse" }).ToArray();
     private static readonly ShopStop[] Shops = {
         new("SeedShop", "SeedShop", "Buy", "Pierre", new[] { new Purchase(Soybean, 6, 60), new Purchase(Wheat, 2, 25) }),
         new("ScienceHouse", "Carpenter", "Carpenter", "Robin", new[] {
@@ -54,23 +56,31 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
     private int DoorOpens, DoorCloses;
     private string? Failure, SkippedEvent;
     private DialogueBox? AnsweredCarpenter;
+    private AutomatedRouteScenario? Processing;
+    private object? HomeEntry, CompletedWalk;
     private TimeSpan ActionSentAt;
     private static Farmer Player => Game1.player;
-    private bool FullRoute => this.Config.FarmName == ThreeShopFarmName;
-    private string[] Maps => this.FullRoute ? ThreeShopMaps : PierreMaps;
+    private bool CompleteRoute => this.Config.Scenario == AutomatedRouteScenario.PurchasedRouteScenario;
+    private bool FullRoute => this.Config.FarmName == ThreeShopFarmName || this.CompleteRoute;
+    private string[] Maps => this.CompleteRoute ? CompleteMaps : this.FullRoute ? ThreeShopMaps : PierreMaps;
     private string SaveName => $"{this.Config.FarmName}_{this.Config.SaveFixtureId}";
     private string CurrentMap => this.Maps[this.Leg];
     private string? NextMap => this.Leg + 1 < this.Maps.Length ? this.Maps[this.Leg + 1] : null;
     private ShopStop? Counter => Shops.FirstOrDefault(shop => shop.Map == this.CurrentMap && !this.Visits.ContainsKey(shop.Map));
     private bool OpeningDoor => this.NextMap is "SeedShop" or "ScienceHouse" or "Saloon";
+    private bool OpeningHome => this.CompleteRoute && this.CurrentMap == "Farm" && this.NextMap == "FarmHouse";
 
     private sealed record ShopStop(string Map, string ShopId, string Token, string Owner, Purchase[] Lines);
     private sealed record Purchase(string ItemId, int Quantity, int Price, string? Recipe = null);
 
     internal NativeShopWalkScenario(IModHelper helper, IMonitor monitor, Config config)
     {
-        Require(config.Enabled && config.Scenario == "NativeShopWalk" && config.FarmName is FarmName or ThreeShopFarmName
-            && config.SaveFixtureId != 0 && !config.OpenPreview, "Bind NativeShopWalk to a dedicated walking save.");
+        Require(config.Enabled && config.SaveFixtureId != 0 && !config.OpenPreview
+            && (config.Scenario == "NativeShopWalk" && config.FarmName is FarmName or ThreeShopFarmName
+                || config.Scenario == AutomatedRouteScenario.PurchasedRouteScenario
+                    && config.FarmName == AutomatedRouteScenario.PurchasedRouteFarm
+                    && config.SaveFixtureId == AutomatedRouteScenario.PurchasedRouteFixtureId),
+            "Bind the walking scenario to its dedicated fixture.");
         this.Helper = helper;
         this.Monitor = monitor;
         this.Config = config;
@@ -78,13 +88,23 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
 
     internal void QueueLoad() => this.LoadDelay = 180;
     internal void OnLoaded() => this.Loaded = true;
-    internal void OnTimeChanged(int time) { if (this.Started && !this.Finished) this.Clock.Add(time); }
+    internal void OnTimeChanged(int oldTime, int newTime)
+    {
+        if (!this.Started || this.Finished || this.Failure is not null) return;
+        if (this.Processing is null) this.Clock.Add(newTime);
+        else this.Processing.OnTimeChanged(oldTime, newTime);
+    }
     internal void OnSaving()
     {
         this.SavingObserved = true;
         this.Failure = "A native save occurred during the walk.";
+        this.Processing?.OnSaving();
     }
-    internal void OnReturnedToTitle() { if (this.Started) this.Failure = "The walk returned to title."; }
+    internal void OnReturnedToTitle()
+    {
+        if (this.Started) this.Failure = "The walk returned to title.";
+        this.Processing?.OnReturnedToTitle();
+    }
 
     internal void Tick()
     {
@@ -101,10 +121,16 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
                 return;
             }
             Require(this.Failure is null, this.Failure ?? "Walk failed.");
-            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(8), "Timed out waiting for the native walking route.");
+            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(this.CompleteRoute ? 12 : 8), "Timed out waiting for the native route.");
             if (this.Loaded && !this.Started && Context.IsPlayerFree) this.Start();
             if (!this.Started) return;
             this.CheckWorld();
+            if (this.Processing is not null)
+            {
+                this.Processing.Tick();
+                if (this.Processing.IsFinished) this.Finish(this.Processing.Failure);
+                return;
+            }
             Require(ReferenceEquals(Simulator.GetValue(null), this), "The native simulator was replaced during the walk.");
             string map = Player.currentLocation.Name;
             if (map == this.NextMap)
@@ -114,6 +140,17 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
                 return;
             }
             Require(map == this.CurrentMap, "Unexpected current map during the walk: " + map);
+            if (this.CompleteRoute && this.NextMap is null)
+            {
+                if (!Context.IsPlayerFree || Game1.eventUp || Game1.fadeToBlack || Game1.isWarping) return;
+                Require(this.HomeEntry is not null && this.Legs.Count == CompleteMaps.Length - 1,
+                    "Missing the native farmhouse entry or return walk.");
+                this.CompletedWalk = this.CreateWalkEvidence(completed: true);
+                this.DetachWalkControls();
+                this.Processing = new AutomatedRouteScenario(this.Helper, this.Monitor, this.Config);
+                this.Processing.BeginPurchasedRoute(this.StartingMoney);
+                return;
+            }
             ShopStop? counter = this.Counter;
 
             // A warp's new map can be published before the native landing position. Never count that delta as walking.
@@ -164,14 +201,17 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
                 this.Waypoints.Pop();
             }
 
-            if (!this.OpeningDoor && counter is null)
+            if (!this.OpeningDoor && !this.OpeningHome && counter is null)
             {
                 // Native maps can place an exit just outside the playable bounds.
                 if (this.Target != this.Standing) this.Steer(this.Target);
                 return;
             }
-            if (Game1.timeOfDay < this.DoorOpens) return;
-            Require(Game1.timeOfDay < this.DoorCloses, "The native shop's opening window elapsed.");
+            if (!this.OpeningHome)
+            {
+                if (Game1.timeOfDay < this.DoorOpens) return;
+                Require(Game1.timeOfDay < this.DoorCloses, "The native shop's opening window elapsed.");
+            }
             if (counter is not null && !this.OwnerAtCounter(counter)) return;
             if (Player.FacingDirection != 0) { this.Direction = 0; return; }
             if (!this.ActionSent) this.ActionQueued = true;
@@ -192,6 +232,9 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
         this.Patch.Patch(AccessTools.Method(typeof(GameLocation), "performAction",
             new[] { typeof(string), typeof(Farmer), typeof(xTile.Dimensions.Location) }),
             postfix: new HarmonyMethod(typeof(NativeShopWalkScenario), nameof(ObserveAction)));
+        if (this.CompleteRoute)
+            this.Patch.Patch(AccessTools.Method(typeof(Building), nameof(Building.OnUseHumanDoor)),
+                postfix: new HarmonyMethod(typeof(NativeShopWalkScenario), nameof(ObserveHomeDoor)));
         Observer = this;
         Simulator.SetValue(null, this);
         this.Options = Game1.options;
@@ -208,12 +251,15 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
     {
         if (!this.Started || this.Finished) return;
         if (oldLocation.Name != this.CurrentMap || newLocation.Name != this.NextMap || this.Counter is not null
-            || this.InputFrames == 0 || this.Walked < 16 || (this.OpeningDoor && !this.ActionSent))
+            || this.InputFrames == 0 || this.Walked < 16 || (this.OpeningDoor && !this.ActionSent)
+            || (this.OpeningHome && this.HomeEntry is null))
         {
             this.Failure = $"Unexpected native map change from {oldLocation.Name} to {newLocation.Name}.";
             return;
         }
         this.Legs.Add(new { From = oldLocation.Name, To = newLocation.Name, Time = Game1.timeOfDay, this.Walked, this.InputFrames });
+        if (this.CompleteRoute)
+            this.Monitor.Log($"NativeShopWalkComplete: {oldLocation.Name} to {newLocation.Name} at {Game1.timeOfDay}.", LogLevel.Info);
         this.EnteredByDoor = this.OpeningDoor && this.CurrentActions == 1;
         this.Leg++;
         this.ResetLegProgress(awaitingArrival: true);
@@ -236,7 +282,16 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
     {
         var bounds = location.Map.Layers[0];
         ShopStop? counter = this.Counter;
-        if (!this.OpeningDoor && counter is null)
+        if (this.OpeningHome)
+        {
+            Building farmhouse = Game1.getFarm().GetMainFarmHouse()
+                ?? throw new InvalidOperationException("The native farmhouse building is missing.");
+            this.Target = farmhouse.getPointForHumanDoor();
+            this.Standing = this.Target + Below;
+            this.Waypoints = PathTo(this.Standing);
+            if (this.Waypoints is not null) return;
+        }
+        else if (!this.OpeningDoor && counter is null)
         {
             foreach (Warp exit in location.warps.Where(exit => exit.TargetName == this.NextMap && !exit.npcOnly.Value))
             {
@@ -312,6 +367,14 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
         current.Actions.Add(new { Map = __instance.Name, Action = fullActionString, tileLocation.X, tileLocation.Y, Time = Game1.timeOfDay });
     }
 
+    private static void ObserveHomeDoor(Building __instance, Farmer who, bool __result)
+    {
+        if (Observer is not { Started: true, Finished: false, OpeningHome: true, ActionSent: true } current
+            || !__result || !ReferenceEquals(who, Player) || !ReferenceEquals(__instance, Game1.getFarm().GetMainFarmHouse())
+            || __instance.getPointForHumanDoor() != current.Target) return;
+        current.HomeEntry = new { Map = current.CurrentMap, current.Target.X, current.Target.Y, Time = Game1.timeOfDay };
+    }
+
     private void AnswerCarpenter(DialogueBox dialogue)
     {
         Require(this.Watch.Elapsed - this.ActionSentAt < TimeSpan.FromSeconds(10), "The native Carpenter dialogue did not open its shop.");
@@ -341,7 +404,7 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
         this.Visits.Add(counter.Map, new { counter.ShopId, counter.Owner, Time = Game1.timeOfDay, this.Walked, this.InputFrames,
             this.DoorOpens, this.DoorCloses, Spent = spent, Purchases = lines,
             CarpenterShopAnswer = counter.Owner == "Robin" && this.AnsweredCarpenter is not null });
-        if (this.NextMap is not null) return;
+        if (this.Visits.Count < (this.FullRoute ? Shops.Length : 1)) return;
         Require(this.FullRoute ? this.Visits.Count == 3 && this.Actions.Count == 6 && this.StartingMoney - Player.Money == 4510
             && Player.Items.CountId(Soybean) == 6 && Player.Items.CountId(Wheat) == 2 && Player.Items.CountId(Toon) == 1
             && Player.Items.Where(item => item is not null).All(item => item.QualifiedItemId is Soybean or Wheat or Toon)
@@ -390,25 +453,43 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
         && Constants.SaveFolderName == this.SaveName && Game1.uniqueIDForThisGame == this.Config.SaveFixtureId
         && Player.farmName.Value == this.Config.FarmName, "The active world does not match the dedicated walking fixture.");
 
+    private void DetachWalkControls()
+    {
+        if (ReferenceEquals(Simulator.GetValue(null), this)) Simulator.SetValue(null, null);
+        if (ReferenceEquals(Observer, this)) Observer = null;
+        this.Patch.UnpatchAll(this.Patch.Id);
+    }
+
     private void Finish(string? failure)
     {
         this.Finished = true;
         this.Failure = failure;
-        if (ReferenceEquals(Simulator.GetValue(null), this)) Simulator.SetValue(null, null);
-        if (ReferenceEquals(Observer, this)) Observer = null;
-        this.Patch.UnpatchAll(this.Patch.Id);
+        this.DetachWalkControls();
         if (this.Options is not null) this.Options.pauseWhenOutOfFocus = this.OriginalPause;
         if (failure is not null) this.Monitor.Log(failure, LogLevel.Error);
-        this.Helper.Data.WriteJsonFile(this.FullRoute ? "native-shop-walk-three-result.json" : "native-shop-walk-result.json", new
-        {
-            SchemaVersion = 1, Completed = failure is null && !this.SavingObserved, this.Failure, this.SavingObserved,
-            ProcessId = Environment.ProcessId, FixtureId = this.Config.SaveFixtureId, this.Leg, this.Legs, this.Clock,
-            this.Actions, this.Walked, this.InputFrames, this.Standing, this.Target, this.SkippedEvent, Visits = this.Visits.Values,
-            MoneySpent = this.Started ? this.StartingMoney - Player.Money : 0,
-            Soybeans = this.Started ? Player.Items.CountId(Soybean) : 0,
-            Preparation = "The harness cleared the disposable backpack, disabled pause while unfocused, and supplied movement and action through the native input simulator."
-        });
+        if (this.CompleteRoute)
+            this.Helper.Data.WriteJsonFile("native-shop-walk-chain-result.json", new
+            {
+                SchemaVersion = 1, Completed = failure is null && !this.SavingObserved && this.Processing?.IsFinished == true,
+                this.Failure, this.SavingObserved, ProcessId = Environment.ProcessId, FixtureId = this.Config.SaveFixtureId,
+                Walk = this.CompletedWalk ?? this.CreateWalkEvidence(completed: false),
+                this.HomeEntry, Processing = this.Processing?.ReadPurchasedEvidence(),
+                Preparation = "After the native return, the harness supplied only wood, stone and a copper bar and positioned the farmer for the machine and kitchen actions."
+            });
+        else
+            this.Helper.Data.WriteJsonFile(this.FullRoute ? "native-shop-walk-three-result.json" : "native-shop-walk-result.json",
+                this.CreateWalkEvidence(failure is null && !this.SavingObserved));
     }
+
+    private object CreateWalkEvidence(bool completed) => new
+    {
+        SchemaVersion = 1, Completed = completed, this.Failure, this.SavingObserved,
+        ProcessId = Environment.ProcessId, FixtureId = this.Config.SaveFixtureId, this.Leg, this.Legs, this.Clock,
+        this.Actions, this.Walked, this.InputFrames, this.Standing, this.Target, this.SkippedEvent, Visits = this.Visits.Values,
+        MoneySpent = this.Started ? this.StartingMoney - Player.Money : 0,
+        Soybeans = this.Started ? Player.Items.CountId(Soybean) : 0,
+        Preparation = "The harness cleared the disposable backpack, disabled pause while unfocused, and supplied movement and action through the native input simulator."
+    };
 
     private static void Require(bool valid, string message)
     {

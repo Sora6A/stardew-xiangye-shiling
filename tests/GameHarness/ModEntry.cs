@@ -102,13 +102,13 @@ public sealed class ModEntry : Mod
             helper.Events.GameLoop.ReturnedToTitle += (_, _) => recovery.OnReturnedToTitle();
             return;
         }
-        if (this.Settings.Enabled && this.Settings.Scenario == "NativeShopWalk")
+        if (this.Settings.Enabled && this.Settings.Scenario is "NativeShopWalk" or AutomatedRouteScenario.PurchasedRouteScenario)
         {
             var walk = new NativeShopWalkScenario(helper, this.Monitor, this.Settings);
             helper.Events.GameLoop.GameLaunched += (_, _) => walk.QueueLoad();
             helper.Events.GameLoop.SaveLoaded += (_, _) => walk.OnLoaded();
             helper.Events.GameLoop.UpdateTicked += (_, _) => walk.Tick();
-            helper.Events.GameLoop.TimeChanged += (_, e) => walk.OnTimeChanged(e.NewTime);
+            helper.Events.GameLoop.TimeChanged += (_, e) => walk.OnTimeChanged(e.OldTime, e.NewTime);
             helper.Events.Player.Warped += (_, e) => { if (e.IsLocalPlayer) walk.OnWarped(e.OldLocation, e.NewLocation); };
             helper.Events.GameLoop.Saving += (_, _) => walk.OnSaving();
             helper.Events.GameLoop.ReturnedToTitle += (_, _) => walk.OnReturnedToTitle();
