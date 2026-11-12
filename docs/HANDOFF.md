@@ -1,5 +1,9 @@
 # 当前开发交接
 
+## 2026-11-12 小麦指纹诊断检查点
+
+分支 `codex/first-stable-release`，基线 `e3f67a1ead99806a4a82ee28d6b1a2fe80855f72`。实机夹具新增拒绝时的类型与 XML 字段差异诊断。Release 构建零警告零错误，同一生产 DLL 的第二次冷启动 21 项全通过，尚未捕获首轮拒绝原因。隔离进程 31036 已退出，夹具禁用，一次加载零保存，51 个存档哈希一致。原进程 16668 保留。证据在 `.local/p1-net03-fingerprint-diagnose`，与首轮失败独立。下一轮重复运行诊断构建以捕获差异，再接双端指纹和 LAN 连接准入。生产及远程均未变。见 [BUG-2026-027](bugfix/BUG-2026-027-native-wheat-fingerprint.md)。
+
 ## 2026-11-12 原版配方物品指纹实机检查点
 
 分支 `codex/first-stable-release`，本轮基线 `dbf815363557bd0547870118662477facee54b57`。新增默认关闭的 GameHarness 实机检查，SDK Release 构建零警告、零错误。专用 `XYSP1Menu` 实际加载一次，普通 Memory 20 项通过；新增检查通过黄豆的原版 Farmer XML 内存往返，在普通小麦初次取指纹失败。生产代码与开发包沿用上轮。见 [BUG-2026-027](bugfix/BUG-2026-027-native-wheat-fingerprint.md)。

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Xml.Linq;
 using StardewValley;
 using XiangyeShiling.GameIntegration;
 
@@ -32,9 +33,11 @@ internal static class OwnerInventoryFingerprintScenarios
         for (int i = 0; i < itemIds.Length; i++)
         {
             Require(owner.Items[i]?.QualifiedItemId == itemIds[i], "Wrong live registry material in the test slot.");
-            Require(read(owner, i, out string? digest) && digest is { Length: 64 }
-                && digest.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f') && digests.Add(digest),
-                "Live material was unavailable or did not have a unique lowercase SHA-256: " + itemIds[i]);
+            bool readable = read(owner, i, out string? digest);
+            if (!readable)
+                throw new InvalidOperationException(DescribeFailure(type, owner.Items[i]!));
+            Require(digest is { Length: 64 } && digest.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f')
+                && digests.Add(digest), "Live material did not have a unique lowercase SHA-256: " + itemIds[i]);
             Require(read(reloaded, i, out string? after) && after == digest,
                 "Native Farmer XML changed the material fingerprint: " + itemIds[i]);
         }
@@ -43,6 +46,19 @@ internal static class OwnerInventoryFingerprintScenarios
             "An empty slot must remain distinct from unavailable before and after native XML.");
         Require(!read(null, 2, out _) && !read(owner, owner.MaxItems, out _),
             "An unavailable owner or invalid index cannot certify an empty slot.");
+    }
+
+    private static string DescribeFailure(Type type, Item item)
+    {
+        var canonical = ItemRegistry.Create(item.QualifiedItemId, item.Stack, item.Quality);
+        string shape = $"{item.QualifiedItemId} {item.GetType().Name}/{canonical.GetType().Name} stack={item.Stack}/{item.maximumStackSize()} quality={item.Quality} metadata={item.modData.Pairs.Count()}";
+        if (item is not StardewValley.Object || canonical is not StardewValley.Object) return shape;
+        MethodInfo serialize = type.GetMethod("WriteNativeXml", BindingFlags.Static | BindingFlags.NonPublic)!;
+        XElement Read(Item value) => XElement.Load(new MemoryStream((byte[])serialize.Invoke(null, new object[] { value })!));
+        XElement current = Read(item), expected = Read(canonical);
+        var changed = current.Elements().Select(x => x.Name).Union(expected.Elements().Select(x => x.Name))
+            .Where(name => !XNode.DeepEquals(current.Element(name), expected.Element(name)));
+        return shape + " XML fields: " + string.Join(", ", changed);
     }
 
     private static void Require(bool condition, string message)
