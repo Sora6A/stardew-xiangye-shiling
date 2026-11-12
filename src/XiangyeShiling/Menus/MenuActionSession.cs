@@ -12,6 +12,7 @@ public sealed class MenuActionSession
     public bool IsComplete { get; private set; }
     public Request? Acquire(MachineState state, long actorId) => this.IsComplete ? null :
         this.Pending ??= new(Guid.NewGuid(), state.InstanceId, state.Revision, actorId);
+    internal void ReleaseRefusedRequest() => this.Pending = null;
     public void Complete(bool applied)
     {
         // BUG-2026-007：领取后的同位置连点不能被重新解释为开工；新意图须重新打开菜单。

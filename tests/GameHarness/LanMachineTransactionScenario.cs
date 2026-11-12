@@ -37,6 +37,7 @@ internal sealed class LanMachineTransactionScenario
     private readonly NativeNetworkBootstrap Bootstrap;
     private readonly bool Host;
     private readonly bool VerifyHostCompetition;
+    private readonly bool VerifyFarmhandMenu;
     private readonly Stopwatch Watch = new();
     private readonly List<Evidence> Stages = new();
     private MachineService? Service;
@@ -53,6 +54,9 @@ internal sealed class LanMachineTransactionScenario
     private HostCompetitionEvidence? HostCompetition;
     private CompetitionSetupEvidence? CompetitionSetup;
     private string? SkippedHostArrivalEvent;
+    private MachineMenu? ActiveFarmhandMenu;
+    private FarmhandMenuEvidence? PendingMenuEvidence;
+    private readonly List<FarmhandMenuEvidence> FarmhandMenus = new();
     private Guid? CancelledPlan;
     private Guid InstanceId;
     private ProtocolDiagnosticSnapshot? Protocol;
@@ -67,6 +71,8 @@ internal sealed class LanMachineTransactionScenario
         this.Monitor = monitor;
         this.Host = config.NetworkRole == "Host";
         this.VerifyHostCompetition = config.VerifyLanHostCompetition;
+        this.VerifyFarmhandMenu = config.VerifyLanFarmhandMenu;
+        Require(!this.VerifyHostCompetition || !this.VerifyFarmhandMenu, "Run the two native menu fixtures independently.");
         this.Bootstrap = new(monitor, config);
     }
 
@@ -392,6 +398,12 @@ internal sealed class LanMachineTransactionScenario
             }
             if (!start.AfterCancellation || !IsSettled(host, owner, this.CancellationRequest.Id)) return;
             this.CancellationSettled = true;
+            if (this.VerifyFarmhandMenu)
+            {
+                this.StartRequest = this.ClickFarmhandMenu(machine, owner, state, "Start");
+                this.Report();
+                return;
+            }
             this.ProposedStart ??= new Request(Guid.NewGuid(), this.InstanceId, 0, owner.UniqueMultiplayerID);
             if (!this.Send(machine, this.ProposedStart, Recipe)) return;
             this.StartRequest = this.ProposedStart;
@@ -404,6 +416,13 @@ internal sealed class LanMachineTransactionScenario
             && IsSettled(host, owner, started.Id))
         {
             this.VerifyStarted(owner, state);
+            if (this.VerifyFarmhandMenu)
+            {
+                if (state.PhaseAt(MachineService.Now()) != MachinePhase.Ready || !this.FinishFarmhandMenu(started, "Start")) return;
+                this.CollectRequest = this.ClickFarmhandMenu(machine, owner, state, "Collect");
+                this.Report();
+                return;
+            }
             this.CollectRequest = new Request(Guid.NewGuid(), this.InstanceId, 1, owner.UniqueMultiplayerID);
             this.SendTwice(machine, this.CollectRequest, null);
             return;
@@ -412,10 +431,63 @@ internal sealed class LanMachineTransactionScenario
             && IsSettled(host, owner, collected.Id))
         {
             this.VerifyCollected(owner, state);
+            if (this.VerifyFarmhandMenu && !this.FinishFarmhandMenu(collected, "Collect")) return;
             this.Finish(null);
         }
         Require(state.Revision is >= 0 and <= 2, "Unexpected extra machine transaction on the farmhand.");
     }
+
+    private Request ClickFarmhandMenu(SObject machine, Farmer owner, MachineState state, string action)
+    {
+        Require(ReferenceEquals(owner, Game1.player) && Game1.activeClickableMenu is null,
+            "The local farmhand must be free to open its real machine menu.");
+        if (!machine.checkForAction(owner) || Game1.activeClickableMenu is not MachineMenu menu)
+            throw new InvalidOperationException("Native checkForAction did not open the real farmhand machine menu.");
+        string raw = machine.modData[MachineService.StateKey];
+        Slot?[] before = Snapshot(owner);
+        var pending = this.Helper.Reflection.GetField<Request?>(menu, "FarmhandRequest");
+        var feedback = this.Helper.Reflection.GetField<string>(menu, "Feedback");
+        Point button = this.Helper.Reflection.GetMethod(menu, "ActionBounds").Invoke<Rectangle>(0).Center;
+        menu.receiveLeftClick(button.X, button.Y);
+        Request request = pending.GetValue() ?? throw new InvalidOperationException("The actual menu did not queue its request.");
+        string waiting = feedback.GetValue();
+        Require(request.ActorId == owner.UniqueMultiplayerID && request.InstanceId == state.InstanceId
+            && request.ExpectedRevision == state.Revision && !menu.readyToClose()
+            && waiting == this.Translate("machine.network-awaiting"),
+            "The real menu did not show its bound asynchronous pending state.");
+        menu.receiveLeftClick(button.X, button.Y);
+        Require(ReferenceEquals(pending.GetValue(), request) && feedback.GetValue() == waiting
+            && machine.modData.GetValueOrDefault(MachineService.StateKey) == raw && before.SequenceEqual(Snapshot(owner)),
+            "A repeated pending click replaced the request or applied a local change before the host result.");
+        this.ActiveFarmhandMenu = menu;
+        this.PendingMenuEvidence = new(action, request.Id, state.Revision, waiting, null);
+        return request;
+    }
+
+    private bool FinishFarmhandMenu(Request request, string action)
+    {
+        if (this.ActiveFarmhandMenu is not { } menu || !ReferenceEquals(Game1.activeClickableMenu, menu)
+            || this.PendingMenuEvidence is not { } evidence || evidence.Request != request.Id || evidence.Action != action)
+            throw new InvalidOperationException("The real farmhand menu did not remain bound through its result.");
+        if (this.Helper.Reflection.GetField<Request?>(menu, "FarmhandRequest").GetValue() is not null) return false;
+
+        bool starting = action == "Start";
+        string completion = this.Helper.Reflection.GetField<string>(menu, "Feedback").GetValue();
+        Require(menu.readyToClose() && this.Helper.Reflection.GetField<Color>(menu, "FeedbackColor").GetValue() == Color.DarkGreen
+            && completion == this.Translate(starting ? "machine.started" : "machine.collected")
+                + " " + this.Translate(starting ? "machine.close-to-process" : "machine.reopen"),
+            "The real farmhand menu did not display the successful native host result.");
+        this.FarmhandMenus.Add(evidence with { Completion = completion });
+        this.PendingMenuEvidence = null;
+        this.ActiveFarmhandMenu = null;
+        menu.exitThisMenu();
+        Require(Game1.activeClickableMenu is null, "The settled farmhand menu did not close through its original path.");
+        this.Monitor.Log($"The real farmhand menu completed {action} after the host result.", LogLevel.Info);
+        return true;
+    }
+
+    private string Translate(string key) =>
+        this.Helper.Reflection.GetField<ITranslationHelper>(this.Service!, "Text").GetValue().Get(key).ToString();
 
     private void VerifyStarted(Farmer owner, MachineState state) => Require(state.Revision == 1
         && state.Batch is { RecipeId: Recipe, Output: { ItemId: Tofu, Quantity: 2 } }
@@ -536,6 +608,7 @@ internal sealed class LanMachineTransactionScenario
         this.CancellationSettled, CancelledRequest = this.Host ? this.CancelledPlan : this.CancellationRequest?.Id,
         StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
         this.VerifyHostCompetition, this.HostCompetition, this.CompetitionSetup, this.SkippedHostArrivalEvent,
+        this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus,
         this.Stages, this.Protocol, this.Lan
     });
 
@@ -556,4 +629,5 @@ internal sealed class LanMachineTransactionScenario
     private sealed record CompetitionSetupEvidence(string? HostLocation, string HostTile, int HostSoybeans, bool HostPositioned,
         string? FarmhandLocation, string? FarmhandTile, int? FarmhandSoybeans, bool FarmhandPositioned, bool PeerReady,
         bool PlayerFree, bool Warping, bool FadeToBlack, bool EventUp, bool DialogueUp, string? EventId, bool? EventSkippable, string? Menu);
+    private sealed record FarmhandMenuEvidence(string Action, Guid Request, long Revision, string Waiting, string? Completion);
 }

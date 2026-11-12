@@ -25,6 +25,7 @@ public sealed class Config
     public bool VerifyOwnerInventoryFingerprints { get; set; }
     public bool VerifyHostReservationStore { get; set; }
     public bool VerifyLanHostCompetition { get; set; }
+    public bool VerifyLanFarmhandMenu { get; set; }
 }
 
 /// <summary>

@@ -33,6 +33,11 @@ public sealed class MachineMenu : IClickableMenu
     private bool GuideOpen;
     private int GuidePage;
     private readonly MenuActionSession Session = new();
+    private readonly bool Farmhand = Context.IsMultiplayer && !Context.IsMainPlayer;
+    private Request? FarmhandRequest;
+    private string? FarmhandRecipe;
+    private bool FarmhandFenced;
+    private double RetryAt;
     private Point LayoutViewport;
     private float LayoutScale = 1f;
     private int LastClickTick = -1;
@@ -166,7 +171,7 @@ public sealed class MachineMenu : IClickableMenu
     {
         this.FitViewport();
         this.LastClickTick = Game1.ticks;
-        if (this.upperRightCloseButton?.containsPoint(x, y) == true) { this.exitThisMenu(); return; }
+        if (this.upperRightCloseButton?.containsPoint(x, y) == true) { this.CloseOrCancel(); return; }
         // 先处理只读导航，不能让指南上的点击落到背后的加工/领取按钮；成功锁定也不能阻止查看说明。
         if (this.GuideBounds.Contains(x, y)) { this.SetGuideOpen(!this.GuideOpen); return; }
         if (this.GuideOpen)
@@ -175,7 +180,7 @@ public sealed class MachineMenu : IClickableMenu
             if (this.NextBounds.Contains(x, y) && this.GuidePage < 1) this.TurnGuidePage(1);
             return;
         }
-        if (this.Session.IsComplete) return;
+        if (this.Session.IsComplete || this.FarmhandRequest is not null || this.FarmhandFenced) return;
         if (!MachineService.TryRead(this.Machine, out var state)) return;
         MachinePhase phase = state!.PhaseAt(MachineService.Now());
         for (int i = 0; i < this.Recipes.Count; i++)
@@ -192,17 +197,102 @@ public sealed class MachineMenu : IClickableMenu
             }
             Request? request = this.Session.Acquire(state, Game1.player.UniqueMultiplayerID);
             if (request is null) return;
-            OperationResult result = this.Service.Execute(this.Machine, Game1.player, request,
-                phase == MachinePhase.Idle ? this.Recipes[i].Id : null);
-            this.Feedback = result.Message;
-            if (result.Applied)
-                this.Feedback += " " + this.Text.Get(phase == MachinePhase.Idle ? "machine.close-to-process" : "machine.reopen");
-            this.FeedbackColor = result.Applied ? Color.DarkGreen : Color.DarkRed;
-            this.Session.Complete(result.Applied);
-            if (result.Applied) Game1.playSound("coin");
+            string? recipeId = phase == MachinePhase.Idle ? this.Recipes[i].Id : null;
+            if (!this.Farmhand)
+                this.ShowResult(this.Service.Execute(this.Machine, Game1.player, request, recipeId), recipeId is not null);
+            else if (this.Service.TryQueueLanMenuOperation(this.Machine, request, recipeId, this.IsCurrentInteraction))
+            {
+                this.FarmhandRequest = request;
+                this.FarmhandRecipe = recipeId;
+                this.RetryAt = 0;
+                this.ShowNetworkFeedback("machine.network-awaiting");
+            }
+            else this.ShowNetworkFeedback("machine.network-busy", failed: true);
             return;
         }
     }
+
+    private bool IsCurrentInteraction() => ReferenceEquals(Game1.activeClickableMenu, this);
+
+    private void ShowResult(OperationResult result, bool starting)
+    {
+        this.Feedback = result.Message;
+        if (result.Applied)
+            this.Feedback += " " + this.Text.Get(starting ? "machine.close-to-process" : "machine.reopen");
+        this.FeedbackColor = result.Applied ? Color.DarkGreen : Color.DarkRed;
+        this.Session.Complete(result.Applied);
+        if (result.Applied) Game1.playSound("coin");
+    }
+
+    private void ShowNetworkFeedback(string key, bool failed = false)
+    {
+        this.Feedback = this.Text.Get(key);
+        this.FeedbackColor = failed ? Color.DarkRed : Game1.textColor;
+    }
+
+    private void CloseOrCancel()
+    {
+        if (this.FarmhandRequest is not { } request) this.exitThisMenu();
+        else if (this.Service.TryCancelLanFixtureOperation(request.Id)) this.ShowNetworkFeedback("machine.network-cancelling");
+    }
+
+    public override bool readyToClose() => this.FarmhandRequest is null && base.readyToClose();
+
+    public override void receiveGamePadButton(Buttons button)
+    {
+        if (button == Buttons.B && this.FarmhandRequest is not null)
+        {
+            if (this.GuideOpen) this.SetGuideOpen(false);
+            else this.CloseOrCancel();
+            return;
+        }
+        base.receiveGamePadButton(button);
+    }
+
+    public override void update(GameTime time)
+    {
+        base.update(time);
+        if (this.FarmhandRequest is not { } request) return;
+        var status = this.Service.ReadLanMenuStatus(request.Id);
+        if (status is FarmhandRequestStatus.AwaitingHostReservation or FarmhandRequestStatus.Cancelling)
+        {
+            double now = time.TotalGameTime.TotalMilliseconds;
+            // Only resend the same intent while its local session still owns it. An applied operation never retries here.
+            if (now >= this.RetryAt)
+            {
+                if (this.RetryAt != 0)
+                    this.Service.TryQueueLanMenuOperation(this.Machine, request, this.FarmhandRecipe, this.IsCurrentInteraction);
+                this.RetryAt = now + 1500;
+            }
+            this.ShowNetworkFeedback(status == FarmhandRequestStatus.Cancelling ? "machine.network-cancelling" : "machine.network-awaiting");
+            return;
+        }
+        if (status == FarmhandRequestStatus.AwaitingHostResult)
+        {
+            this.ShowNetworkFeedback("machine.network-finishing");
+            return;
+        }
+
+        this.FarmhandRequest = null;
+        if (status == FarmhandRequestStatus.Applied)
+        {
+            bool starting = this.FarmhandRecipe is not null;
+            this.ShowResult(new(true, this.Text.Get(starting ? "machine.started" : "machine.collected")), starting);
+        }
+        else if (status is FarmhandRequestStatus.NoGrant or FarmhandRequestStatus.Cancelled)
+        {
+            this.Session.ReleaseRefusedRequest();
+            this.ShowNetworkFeedback(status == FarmhandRequestStatus.NoGrant ? "machine.network-refused" : "machine.network-cancelled",
+                failed: status == FarmhandRequestStatus.NoGrant);
+        }
+        else
+        {
+            this.FarmhandFenced = true;
+            this.ShowNetworkFeedback("machine.network-unconfirmed", failed: true);
+        }
+        this.FarmhandRecipe = null;
+    }
+
     public override void receiveKeyPress(Keys key)
     {
         if (key == Keys.None) return;
@@ -213,6 +303,7 @@ public sealed class MachineMenu : IClickableMenu
         if (key == Keys.Escape || Game1.options.doesInputListContain(Game1.options.menuButton, key))
         {
             if (this.GuideOpen) this.SetGuideOpen(false);
+            else if (this.FarmhandRequest is not null) this.CloseOrCancel();
             else base.receiveKeyPress(key);
             return;
         }
@@ -336,9 +427,11 @@ public sealed class MachineMenu : IClickableMenu
                     float scale = Math.Min(1f, 384 / Math.Max(1f, Game1.smallFont.MeasureString(timing).X));
                     this.DrawText(b, timing, Game1.smallFont, 44, rowY + 64, Game1.textColor, scale);
                 }
-                this.Button(b, bounds, this.Text.Get(this.Session.IsComplete ? "machine.done" : phase == MachinePhase.Ready ? "machine.collect"
+                this.Button(b, bounds, this.Text.Get(this.Session.IsComplete ? "machine.done"
+                    : this.FarmhandRequest is not null ? "machine.network-pending" : phase == MachinePhase.Ready ? "machine.collect"
                     : phase == MachinePhase.Processing ? "phase.Processing" : missing ? "machine.materials-missing" : "machine.start"),
-                    !this.Session.IsComplete && phase != MachinePhase.Processing && !missing);
+                    !this.Session.IsComplete && this.FarmhandRequest is null && !this.FarmhandFenced
+                    && phase != MachinePhase.Processing && !missing);
             }
         }
         if (this.Feedback.Length > 0) this.DrawText(b, Game1.parseText(this.Feedback, Game1.smallFont, 630), Game1.smallFont,

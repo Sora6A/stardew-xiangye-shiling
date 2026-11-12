@@ -205,6 +205,18 @@ Test("menu failure retains the original request and revision for safe retry", ()
         "A failed click must not silently acquire a request for a new revision.");
 });
 
+Test("menu starts a fresh intent only after an authoritative refusal", () =>
+{
+    var session = new XiangyeShiling.Menus.MenuActionSession();
+    Request first = session.Acquire(empty, 10)!;
+    session.ReleaseRefusedRequest();
+    Request next = session.Acquire(empty with { Revision = 1 }, 10)!;
+    Assert(next.Id != first.Id && next.ExpectedRevision == 1 && next.ActorId == first.ActorId,
+        "An authoritative no-grant or cancellation must release the rejected request ID.");
+    session.Complete(true);
+    Assert(session.Acquire(empty, 10) is null, "A finished menu must stay locked after a successful action.");
+});
+
 Test("successful menu action cannot acquire another request until reopened", () =>
 {
     var session = new XiangyeShiling.Menus.MenuActionSession();

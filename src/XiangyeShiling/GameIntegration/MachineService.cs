@@ -41,6 +41,11 @@ public sealed class MachineService
     internal bool TryCancelLanFixtureOperation(Guid requestId) => this.Network?.TryCancelFixtureOperation(requestId) ?? false;
     internal bool AllowsLocalHostOperations() => Context.IsWorldReady && Context.IsMainPlayer
         && (!Context.IsMultiplayer || this.Network?.AllowsFixtureHostOperations() == true);
+    internal bool AllowsFarmhandMenu() => this.Network?.AllowsFixtureFarmhandOperations() == true;
+    internal bool TryQueueLanMenuOperation(SObject machine, Request request, string? recipeId, Func<bool> interaction)
+        => this.Network?.TryQueueFixtureOperation(machine, request, recipeId, interaction) ?? false;
+    internal FarmhandRequestStatus ReadLanMenuStatus(Guid requestId)
+        => this.Network?.ReadFarmhandStatus(requestId) ?? FarmhandRequestStatus.Unconfirmed;
     internal void CaptureLoadedReservation() => this.Network?.CaptureLoadedReservation();
     /// <summary>默认禁用、主线程、专用世界的固定旧Welcome重放；不能传入载荷或目标，true不表示对端拒绝。</summary>
     public bool TryReplayPreviousNetworkWelcome(Guid expectedConnectionId) => this.Network?.TryReplayPreviousWelcome(expectedConnectionId) ?? false;

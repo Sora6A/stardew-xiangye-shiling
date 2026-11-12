@@ -46,8 +46,10 @@ internal static class MachinePatches
         if (!MachineService.TryGetKind(__instance, out _)) return true;
         __result = true;
         if (justCheckingForActivity) return false;
-        if (!Service.AllowsLocalHostOperations()) { Game1.showRedMessage(Text.Get("machine.single-player-only")); return false; }
-        MachineService.Initialize(__instance);
+        if (who != Game1.player) return false;
+        bool localHost = Service.AllowsLocalHostOperations();
+        if (!localHost && !Service.AllowsFarmhandMenu()) { Game1.showRedMessage(Text.Get("machine.single-player-only")); return false; }
+        if (localHost) MachineService.Initialize(__instance);
         if (who == Game1.player && Game1.activeClickableMenu is null)
             Game1.activeClickableMenu = new MachineMenu(Service, __instance, Text);
         return false;

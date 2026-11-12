@@ -147,9 +147,12 @@ internal sealed class ReadOnlyProtocolService
             if (this.MachineFixtureAllowed() && this.Session.ActiveSessionId is Guid sessionId)
             {
                 if (this.IsHost) this.HostTransactions!.Advance(sessionId);
-                else if (this.Session.ReadPeerStatus().SingleOrDefault(peer => peer.IsHost && peer.Ready) is { } host)
+                else if (this.CurrentReadyHost() is { } host)
                     this.OwnerTransactions!.Advance(host.PlayerId, sessionId, host.ConnectionId);
+                else this.OwnerTransactions!.FenceIntent();
             }
+            else if (!this.IsHost && this.Session.ActiveSessionId is null)
+                this.OwnerTransactions?.FenceIntent();
             for (int count = 0; count < MaximumWorkPerTick && this.Inbox.TryDequeue(out var pending); count++)
             {
                 // Any disconnect invalidates already queued work conservatively, without rotating the host world ID.
@@ -291,12 +294,30 @@ internal sealed class ReadOnlyProtocolService
         && Context.IsMainPlayer && this.IsHost && !Game1.newDay && this.Session?.ActiveSessionId is not null
         && this.MachineFixtureAllowed();
 
-    internal bool TryQueueFixtureOperation(SObject machine, Request request, string? recipeId)
+    internal bool AllowsFixtureFarmhandOperations() => ReferenceEquals(Thread.CurrentThread, this.Owner)
+        && !Context.IsMainPlayer && !this.IsHost && !Game1.newDay && this.MachineFixtureAllowed()
+        && this.CurrentReadyHost() is not null;
+
+    private ProtocolPeerStatus? CurrentReadyHost()
+    {
+        if (this.Session?.ActiveSessionId is null) return null;
+        var host = this.Session.ReadPeerStatus().SingleOrDefault(peer => peer.IsHost && peer.Ready);
+        return host is not null && Game1.MasterPlayer?.UniqueMultiplayerID == host.PlayerId
+            && this.Connections.TryGetValue(host.PlayerId, out var connection) && connection.Id == host.ConnectionId
+            && ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(host.PlayerId)) ? host : null;
+    }
+
+    internal FarmhandRequestStatus ReadFarmhandStatus(Guid requestId)
     {
         this.RequireOwner();
-        if (this.IsHost || !this.MachineFixtureAllowed() || this.Session?.ActiveSessionId is not Guid session
-            || this.Session.ReadPeerStatus().SingleOrDefault(peer => peer.IsHost && peer.Ready) is not { } host
-            || Game1.MasterPlayer?.UniqueMultiplayerID != host.PlayerId || Game1.player.UniqueMultiplayerID != request.ActorId
+        return this.OwnerTransactions?.ReadStatus(requestId) ?? FarmhandRequestStatus.Unconfirmed;
+    }
+
+    internal bool TryQueueFixtureOperation(SObject machine, Request request, string? recipeId, Func<bool>? interaction = null)
+    {
+        this.RequireOwner();
+        if (this.IsHost || !this.MachineFixtureAllowed() || Game1.newDay || this.Session?.ActiveSessionId is not Guid session
+            || this.CurrentReadyHost() is not { } host || Game1.player.UniqueMultiplayerID != request.ActorId
             || Game1.eventUp || Game1.player.UsingTool || Game1.player.currentLocation is not { } location
             || !location.objects.TryGetValue(machine.TileLocation, out SObject placed) || !ReferenceEquals(machine, placed)
             || !MachineService.TryRead(machine, out var state) || state!.InstanceId != request.InstanceId
@@ -309,8 +330,10 @@ internal sealed class ReadOnlyProtocolService
             recipeId is null ? MachineRequestAction.Collect : MachineRequestAction.Start, recipeId);
         if (!MachineRequestCodec.IsValid(intent)) return false;
         string json = MachineRequestCodec.Write(intent);
-        return this.OwnerTransactions!.TryRemember(intent, host.ConnectionId, out Guid nonce)
-            && this.Send(new(host.PlayerId, MachineIntentType, OwnerIntentRefusal.WriteIntent(nonce, json)));
+        if (!this.OwnerTransactions!.TryRemember(intent, host.ConnectionId, interaction, out Guid nonce)) return false;
+        bool sent = this.Send(new(host.PlayerId, MachineIntentType, OwnerIntentRefusal.WriteIntent(nonce, json)));
+        // An interactive request stays pending if dispatch could not be confirmed, so it can retry the same nonce.
+        return interaction is not null || sent;
     }
 
     internal bool TryCancelFixtureOperation(Guid requestId)
