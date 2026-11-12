@@ -24,6 +24,7 @@ public sealed class Config
     public string NativeRecoveryPhase { get; set; } = "";
     public bool VerifyOwnerInventoryFingerprints { get; set; }
     public bool VerifyHostReservationStore { get; set; }
+    public bool VerifyLanHostCompetition { get; set; }
 }
 
 /// <summary>
@@ -74,6 +75,8 @@ public sealed class ModEntry : Mod
         {
             var transaction = new LanMachineTransactionScenario(helper, this.Monitor, this.Settings);
             helper.Events.GameLoop.GameLaunched += (_, _) => transaction.QueueStart();
+            if (this.Settings.VerifyLanHostCompetition)
+                helper.Events.GameLoop.UpdateTicked += transaction.OnHostCompetitionTick;
             helper.Events.GameLoop.UpdateTicked += (_, _) => transaction.Tick();
             helper.Events.Multiplayer.ModMessageReceived += (_, e) => transaction.OnMessage(e);
             helper.Events.GameLoop.ReturnedToTitle += (_, _) => transaction.OnReturnedToTitle();

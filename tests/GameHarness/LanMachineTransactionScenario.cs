@@ -8,6 +8,7 @@ using StardewValley;
 using XiangyeShiling.GameIntegration;
 using XiangyeShiling.Machines;
 using XiangyeShiling.Networking;
+using XiangyeShiling.Menus;
 using SObject = StardewValley.Object;
 
 namespace GameHarness;
@@ -35,6 +36,7 @@ internal sealed class LanMachineTransactionScenario
     private readonly IMonitor Monitor;
     private readonly NativeNetworkBootstrap Bootstrap;
     private readonly bool Host;
+    private readonly bool VerifyHostCompetition;
     private readonly Stopwatch Watch = new();
     private readonly List<Evidence> Stages = new();
     private MachineService? Service;
@@ -47,6 +49,10 @@ internal sealed class LanMachineTransactionScenario
     private int PreparedRevision = -1;
     private int? ReadyClock;
     private bool Positioned, Completed, SavingObserved, RefusalObserved, CancellationSettled;
+    private bool HostPositioned;
+    private HostCompetitionEvidence? HostCompetition;
+    private CompetitionSetupEvidence? CompetitionSetup;
+    private string? SkippedHostArrivalEvent;
     private Guid? CancelledPlan;
     private Guid InstanceId;
     private ProtocolDiagnosticSnapshot? Protocol;
@@ -60,6 +66,7 @@ internal sealed class LanMachineTransactionScenario
         this.Helper = helper;
         this.Monitor = monitor;
         this.Host = config.NetworkRole == "Host";
+        this.VerifyHostCompetition = config.VerifyLanHostCompetition;
         this.Bootstrap = new(monitor, config);
     }
 
@@ -92,7 +99,10 @@ internal sealed class LanMachineTransactionScenario
 
             Farmer host = Game1.MasterPlayer;
             Require(host.UniqueMultiplayerID == NativeNetworkBootstrap.HostId, "Unexpected native host.");
-            if (this.Host && this.PreparedMachine is null) this.PreparedMachine = PrepareMachine(host);
+            if (this.Host && this.PreparedMachine is null)
+                this.PreparedMachine = PrepareMachine(host, requireHostStanding: this.VerifyHostCompetition);
+            if (this.VerifyHostCompetition && this.Before is null) this.ObserveCompetitionSetup(host);
+            if (this.Host && this.VerifyHostCompetition && !this.PrepareCompetingHost(host, this.PreparedMachine!)) return;
             long expectedPeer = this.Host ? NativeNetworkBootstrap.ClientId : NativeNetworkBootstrap.HostId;
             if (!this.Protocol.Peers.Any(peer => peer.PlayerId == expectedPeer && peer.IsHost != this.Host && peer.Ready)) return;
             Farmer? owner = this.Host ? Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: true) : Game1.player;
@@ -108,6 +118,9 @@ internal sealed class LanMachineTransactionScenario
             Require(state!.InstanceId == this.InstanceId, "The native machine instance changed.");
             if (!this.Host && !this.Positioned) this.Positioned = PrepareOwner(owner, farm, machine);
             if (!ReferenceEquals(owner.currentLocation, farm) || owner.Tile != machine.TileLocation + Below) return;
+            // The host puts its stack in place before publishing Ready; the client still has to see the native replica.
+            if (this.VerifyHostCompetition && (!ReferenceEquals(host.currentLocation, farm) || host.Tile != machine.TileLocation - Below
+                || host.Items[InputSlot] is not { QualifiedItemId: Soybean, Stack: 3, Quality: 0 })) return;
 
             if (this.HostInventory is null) this.HostInventory = Snapshot(host);
             Require(Snapshot(host).SequenceEqual(this.HostInventory), "The production transaction changed host inventory.");
@@ -126,7 +139,7 @@ internal sealed class LanMachineTransactionScenario
         }
     }
 
-    internal static SObject PrepareMachine(Farmer host)
+    internal static SObject PrepareMachine(Farmer host, bool requireHostStanding = false)
     {
         GameLocation farm = Game1.getFarm();
         Require(!farm.objects.Values.Any(item => MachineService.TryGetKind(item, out _))
@@ -136,12 +149,131 @@ internal sealed class LanMachineTransactionScenario
                         from x in Enumerable.Range(45, 23)
                         let candidate = new Vector2(x, y)
                         where farm.CanItemBePlacedHere(candidate) && farm.CanItemBePlacedHere(candidate + Below)
+                            && (!requireHostStanding || farm.CanItemBePlacedHere(candidate - Below))
                         select candidate).First();
         var machine = ItemRegistry.Create<SObject>("(BC)" + Id + "_BeanWorkshop");
         machine.TileLocation = tile;
         machine.modData[MachineService.StateKey] = MachineStateCodec.Write(MachineState.Empty(Guid.NewGuid(), MachineKind.BeanWorkshop));
         farm.objects.Add(tile, machine);
         return machine;
+    }
+
+    private bool PrepareCompetingHost(Farmer host, SObject machine)
+    {
+        Require(ReferenceEquals(host, Game1.player), "Only the dedicated local host can prepare its competition input.");
+        var farm = Game1.getFarm();
+        Vector2 standing = machine.TileLocation - Below;
+        if (!ReferenceEquals(host.currentLocation, farm))
+        {
+            if (!Game1.isWarping && !Game1.fadeToBlack)
+                Game1.warpFarmer(farm.NameOrUniqueName, (int)standing.X, (int)standing.Y, 2);
+            return false;
+        }
+        if (this.Before is null && this.SkippedHostArrivalEvent is null && Game1.eventUp && !Game1.isQuestion
+            && Game1.activeClickableMenu is StardewValley.Menus.DialogueBox { isQuestion: false }
+            && Game1.CurrentEvent is { skippable: true } arrival)
+        {
+            // The first Farm arrival can move the host to a story tile after the fixture initially positions it.
+            this.SkippedHostArrivalEvent = arrival.id;
+            arrival.skipEvent();
+            this.Report();
+            return false;
+        }
+        if (Game1.isWarping || Game1.fadeToBlack || Game1.eventUp || !Context.IsPlayerFree) return false;
+        if (host.Tile != standing)
+        {
+            host.setTileLocation(standing);
+            host.faceDirection(2);
+        }
+        if (!this.HostPositioned)
+        {
+            Require(host.Items.Count > InputSlot && host.Items[InputSlot] is null && host.CurrentToolIndex != InputSlot
+                && host.Items.CountId(Soybean) == 0, "The dedicated host must start with an empty competition slot and no soybeans.");
+            host.Items[InputSlot] = ItemRegistry.Create(Soybean, 3);
+            this.HostPositioned = true;
+        }
+        return true;
+    }
+
+    private void ObserveCompetitionSetup(Farmer host)
+    {
+        var owner = this.Host ? Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: true) : Game1.player;
+        var observed = new CompetitionSetupEvidence(
+            host.currentLocation?.NameOrUniqueName, host.Tile.ToString(), host.Items.CountId(Soybean), this.HostPositioned,
+            owner?.currentLocation?.NameOrUniqueName, owner?.Tile.ToString(), owner?.Items.CountId(Soybean), this.Positioned,
+            this.Protocol!.Peers.Any(peer => peer.Ready), Context.IsPlayerFree, Game1.isWarping, Game1.fadeToBlack,
+            Game1.eventUp, Game1.dialogueUp, Game1.CurrentEvent?.id, Game1.CurrentEvent?.skippable, Game1.activeClickableMenu?.GetType().Name);
+        if (observed == this.CompetitionSetup) return;
+        this.CompetitionSetup = observed;
+        this.Report();
+    }
+
+    // The real grant is created by the normal production tick. On the next native tick observe it before
+    // production can finalize the machine, and run the entire menu action within that one callback.
+    [EventPriority(EventPriority.High)]
+    internal void OnHostCompetitionTick(object? sender, UpdateTickedEventArgs e)
+    {
+        if (!this.Host || !this.VerifyHostCompetition || !this.CancellationSettled || this.Completed || this.Failure is not null
+            || this.HostCompetition is not null || !this.Bootstrap.Ready || this.PreparedMachine is not { } machine
+            || !Context.IsWorldReady || !Context.IsMainPlayer || Game1.uniqueIDForThisGame != NativeNetworkBootstrap.TransactionFixtureId)
+            return;
+        Farmer host = Game1.player;
+        if (!host.modData.TryGetValue(ReservationKey, out string reservedRaw)) return;
+        try
+        {
+            using var document = JsonDocument.Parse(reservedRaw);
+            JsonElement reservation = document.RootElement;
+            if (reservation.GetProperty("Status").GetString() != "Reserved") return;
+            bool readRequest = MachineRequestCodec.TryRead(reservation.GetProperty("RequestRaw").GetString(), out var request);
+            Require(readRequest && request is { ActorId: NativeNetworkBootstrap.ClientId, Action: MachineRequestAction.Start, ExpectedRevision: 0 }
+                && request.RequestId != this.CancelledPlan && request.InstanceId == this.InstanceId && request.RecipeId == Recipe,
+                "The active reservation did not match the competing farmhand's real Start.");
+            Farmer owner = Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: true)
+                ?? throw new InvalidOperationException("The reserved farmhand must still be connected.");
+            var farm = Game1.getFarm();
+            Require(ReferenceEquals(host.currentLocation, farm) && host.Tile == machine.TileLocation - Below
+                && ReferenceEquals(owner.currentLocation, farm) && owner.Tile == machine.TileLocation + Below
+                && !Game1.eventUp && !host.UsingTool && Game1.activeClickableMenu is null && host.Items.CountId(Soybean) == 3,
+                "Both actors must stand at the same real device and the host must be able to start the recipe.");
+            Require(farm.objects.TryGetValue(machine.TileLocation, out var placed) && ReferenceEquals(placed, machine)
+                && MachineService.TryRead(machine, out var state) && state is { Revision: 0, Batch: null },
+                "The exact placed device must still be idle before the competing menu action.");
+            string machineRaw = machine.modData[MachineService.StateKey];
+            Require(machineRaw == reservation.GetProperty("BeforeRaw").GetString(), "The device and live reservation do not match.");
+            Item[] hostReferences = host.Items.ToArray(), ownerReferences = owner.Items.ToArray();
+            var hostBefore = Snapshot(host);
+            var ownerBefore = Snapshot(owner);
+            string? ownerJournal = owner.modData.GetValueOrDefault(JournalKey);
+            if (!machine.checkForAction(host) || Game1.activeClickableMenu is not MachineMenu menu)
+                throw new InvalidOperationException("Native checkForAction did not open the real host machine menu.");
+            string feedback;
+            try
+            {
+                Point action = this.Helper.Reflection.GetMethod(menu, "ActionBounds").Invoke<Rectangle>(0).Center;
+                menu.receiveLeftClick(action.X, action.Y);
+                feedback = this.Helper.Reflection.GetField<string>(menu, "Feedback").GetValue();
+                var text = this.Helper.Reflection.GetField<ITranslationHelper>(this.Service!, "Text").GetValue();
+                Require(feedback == text.Get("machine.invalid-state").ToString(), "The real host menu did not report the reservation denial.");
+            }
+            finally
+            {
+                if (ReferenceEquals(Game1.activeClickableMenu, menu)) Game1.exitActiveMenu();
+            }
+            Require(machine.modData.GetValueOrDefault(MachineService.StateKey) == machineRaw
+                && host.modData.GetValueOrDefault(ReservationKey) == reservedRaw && owner.modData.GetValueOrDefault(JournalKey) == ownerJournal
+                && hostReferences.SequenceEqual(host.Items, ReferenceEqualityComparer.Instance)
+                && ownerReferences.SequenceEqual(owner.Items, ReferenceEqualityComparer.Instance)
+                && hostBefore.SequenceEqual(Snapshot(host)) && ownerBefore.SequenceEqual(Snapshot(owner)),
+                "The rejected host click changed the exact machine, reservation, journal or either inventory.");
+            this.HostCompetition = new(request!.RequestId, 0, host.Items.CountId(Soybean), owner.Items.CountId(Soybean),
+                machineRaw, reservedRaw, feedback);
+            this.Monitor.Log("The native host menu refused to start a machine reserved by the connected farmhand.", LogLevel.Info);
+            this.Report();
+        }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            this.Finish(error is TargetInvocationException { InnerException: { } inner } ? inner.Message : error.Message);
+        }
     }
 
     internal static bool PrepareOwner(Farmer owner, GameLocation farm, SObject machine)
@@ -222,6 +354,9 @@ internal sealed class LanMachineTransactionScenario
             this.VerifyCollected(owner, state);
             Require(this.RefusalObserved && this.CancellationSettled,
                 "The host did not observe a refusal and a settled cancellation before actual machine work.");
+            Require(!this.VerifyHostCompetition || this.HostCompetition is { } competition
+                && this.Stages.Any(evidence => evidence.Revision == 1 && evidence.Request == competition.FarmhandRequest),
+                "The real farmhand Start did not follow the verified competing host refusal.");
             this.Finish(null);
         }
         Require(state.Revision is >= 0 and <= 2, "Unexpected extra machine transaction.");
@@ -400,6 +535,7 @@ internal sealed class LanMachineTransactionScenario
         this.PreparedRevision, this.ReadyClock, this.Positioned, this.RefusalObserved, RefusedRequest = this.RefusedRequest?.Id,
         this.CancellationSettled, CancelledRequest = this.Host ? this.CancelledPlan : this.CancellationRequest?.Id,
         StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
+        this.VerifyHostCompetition, this.HostCompetition, this.CompetitionSetup, this.SkippedHostArrivalEvent,
         this.Stages, this.Protocol, this.Lan
     });
 
@@ -415,4 +551,9 @@ internal sealed class LanMachineTransactionScenario
     private sealed record ReadySignal(Guid InstanceId, int Revision, bool AfterCancellation);
     private sealed record Slot(string Id, int Stack, int Quality, string Metadata);
     private sealed record Evidence(long Revision, Guid? Request, string? Reservation, string? Journal, string? Receipt, int Soybeans, int Tofu);
+    private sealed record HostCompetitionEvidence(Guid FarmhandRequest, long Revision, int HostSoybeans, int FarmhandSoybeans,
+        string MachineRaw, string ReservationRaw, string Feedback);
+    private sealed record CompetitionSetupEvidence(string? HostLocation, string HostTile, int HostSoybeans, bool HostPositioned,
+        string? FarmhandLocation, string? FarmhandTile, int? FarmhandSoybeans, bool FarmhandPositioned, bool PeerReady,
+        bool PlayerFree, bool Warping, bool FadeToBlack, bool EventUp, bool DialogueUp, string? EventId, bool? EventSkippable, string? Menu);
 }
