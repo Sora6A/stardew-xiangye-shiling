@@ -78,6 +78,19 @@ internal static class OwnerInventoryFingerprintScenarios
             item.heldObject.Value = item;
             Check(WithCanonical(item) == (false, null), "Nested/cyclic item state must be rejected before serialization.");
         });
+        test("ordinary inventory fingerprint ignores visual flip without changing either object", () =>
+        {
+            var wheat = Plain("(O)262", 2, 0);
+            var canonical = Plain("(O)262", 2, 0);
+            var original = WithCanonical(wheat);
+            wheat.flipped.Value = true;
+            var flipped = WithCanonical(wheat, (_, _, _) => canonical);
+            Check(original.Success && flipped == original, "A different native sprite flip must not reject ordinary wheat.");
+            Check(wheat.flipped.Value && !canonical.flipped.Value, "Fingerprinting must preserve both native objects.");
+            canonical.price.Value = 9876;
+            Check(WithCanonical(wheat, (_, _, _) => canonical) == (false, null),
+                "Visual normalization must not mask a price difference.");
+        });
     }
 
     private static SObject Plain(string id, int stack, int quality)

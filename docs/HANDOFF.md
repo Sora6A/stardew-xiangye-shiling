@@ -1,5 +1,13 @@
 # 当前开发交接
 
+## 2026-11-12 原版小麦指纹修复检查点
+
+分支 `codex/first-stable-release`，基线 `7600b8c47394b69e16bd5dc642768d9850b508cf`。已定位原版构造随机翻转，将普通库存物品的 `flipped` 排除出指纹，保留其余原生字段与原对象。GameAdapter 旧 DLL 具名回归失败，新 DLL 17 项通过。生产及夹具 Release 零警告零错误。修后专用进程 29412 实机 Memory 21 项通过，含两种小麦朝向和 Farmer XML 往返；一次加载、零原生保存、51 个存档文件哈希一致，进程已退出、夹具禁用，原进程 16668 保留。新开发 ZIP 已生成，生产 DLL `A307647D6F9934F5A2BB244483A0B08A40A2D1A7E7EC17886DD2B51C9004D42E`。当前修复证据见 [BUG-2026-027](bugfix/BUG-2026-027-native-wheat-fingerprint.md)。后续验证实际双端指纹、可信 LAN 连接与正常就寝保存。正式联机写入仍关闭。
+
+## 2026-11-12 小麦指纹差异已定位
+
+分支 `codex/first-stable-release`，基线 `7600b8c47394b69e16bd5dc642768d9850b508cf`。相同诊断 DLL 的独立冷启动复现小麦拒绝，原物品与注册表重建对象的 XML 仅 `flipped` 不同。进程 15132 已退出，夹具禁用，原生保存零次，51 个文件无差异。原证据 `.local/p1-net03-fingerprint-repeat/audit.json`。短窗口额度达 90%，仅本交接未提交。下轮核对 `flipped` 的原生语义，补可重复回归后修复并重跑；生产 DLL 未改。[BUG-2026-027](bugfix/BUG-2026-027-native-wheat-fingerprint.md)
+
 ## 2026-11-12 小麦指纹诊断检查点
 
 分支 `codex/first-stable-release`，基线 `e3f67a1ead99806a4a82ee28d6b1a2fe80855f72`。实机夹具新增拒绝时的类型与 XML 字段差异诊断。Release 构建零警告零错误，同一生产 DLL 的第二次冷启动 21 项全通过，尚未捕获首轮拒绝原因。隔离进程 31036 已退出，夹具禁用，一次加载零保存，51 个存档哈希一致。原进程 16668 保留。证据在 `.local/p1-net03-fingerprint-diagnose`，与首轮失败独立。下一轮重复运行诊断构建以捕获差异，再接双端指纹和 LAN 连接准入。生产及远程均未变。见 [BUG-2026-027](bugfix/BUG-2026-027-native-wheat-fingerprint.md)。

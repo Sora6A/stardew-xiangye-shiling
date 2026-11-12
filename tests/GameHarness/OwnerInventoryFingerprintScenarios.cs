@@ -41,6 +41,17 @@ internal static class OwnerInventoryFingerprintScenarios
             Require(read(reloaded, i, out string? after) && after == digest,
                 "Native Farmer XML changed the material fingerprint: " + itemIds[i]);
         }
+        var wheat = (StardewValley.Object)owner.Items[1]!;
+        bool originalFlip = wheat.Flipped;
+        try
+        {
+            wheat.Flipped = false;
+            Require(read(owner, 1, out string? normal), "Unflipped registry wheat was unavailable.");
+            wheat.Flipped = true;
+            Require(read(owner, 1, out string? mirrored) && mirrored == normal && wheat.Flipped,
+                "A mirrored sprite changed the fingerprint or the live object.");
+        }
+        finally { wheat.Flipped = originalFlip; }
         Require(read(owner, 2, out string? empty) && empty is null
             && read(reloaded, 2, out string? loadedEmpty) && loadedEmpty is null,
             "An empty slot must remain distinct from unavailable before and after native XML.");

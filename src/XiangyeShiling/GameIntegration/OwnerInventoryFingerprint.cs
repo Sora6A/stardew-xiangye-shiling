@@ -15,7 +15,14 @@ namespace XiangyeShiling.GameIntegration;
 internal static class OwnerInventoryFingerprint
 {
     private const int MaxXmlBytes = 16 * 1024;
-    private static readonly Lazy<XmlSerializer> NativeObjectSerializer = new(() => new(typeof(SObject)));
+    private static readonly Lazy<XmlSerializer> NativeObjectSerializer = new(() =>
+    {
+        // Registry objects can choose different sprite orientations. Keep this native field on the live
+        // item and in saves, but exclude it from the equivalence check for ordinary inventory objects.
+        var overrides = new XmlAttributeOverrides();
+        overrides.Add(typeof(SObject), nameof(SObject.flipped), new XmlAttributes { XmlIgnore = true });
+        return new XmlSerializer(typeof(SObject), overrides);
+    });
 
     internal static bool TryReadSlot(Farmer? owner, int slot, out string? fingerprint)
     {
@@ -44,7 +51,8 @@ internal static class OwnerInventoryFingerprint
             if (id.Length is < 4 or > 128 || !id.StartsWith("(O)", StringComparison.Ordinal)
                 || native.Stack > native.maximumStackSize()) return false;
             // ID/quantity/quality alone cannot restore preserve types, mutable native fields or other mod data.
-            // A matching complete Object XML image proves this slot can be recreated by the game registry.
+            // Matching the persisted Object fields other than sprite orientation proves the registry can
+            // reconstruct the ordinary inventory item used in the write set.
             Item? canonical = createCanonical(id, native.Stack, native.Quality);
             if (canonical is not SObject prototype || prototype.GetType() != typeof(SObject)
                 || ReferenceEquals(native, prototype) || prototype.modData.Pairs.Any() || prototype.heldObject.Value is not null
