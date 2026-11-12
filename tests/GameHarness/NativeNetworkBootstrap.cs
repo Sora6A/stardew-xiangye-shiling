@@ -20,6 +20,8 @@ internal sealed class NativeNetworkBootstrap
     internal const long ClientId = -5889529773947908937;
     internal const string RecoveryFarmName = "XYSNET03";
     internal const ulong RecoveryFixtureId = 620261112;
+    internal const string BedtimeFarmName = "XYSNET04";
+    internal const ulong BedtimeFixtureId = 620261114;
 
     private readonly IMonitor Monitor;
     private readonly bool Host;
@@ -38,9 +40,10 @@ internal sealed class NativeNetworkBootstrap
     internal NativeNetworkBootstrap(IMonitor monitor, Config config)
     {
         bool ownership = config.Scenario == "NativeInventoryOwnership" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
-        bool recovery = config.Scenario == "NativeInventoryRecovery" && config.FarmName == RecoveryFarmName && config.SaveFixtureId == RecoveryFixtureId;
+        bool recovery = config.Scenario == "NativeInventoryRecovery" && IsRecoveryFixture(config);
         bool observation = config.Scenario == "LanTransportObservation" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
-        if (!config.Enabled || config.OpenPreview || (!observation && (!config.EnableNativeInventoryOwnership || (!ownership && !recovery)))
+        bool supported = observation || (config.EnableNativeInventoryOwnership && (ownership || recovery));
+        if (!config.Enabled || config.OpenPreview || !supported
             || config.NetworkRole is not ("Host" or "Client"))
             throw new InvalidOperationException("Native network bootstrap requires a dedicated fixture and Host or Client role.");
 
@@ -49,6 +52,10 @@ internal sealed class NativeNetworkBootstrap
         this.BoundFarmName = config.FarmName;
         this.BoundFixtureId = config.SaveFixtureId;
     }
+
+    internal static bool IsRecoveryFixture(Config config) =>
+        (config.FarmName == RecoveryFarmName && config.SaveFixtureId == RecoveryFixtureId)
+        || (config.FarmName == BedtimeFarmName && config.SaveFixtureId == BedtimeFixtureId);
 
     // 和既有夹具一致，等待标题资源初始化后再调用原版加载入口。
     internal void QueueStart()

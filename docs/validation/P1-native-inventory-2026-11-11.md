@@ -33,3 +33,11 @@ Write 轮直接推进原版存档迭代器，`SavingObserved=false`、`SavedObse
 在 `XYSNET02` 的隔离主机与实际农工启用 `LanTransportObservation` 及只读探针配置。主机 PID 22572、客户端 PID 33080。农工正常发送固定只读开工探针。主机从原版 Lidgren 已批准的连接识别农工，两次原生派发通过来源核对，其中开工探针与同一 SDK 连接、同一请求的拒绝配对。两端均记录 `WritesDisabled`。客户端实际返回标题后，主机断连代次从 0 递增到 1，旧 `LastConfirmed` 失效。
 
 生产 DLL `1A077F962A9D81BA85395E0FE3AE2C4056FB38D1FFC8F7F192BF699304EFB3D0`，夹具 DLL `E525F06CBD0F03F675DD66CFB70680DD25691ACD87FCD1E3B7939FB45FB1874F`。双方完成，未发生保存，53 个文件哈希一致；关闭两测试进程、禁用配置，保留原普通进程 16668。原版改写了 `startup_preferences`。报告、构建和审计保存在 `.local/p1-net03-lan/native`。本轮范围为指定 Windows 1.6.15.24356、SMAPI 4.4.0 和 LAN 接收来源，Steam/Galaxy 和实际写权限另验。
+
+## 2026-11-12 原版就寝与普通物品双端指纹
+
+从春 24 的 `XYSNET02` 生成独立 `XYSNET04_620261114`。`NativeInventoryRecovery` 仍使用 `Write` 和 `Verify`，用该精确世界绑定启用就寝路径。夹具在农工自己的背包另准备无标记的原版小麦，作为库存同步和实际 `OwnerInventoryFingerprint` 的见证。生产探针关闭。
+
+Write 主机 PID 11988、客户端 PID 17856。农工写入后无业务确认即原版断线，主机由实际床铺触发原版问答并确认，观察到恰好一次 SMAPI `Saving` 和一次 `Saved`，春 24 推进到春 25。磁盘保存同一农工的木材 2、提交日志和无标小麦。Verify 主机 PID 28528 在客户端 PID 28424 重连前从离线 Farmer 读到相同值，重连后重发同一请求，农工重放一次、写入零次。无标小麦的生产指纹 `43405b5b6f4e0f18263219eddc044497caa749e23b810d885befc1adf5f955c4` 在写入两端、冷主机离线及重入两端一致。
+
+生产 DLL `1A077F962A9D81BA85395E0FE3AE2C4056FB38D1FFC8F7F192BF699304EFB3D0`，夹具 DLL `D28508C0B78EF8BA3B49E71521E1688E5ABA4E714EA1465CA6997CA51BE9C158`。两轮审计均通过，Write 只更新该副本与原版备份，Verify 的 55 个文件哈希一致。四进程退出且配置禁用，原普通进程 16668 保留。首次启动的旧生产 DLL 因缺少合并夹具引用的诊断类型被 SMAPI 拒绝，无存档加载或变化。成功轮与失败轮分别留档。证据 `.local/p1-net03-native/bedtime-write-v3`、`.local/p1-net03-native/bedtime-verify`。正式机器事务与生产预留在就寝时的联机守恒仍待实测。
