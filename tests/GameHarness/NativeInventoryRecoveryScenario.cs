@@ -3,11 +3,9 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
-using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
-using StardewValley.Locations;
 using StardewValley.Menus;
 using XiangyeShiling.GameIntegration;
 
@@ -62,10 +60,7 @@ internal sealed class NativeInventoryRecoveryScenario
     private int SavedEvents;
     private int? StartTotalDays;
     private int? SavedTotalDays;
-    private Vector2? BedTile;
-    private int BedApproachTicks;
-    private DialogueBox? BedtimePrompt;
-    private bool BedtimeAnswerSent;
+    private NativeBedtimeInteraction? BedtimeInteraction;
     private string? WheatDigest;
     private int OwnerWrites;
     private int OwnerReplays;
@@ -218,7 +213,7 @@ internal sealed class NativeInventoryRecoveryScenario
         this.SavingObserved = true;
         if (!this.Host || !this.Write || !this.NativeSaveStarted || this.Stage != State.Saving)
             this.Fail("Saving was observed outside the one authorized host write.");
-        else if (this.Bedtime && (!this.BedtimeAnswerSent || this.SavingEvents != 1))
+        else if (this.Bedtime && (this.BedtimeInteraction?.AnswerSent != true || this.SavingEvents != 1))
             this.Fail("The bedtime save did not follow the one authorized native Yes response.");
         else if (this.Bedtime)
             this.Record("HostObservedSmapiSaving", null);
@@ -393,24 +388,8 @@ internal sealed class NativeInventoryRecoveryScenario
 
     private void BeginBedtime()
     {
-        Require(Game1.currentLocation is FarmHouse && Game1.activeClickableMenu is null && !Game1.eventUp,
-            "The disposable host must be free to interact inside its farmhouse.");
-        var house = (FarmHouse)Game1.currentLocation;
-        var bed = house.GetPlayerBed() ?? throw new InvalidOperationException("The disposable farmhouse has no player bed.");
-        // GetPlayerBedSpot points at the wake-up tile. The bed exposes Sleep one row below the furniture origin.
-        var origin = bed.TileLocation;
-        var candidates = Enumerable.Range((int)origin.X, bed.getTilesWide())
-            .Select(x => new Vector2(x, origin.Y + 1))
-            .Where(tile => house.doesTileHaveProperty((int)tile.X, (int)tile.Y, "TouchAction", "Back") == "Sleep").ToArray();
-        Require(candidates.Length == 1, "The player bed must expose exactly one native Sleep touch tile.");
-        Vector2 approach = candidates[0] + Vector2.UnitY;
-        Require(house.doesTileHaveProperty((int)approach.X, (int)approach.Y, "TouchAction", "Back") is null,
-            "The adjacent bed approach tile has another touch action.");
-        this.StartTotalDays = Game1.Date.TotalDays;
-        this.BedTile = candidates[0];
-        // Position the fixture at the bed approach; the native location update dispatches the Sleep touch action.
-        Game1.player.setTileLocation(approach);
-        Game1.player.behaviorOnMovement(0);
+        this.BedtimeInteraction = new NativeBedtimeInteraction();
+        this.StartTotalDays = this.BedtimeInteraction.StartTotalDays;
         this.Record("HostApproachedNativeBed", null);
     }
 
@@ -429,29 +408,7 @@ internal sealed class NativeInventoryRecoveryScenario
             this.Complete("HostFinishedNativeBedtime", offline);
             return;
         }
-        if (this.BedtimeAnswerSent) return;
-        if (++this.BedApproachTicks < 3) return;
-        if (this.BedApproachTicks == 3)
-        {
-            Game1.player.setTileLocation(this.BedTile!.Value);
-            return;
-        }
-        if (Game1.activeClickableMenu is not DialogueBox prompt || Game1.currentLocation.lastQuestionKey != "Sleep")
-            return;
-        if (this.BedtimePrompt is null)
-        {
-            this.BedtimePrompt = prompt;
-            this.Record("HostOpenedNativeSleepQuestion", null);
-        }
-        Require(ReferenceEquals(this.BedtimePrompt, prompt), "The native sleep prompt changed before confirmation.");
-        if (prompt.transitioning || prompt.safetyTimer > 0 || prompt.characterIndexInDialogue < prompt.getCurrentString().Length)
-            return;
-        int yes = Array.FindIndex(prompt.responses, response => response.responseKey == "Yes");
-        Require(yes >= 0, "The native sleep prompt has no Yes response.");
-        prompt.selectedResponse = yes;
-        this.BedtimeAnswerSent = true;
-        this.Record("HostSelectedNativeSleepYes", null);
-        prompt.receiveLeftClick(0, 0);
+        this.BedtimeInteraction!.Tick(name => this.Record(name, null));
     }
 
     private void VerifyWorld()

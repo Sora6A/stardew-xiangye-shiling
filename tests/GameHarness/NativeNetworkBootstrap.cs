@@ -24,6 +24,8 @@ internal sealed class NativeNetworkBootstrap
     internal const ulong BedtimeFixtureId = 620261114;
     internal const string TransactionFarmName = "XYSNET05";
     internal const ulong TransactionFixtureId = 620261116;
+    internal const string MachineRecoveryFarmName = "XYSNET06";
+    internal const ulong MachineRecoveryFixtureId = 620261118;
 
     private readonly IMonitor Monitor;
     private readonly bool Host;
@@ -46,7 +48,9 @@ internal sealed class NativeNetworkBootstrap
         bool observation = config.Scenario == "LanTransportObservation" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
         bool transaction = config.Scenario == "LanMachineTransaction" && config.FarmName == TransactionFarmName
             && config.SaveFixtureId == TransactionFixtureId;
-        bool supported = observation || transaction || (config.EnableNativeInventoryOwnership && (ownership || recovery));
+        bool machineRecovery = config.Scenario == "LanMachineRecovery" && config.FarmName == MachineRecoveryFarmName
+            && config.SaveFixtureId == MachineRecoveryFixtureId;
+        bool supported = observation || transaction || machineRecovery || (config.EnableNativeInventoryOwnership && (ownership || recovery));
         if (!config.Enabled || config.OpenPreview || !supported
             || config.NetworkRole is not ("Host" or "Client"))
             throw new InvalidOperationException("Native network bootstrap requires a dedicated fixture and Host or Client role.");
