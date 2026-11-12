@@ -15,3 +15,15 @@
 实际主机 PID 21284 与客户端 PID 27892 均报告完成，提交阶段各有一条记录，标记与数量一致。两端未保存，隔离夹具已禁用。退出审计的 `IntegrityPassed` 与 `ScenarioPassed` 均为 true，47 个存档文件哈希一致，原进程 16668 保留。原版写回了共享启动偏好，启动前的字节与审计均留在 `.local/p1-net03-native/owner-commit`。本场景证明在线原版库存同步和重复指令下的本地一次执行，断线、保存恢复和正式机器事务留待 NET03/04。
 
 同日第二轮在农工的 `Farmer.modData` 增加仅本轮使用的提交记录。主机等原版同步同时提供记录和匹配的库存结果才确认，允许两者在不同更新时刻到达。PID 31368 与 6716 的记录、物品标记和数量一致，主机随后观察到记录和测试格均已清空。两端均完成且未保存，47 个存档文件哈希一致。报告、启动偏好备份和退出审计在 `.local/p1-net03-native/owner-journal`。这验证了在线观察持久化候选字段的路径，字段跨存档的存续还需专用保存试验。
+
+## 2026-11-12 无确认断线及冷重载
+
+使用 `python tools/prepare_save_copy.py --source <XYSNET02_450604963> --label XYSNET03 --save-id 620261112 --cooperative` 生成独立副本。工具只在工作区输出，保留主机和农工的原生联机 ID，重新绑定世界名。审查后仅将该副本安装到游戏 Saves。主机和农工分别使用隔离 Mods 的 `NativeInventoryRecovery`，设置专用农场名和世界 ID，显式开启库存试验，关闭生产协议探针。Write 与 Verify 分别启动新进程。
+
+Write 轮主机 PID 18324、农工 PID 7400。农工把测试格中的标记木材由 3 改为 2，在自身 `Farmer.modData` 写同一请求的日志。主机从实际 Farmer 观察到两者后仍不发业务确认。启动器以本轮请求 ID 通知农工调用原版 `ExitToTitle`。主机收到 `PeerDisconnected` 且在线名单中无该农工后，推进一次 `SaveGame.Save()` 迭代至结束。退出审计核对专用主 XML 中该农工第 12 格为木材 `(O)388`、数量 2、品质 0，匹配本轮标记和日志。原 47 个存档文件不变，两套夹具关闭，原普通进程保留。原报告、配置和审计保存在 `.local/p1-net03-native/recovery-write`。
+
+Verify 轮主机 PID 18764 在农工上线前从磁盘加载的离线 Farmer 读到相同槽位及日志。农工 PID 33456 实际重连后，主机重发同一请求；农工报告 `OwnerWrites=0`、`OwnerReplays=1`，主机及农工最终仍见木材 2 个及原日志，两端完成。两轮隔离生产 DLL 为 `E19B50F8ADFFCCFBFDF41B69A4A5C654D296D0C72FCC83C1E4DF98E4A4C7BEAF`，夹具 DLL 为 `E936D2FA68236BC07616F91B734EDDDBC101805EDDEF301EC785BF2706E613DB`。Verify 原报告位于 `.local/p1-net03-native/recovery-verify`。
+
+两轮审计的 `IntegrityPassed`、`ScenarioPassed`、`DiskCommitMatches` 均为 true。Write 轮只更新两个副本主文件并创建两个原版备份，Verify 轮全部 51 个存档文件哈希一致。两轮隔离夹具均禁用，四个测试进程均已退出，原普通进程 16668 保留。游戏原版写回共享启动偏好，前后哈希与启动前字节留在两轮证据中。
+
+Write 轮直接推进原版存档迭代器，`SavingObserved=false`、`SavedObserved=false`。写盘以主 XML、原版备份和下一进程冷重载证明。生产实现仍需在正常就寝保存中验证 SMAPI 生命周期，并覆盖主机预留、部分同步、两人争用及真实设备提交。标记木材仅用于此场景识别同一测试栈，生产指纹实测需使用普通无标记物品。

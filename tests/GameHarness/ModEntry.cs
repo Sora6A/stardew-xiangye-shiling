@@ -21,6 +21,7 @@ public sealed class Config
     public string NetworkRole { get; set; } = "Observe";
     public bool EnableNativeInventoryOwnership { get; set; }
     public bool NativeInventoryCommitByOwner { get; set; }
+    public string NativeRecoveryPhase { get; set; } = "";
 }
 
 /// <summary>
@@ -49,6 +50,18 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.Scenario == "NativeInventoryRecovery")
+        {
+            var recovery = new NativeInventoryRecoveryScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => recovery.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => recovery.Tick();
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => recovery.OnMessage(e);
+            helper.Events.Multiplayer.PeerDisconnected += (_, e) => recovery.OnPeerDisconnected(e.Peer.PlayerID);
+            helper.Events.GameLoop.Saving += (_, _) => recovery.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => recovery.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => recovery.OnReturnedToTitle();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == "NativeInventoryOwnership")
         {
             var bootstrap = new NativeNetworkBootstrap(this.Monitor, this.Settings);

@@ -18,10 +18,13 @@ internal sealed class NativeNetworkBootstrap
     internal const long HostId = -3294125852957351781;
     internal const string ClientName = "XYSNETClient";
     internal const long ClientId = -5889529773947908937;
+    internal const string RecoveryFarmName = "XYSNET03";
+    internal const ulong RecoveryFixtureId = 620261112;
 
-    private const string SaveName = "XYSNET02_450604963";
     private readonly IMonitor Monitor;
     private readonly bool Host;
+    private readonly string BoundFarmName;
+    private readonly ulong BoundFixtureId;
     private readonly Stopwatch Watch = new();
     private int LoadDelay = -1;
     private FarmhandMenu? JoinMenu;
@@ -34,13 +37,16 @@ internal sealed class NativeNetworkBootstrap
 
     internal NativeNetworkBootstrap(IMonitor monitor, Config config)
     {
-        if (!config.Enabled || !config.EnableNativeInventoryOwnership || config.Scenario != "NativeInventoryOwnership"
-            || config.OpenPreview || config.FarmName != FarmName || config.SaveFixtureId != FixtureId
+        bool ownership = config.Scenario == "NativeInventoryOwnership" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
+        bool recovery = config.Scenario == "NativeInventoryRecovery" && config.FarmName == RecoveryFarmName && config.SaveFixtureId == RecoveryFixtureId;
+        if (!config.Enabled || !config.EnableNativeInventoryOwnership || config.OpenPreview || (!ownership && !recovery)
             || config.NetworkRole is not ("Host" or "Client"))
-            throw new InvalidOperationException("Native network bootstrap requires the dedicated XYSNET02 fixture and Host or Client role.");
+            throw new InvalidOperationException("Native network bootstrap requires a dedicated fixture and Host or Client role.");
 
         this.Monitor = monitor;
         this.Host = config.NetworkRole == "Host";
+        this.BoundFarmName = config.FarmName;
+        this.BoundFixtureId = config.SaveFixtureId;
     }
 
     // 和既有夹具一致，等待标题资源初始化后再调用原版加载入口。
@@ -71,7 +77,7 @@ internal sealed class NativeNetworkBootstrap
                 return;
             }
 
-            if (Game1.player.farmName.Value != FarmName || Game1.uniqueIDForThisGame != FixtureId
+            if (Game1.player.farmName.Value != this.BoundFarmName || Game1.uniqueIDForThisGame != this.BoundFixtureId
                 || Context.IsMainPlayer != this.Host || Context.IsSplitScreen || Context.ScreenId != 0
                 || Game1.player.UniqueMultiplayerID != (this.Host ? HostId : ClientId))
                 throw new InvalidOperationException("Loaded the wrong world, screen, or native player role.");
@@ -106,14 +112,15 @@ internal sealed class NativeNetworkBootstrap
 
         if (this.Host)
         {
-            if (!File.Exists(Path.Combine(Constants.SavesPath, SaveName, SaveName))
-                || !File.Exists(Path.Combine(Constants.SavesPath, SaveName, "SaveGameInfo")))
+            string saveName = $"{this.BoundFarmName}_{this.BoundFixtureId}";
+            if (!File.Exists(Path.Combine(Constants.SavesPath, saveName, saveName))
+                || !File.Exists(Path.Combine(Constants.SavesPath, saveName, "SaveGameInfo")))
                 throw new InvalidOperationException("The dedicated cooperative fixture is missing.");
 
             // 对应原版 HostFileSlot.Activate。加载器从这个存档启用原版服务器。
             Game1.multiplayerMode = Game1.multiplayerServer;
             Game1.activeClickableMenu = null;
-            SaveGame.Load(SaveName);
+            SaveGame.Load(saveName);
             return;
         }
 
