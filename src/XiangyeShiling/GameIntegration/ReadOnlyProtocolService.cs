@@ -23,6 +23,7 @@ internal sealed class ReadOnlyProtocolService
     private readonly string ModId;
     private readonly string ModVersion;
     private readonly NetworkDiagnosticOptions Options;
+    private readonly LanTransportActorObservation LanTransport;
     private readonly Thread Owner = Thread.CurrentThread;
     private readonly Guid RunId = Guid.NewGuid();
     private readonly ProtocolTraceBuffer Trace = new();
@@ -49,6 +50,7 @@ internal sealed class ReadOnlyProtocolService
         this.ModId = manifest.UniqueID;
         this.ModVersion = manifest.Version.ToString();
         this.Options = options;
+        this.LanTransport = new(options.EnableReadOnlyNetworkProbes, monitor, this.ModId);
         helper.Events.Multiplayer.ModMessageReceived += this.OnMessageReceived;
         helper.Events.Multiplayer.PeerDisconnected += (_, _) => Interlocked.Increment(ref this.ConnectionGeneration);
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
@@ -60,13 +62,17 @@ internal sealed class ReadOnlyProtocolService
 
     private void OnMessageReceived(object? sender, ModMessageReceivedEventArgs e)
     {
-        // Do not touch Context/Game1 or ReadAs in this callback; even local SendMessage can be reentrant.
-        // Explicit outbound recipients exclude ourselves. Unknown sources are filtered later on the owner thread.
+        // Never read the body here. Existing read-only handling is independent of the opt-in host provenance sample.
         if (e.FromModID != this.ModId || e.Type is not (ReadOnlyProtocolCodec.HelloType
                 or ReadOnlyProtocolCodec.WelcomeType or ReadOnlyProtocolCodec.RequestType or ReadOnlyProtocolCodec.RejectedType)) return;
         if (!Volatile.Read(ref this.PublishedConnections).TryGetValue(e.FromPlayerID, out Guid connectionId)) return;
-        if (!this.Inbox.TryEnqueue(new PendingMessage(Volatile.Read(ref this.Generation),
-            Volatile.Read(ref this.ConnectionGeneration), connectionId, e))) Interlocked.Increment(ref this.QueueRejected);
+        long worldGeneration = Volatile.Read(ref this.Generation);
+        long connectionGeneration = Volatile.Read(ref this.ConnectionGeneration);
+        var provenance = this.Options.EnableReadOnlyNetworkProbes && ReferenceEquals(Thread.CurrentThread, this.Owner)
+            && Context.IsMainPlayer && this.ProbesAllowed()
+            ? this.LanTransport.Capture(e.FromPlayerID, worldGeneration, connectionGeneration) : null;
+        if (!this.Inbox.TryEnqueue(new PendingMessage(worldGeneration, connectionGeneration, connectionId, e, provenance)))
+            Interlocked.Increment(ref this.QueueRejected);
     }
 
     private void Reset()
@@ -115,10 +121,16 @@ internal sealed class ReadOnlyProtocolService
                     || !this.Connections.TryGetValue(pending.Args.FromPlayerID, out var connection)
                     || pending.ConnectionId != connection.Id)
                 {
+                    this.LanTransport.Discard(pending.LanProvenance);
                     this.Record(ProtocolTraceKind.StaleQueue, pending.Args.FromPlayerID, pending.Args.Type);
                     continue;
                 }
                 var args = pending.Args;
+                if (pending.LanProvenance is not null && this.IsHost && this.ProbesAllowed()
+                    && ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(args.FromPlayerID)))
+                    this.LanTransport.Confirm(pending.LanProvenance, args.FromPlayerID, args.Type,
+                        this.Generation, Volatile.Read(ref this.ConnectionGeneration), pending.ConnectionId);
+                else this.LanTransport.Discard(pending.LanProvenance);
                 OutboundProtocolMessage? response = this.Session.Receive(args.FromPlayerID, args.FromModID,
                     args.Type, () => ReadBody(args), now);
                 this.Record(ProtocolTraceKind.Processed, args.FromPlayerID, args.Type, this.Session.LastObservation,
@@ -189,6 +201,13 @@ internal sealed class ReadOnlyProtocolService
             this.Session?.ReadPeerStatus() ?? Array.Empty<ProtocolPeerStatus>(), this.Trace.Snapshot());
     }
 
+    public LanTransportDiagnosticSnapshot ReadLanTransportDiagnostics()
+    {
+        this.RequireOwner();
+        return this.LanTransport.Read(this.IsHost && this.ProbesAllowed(), this.Generation,
+            Volatile.Read(ref this.ConnectionGeneration), Volatile.Read(ref this.PublishedConnections));
+    }
+
     /// <summary>默认关闭的固定合成意图测试；无任意JSON/目标/actor入口，主机不能发，16次/秒上限。true仅表示发送尝试。</summary>
     public bool TrySendProbe(ProtocolProbeKind kind, Guid requestId)
     {
@@ -252,6 +271,7 @@ internal sealed class ReadOnlyProtocolService
         catch (Exception ex) when (ex is not OutOfMemoryException) { return null; }
     }
 
-    private sealed record PendingMessage(long Generation, long ConnectionGeneration, Guid ConnectionId, ModMessageReceivedEventArgs Args);
+    private sealed record PendingMessage(long Generation, long ConnectionGeneration, Guid ConnectionId,
+        ModMessageReceivedEventArgs Args, LanTransportActorObservation.IngressTicket? LanProvenance);
     private sealed record PeerConnection(IMultiplayerPeer Peer, Guid Id);
 }

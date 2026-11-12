@@ -30,6 +30,9 @@ public sealed class MachineService
     /// <summary>仅本地主线程诊断快照，不提供库存授权；未绑定时抛错，不伪造“零错误”报告。</summary>
     public ProtocolDiagnosticSnapshot ReadNetworkDiagnostics() => this.Network?.ReadDiagnostics()
         ?? throw new InvalidOperationException("Read-only protocol diagnostics are unavailable.");
+    /// <summary>本地主线程上的已配置 LAN 来源观测。独立于原只读协议报告，不授权联机事务。</summary>
+    public LanTransportDiagnosticSnapshot ReadLanTransportDiagnostics() => this.Network?.ReadLanTransportDiagnostics()
+        ?? throw new InvalidOperationException("LAN transport diagnostics are unavailable.");
     /// <summary>固定合成只读probe，另需主模块显式配置及专用世界；不委托Execute，true不表示对端收到。</summary>
     public bool TrySendNetworkProbe(ProtocolProbeKind kind, Guid requestId) => this.Network?.TrySendProbe(kind, requestId) ?? false;
     /// <summary>默认禁用、主线程、专用世界的固定旧Welcome重放；不能传入载荷或目标，true不表示对端拒绝。</summary>
