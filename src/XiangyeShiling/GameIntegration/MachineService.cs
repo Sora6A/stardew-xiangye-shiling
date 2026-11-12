@@ -38,6 +38,7 @@ public sealed class MachineService
     public bool TrySendNetworkProbe(ProtocolProbeKind kind, Guid requestId) => this.Network?.TrySendProbe(kind, requestId) ?? false;
     internal bool TryQueueLanFixtureOperation(SObject machine, Request request, string? recipeId)
         => this.Network?.TryQueueFixtureOperation(machine, request, recipeId) ?? false;
+    internal bool TryCancelLanFixtureOperation(Guid requestId) => this.Network?.TryCancelFixtureOperation(requestId) ?? false;
     internal void CaptureLoadedReservation() => this.Network?.CaptureLoadedReservation();
     /// <summary>默认禁用、主线程、专用世界的固定旧Welcome重放；不能传入载荷或目标，true不表示对端拒绝。</summary>
     public bool TryReplayPreviousNetworkWelcome(Guid expectedConnectionId) => this.Network?.TryReplayPreviousWelcome(expectedConnectionId) ?? false;

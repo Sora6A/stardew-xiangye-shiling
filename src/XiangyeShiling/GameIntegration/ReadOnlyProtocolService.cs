@@ -309,6 +309,13 @@ internal sealed class ReadOnlyProtocolService
             && this.Send(new(host.PlayerId, MachineIntentType, OwnerIntentRefusal.WriteIntent(nonce, json)));
     }
 
+    internal bool TryCancelFixtureOperation(Guid requestId)
+    {
+        this.RequireOwner();
+        return !this.IsHost && this.MachineFixtureAllowed() && this.Session?.ActiveSessionId is not null
+            && this.OwnerTransactions!.RequestCancellation(requestId);
+    }
+
     /// <summary>
     /// 独立NET02重放夹具入口：仅专用世界主机、唯一当前Ready客户端、相邻旧连接一次；
     /// 不接收JSON/peer/actor/session，旧正文仅取自本进程真实已发送Welcome内存。

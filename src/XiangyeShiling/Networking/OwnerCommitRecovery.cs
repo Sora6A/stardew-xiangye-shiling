@@ -1,7 +1,7 @@
 namespace XiangyeShiling.Networking;
 
 internal enum OwnerReservationStatus { Reserved, Applied, Cancelled }
-internal enum OwnerJournalObservation { Absent, Matching, Foreign }
+internal enum OwnerJournalObservation { Absent, Matching, Foreign, Declined }
 internal enum ReservedMachineObservation { Before, After, Conflict }
 
 internal enum OwnerRecoveryAction
@@ -27,17 +27,22 @@ internal static class OwnerCommitRecovery
         OwnerInventoryObservation inventory, OwnerJournalObservation journal, bool settledCheckpoint)
     {
         if (machine is not (ReservedMachineObservation.Before or ReservedMachineObservation.After) ||
-            journal is not (OwnerJournalObservation.Absent or OwnerJournalObservation.Matching) ||
+            journal is not (OwnerJournalObservation.Absent or OwnerJournalObservation.Matching or OwnerJournalObservation.Declined) ||
             inventory is not (OwnerInventoryObservation.Before or OwnerInventoryObservation.After or OwnerInventoryObservation.Partial))
             return OwnerRecoveryAction.Isolate;
 
         bool ownerApplied = inventory == OwnerInventoryObservation.After && journal == OwnerJournalObservation.Matching;
-        bool ownerUntouched = inventory == OwnerInventoryObservation.Before && journal == OwnerJournalObservation.Absent;
+        bool ownerUntouched = inventory == OwnerInventoryObservation.Before
+            && journal is OwnerJournalObservation.Absent or OwnerJournalObservation.Declined;
         return reservation switch
         {
             OwnerReservationStatus.Reserved when ownerApplied => machine == ReservedMachineObservation.Before
                 ? OwnerRecoveryAction.CommitMachine : OwnerRecoveryAction.RecordAppliedReceipt,
             OwnerReservationStatus.Reserved when machine == ReservedMachineObservation.After => OwnerRecoveryAction.Isolate,
+            // Declined is affirmative native owner evidence. An inconsistent decline cannot authorize
+            // either application or cancellation, even after a settled checkpoint.
+            OwnerReservationStatus.Reserved when journal == OwnerJournalObservation.Declined => ownerUntouched
+                ? OwnerRecoveryAction.CancelReservation : OwnerRecoveryAction.Isolate,
             OwnerReservationStatus.Reserved when settledCheckpoint => ownerUntouched
                 ? OwnerRecoveryAction.CancelReservation : OwnerRecoveryAction.Isolate,
             OwnerReservationStatus.Reserved => OwnerRecoveryAction.Wait,

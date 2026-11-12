@@ -49,9 +49,17 @@ internal sealed class OwnerInventoryCommit
 
     internal static OwnerJournalObservation ObserveJournal(Farmer owner, OwnerCommitReservation reservation)
         => !owner.modData.TryGetValue(JournalKey, out string raw) ? OwnerJournalObservation.Absent
-            : raw == reservation.OwnerJournal ? OwnerJournalObservation.Matching : OwnerJournalObservation.Foreign;
+            : raw == reservation.OwnerJournal ? OwnerJournalObservation.Matching
+            : raw == DeclinedJournal(reservation) ? OwnerJournalObservation.Declined : OwnerJournalObservation.Foreign;
 
     internal static string SeenJournal(OwnerCommitReservation reservation) => reservation.OwnerJournal + ":Seen";
+    internal static string DeclinedJournal(OwnerCommitReservation reservation) => reservation.OwnerJournal + ":Declined";
+
+    /// <summary>The caller has authenticated the live grant and has never attempted to apply this plan.</summary>
+    internal bool TryDecline(Farmer owner, OwnerCommitReservation reservation)
+        => reservation.Status == OwnerReservationStatus.Reserved
+            && this.TryWriteJournal(owner, null, DeclinedJournal(reservation), () => this.IsCurrentOwner(owner, reservation),
+                () => Observe(owner, reservation.WriteSet) == OwnerInventoryObservation.Before);
 
     /// <summary>The caller has authenticated the terminal native host record for this owner.</summary>
     internal bool TryMarkSeen(Farmer owner, OwnerCommitReservation reservation)
@@ -60,7 +68,8 @@ internal sealed class OwnerInventoryCommit
         if (!applied && reservation.Status != OwnerReservationStatus.Cancelled) return false;
         return this.TryWriteJournal(owner, applied ? reservation.OwnerJournal : null, SeenJournal(reservation),
             () => this.IsCurrentOwner(owner, reservation), () => Observe(owner, reservation.WriteSet)
-                == (applied ? OwnerInventoryObservation.After : OwnerInventoryObservation.Before));
+                == (applied ? OwnerInventoryObservation.After : OwnerInventoryObservation.Before),
+            alternative: applied ? null : DeclinedJournal(reservation));
     }
 
     /// <summary>The caller has read the matching native host receipt and confirmed retirement of its record.</summary>
@@ -88,7 +97,7 @@ internal sealed class OwnerInventoryCommit
         try
         {
             OwnerJournalObservation journal = ObserveJournal(owner, reservation);
-            if (journal == OwnerJournalObservation.Foreign) return false;
+            if (journal is not (OwnerJournalObservation.Absent or OwnerJournalObservation.Matching)) return false;
             OwnerInventoryObservation inventory = Observe(owner, reservation.WriteSet);
             if (journal == OwnerJournalObservation.Matching)
                 return inventory == OwnerInventoryObservation.After && !this.Saving && this.IsCurrentOwner(owner, reservation)
@@ -122,7 +131,7 @@ internal sealed class OwnerInventoryCommit
         && Game1.MasterPlayer.UniqueMultiplayerID == reservation.HostId;
 
     private bool TryWriteJournal(Farmer owner, string? expected, string? value, Func<bool> owns,
-        Func<bool>? matchesInventory = null)
+        Func<bool>? matchesInventory = null, string? alternative = null)
     {
         if (!this.CanStart() || !owns()) return false;
         this.Applying = true;
@@ -131,7 +140,7 @@ internal sealed class OwnerInventoryCommit
         {
             if (matchesInventory?.Invoke() == false || this.Saving || !owns()) return false;
             if (value is not null && Matches(value)) return true;
-            if (!Matches(expected)) return false;
+            if (!Matches(expected) && (alternative is null || !Matches(alternative))) return false;
 
             // The native net dictionary setter can notify after writing. Keep the actual value and stop
             // further owner commits when a callback leaves the terminal handoff ambiguous.

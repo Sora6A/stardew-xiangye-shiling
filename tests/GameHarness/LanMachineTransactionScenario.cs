@@ -40,13 +40,14 @@ internal sealed class LanMachineTransactionScenario
     private MachineService? Service;
     private SObject? PreparedMachine;
     private Slot?[]? HostInventory, Before, Started, Collected;
-    private Request? RefusedRequest, ProposedStart, StartRequest, CollectRequest;
+    private Request? RefusedRequest, ProposedCancellation, CancellationRequest, ProposedStart, StartRequest, CollectRequest;
     private string? Failure;
     private ReadySignal? Ready;
     private Evidence? LastEvidence;
     private int PreparedRevision = -1;
     private int? ReadyClock;
-    private bool Positioned, Completed, SavingObserved, RefusalObserved;
+    private bool Positioned, Completed, SavingObserved, RefusalObserved, CancellationSettled;
+    private Guid? CancelledPlan;
     private Guid InstanceId;
     private ProtocolDiagnosticSnapshot? Protocol;
     private LanTransportDiagnosticSnapshot? Lan;
@@ -191,6 +192,14 @@ internal sealed class LanMachineTransactionScenario
             this.RefusalObserved = true;
             this.Report();
         }
+        if (!this.CancellationSettled && this.CancelledPlan is Guid cancelled && state.Revision == 0 && IsSettled(host, owner, cancelled))
+        {
+            Require(this.RefusalObserved && state.Batch is null && Snapshot(owner).SequenceEqual(this.Before!),
+                "Live cancellation changed the initial device or inventory.");
+            this.CancellationSettled = true;
+            this.SendReady(0, afterCancellation: true);
+            return;
+        }
         if (state.Revision == 1 && this.PreparedRevision == 0 && IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyStarted(owner, state);
@@ -211,7 +220,8 @@ internal sealed class LanMachineTransactionScenario
         if (state.Revision == 2 && this.PreparedRevision == 1 && IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyCollected(owner, state);
-            Require(this.RefusalObserved, "The host did not observe a no-grant refusal before actual machine work.");
+            Require(this.RefusalObserved && this.CancellationSettled,
+                "The host did not observe a refusal and a settled cancellation before actual machine work.");
             this.Finish(null);
         }
         Require(state.Revision is >= 0 and <= 2, "Unexpected extra machine transaction.");
@@ -230,11 +240,25 @@ internal sealed class LanMachineTransactionScenario
                 return;
             }
             if (!host.modData.TryGetValue(RefusalKey, out string raw) || this.ReadRefusedRequest(raw) != this.RefusedRequest.Id) return;
-            Require(!host.modData.ContainsKey(ReservationKey) && !owner.modData.ContainsKey(JournalKey),
-                "The native no-grant reply came with a reservation or owner journal.");
+            if (this.CancellationRequest is null)
+            {
+                Require(!host.modData.ContainsKey(ReservationKey) && !owner.modData.ContainsKey(JournalKey),
+                    "The native no-grant reply came with a reservation or owner journal.");
+                this.ProposedCancellation ??= new Request(Guid.NewGuid(), this.InstanceId, 0, owner.UniqueMultiplayerID);
+                if (!this.Send(machine, this.ProposedCancellation, Recipe)) return;
+                this.RefusalObserved = true;
+                this.CancellationRequest = this.ProposedCancellation;
+                var cancel = typeof(MachineService).GetMethod("TryCancelLanFixtureOperation", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?? throw new InvalidOperationException("The isolated production cancellation entry is unavailable.");
+                Require(cancel.Invoke(this.Service, new object[] { this.CancellationRequest.Id }) is true,
+                    "Production refused cancellation of the untouched pending intent.");
+                this.Report();
+                return;
+            }
+            if (!start.AfterCancellation || !IsSettled(host, owner, this.CancellationRequest.Id)) return;
+            this.CancellationSettled = true;
             this.ProposedStart ??= new Request(Guid.NewGuid(), this.InstanceId, 0, owner.UniqueMultiplayerID);
             if (!this.Send(machine, this.ProposedStart, Recipe)) return;
-            this.RefusalObserved = true;
             this.StartRequest = this.ProposedStart;
             Require(this.Send(machine, this.StartRequest, Recipe), "Production did not send the duplicate Start after a refusal.");
             this.Report();
@@ -274,10 +298,10 @@ internal sealed class LanMachineTransactionScenario
             StringComparison.Ordinal)
         && receipt.EndsWith(":Seen", StringComparison.Ordinal);
 
-    private void SendReady(int revision)
+    private void SendReady(int revision, bool afterCancellation = false)
     {
         this.PreparedRevision = revision;
-        this.Helper.Multiplayer.SendMessage(new ReadySignal(this.InstanceId, revision), ReadyType, new[] { HarnessId },
+        this.Helper.Multiplayer.SendMessage(new ReadySignal(this.InstanceId, revision, afterCancellation), ReadyType, new[] { HarnessId },
             new[] { NativeNetworkBootstrap.ClientId });
         this.Report();
     }
@@ -316,7 +340,8 @@ internal sealed class LanMachineTransactionScenario
         {
             var ready = args.ReadAs<ReadySignal>();
             if (ready is not null && ready.InstanceId == this.InstanceId && ready.Revision is 0 or 1
-                && (this.Ready is null || ready.Revision >= this.Ready.Revision)) this.Ready = ready;
+                && (this.Ready is null || ready.Revision > this.Ready.Revision
+                    || ready.Revision == this.Ready.Revision && (!this.Ready.AfterCancellation || ready.AfterCancellation))) this.Ready = ready;
         }
         catch (Exception error) when (error is not OutOfMemoryException) { this.Finish(error.Message); }
     }
@@ -340,6 +365,13 @@ internal sealed class LanMachineTransactionScenario
         {
             using var data = JsonDocument.Parse(raw);
             status = data.RootElement.GetProperty("Status").GetString();
+            if (this.Host && status == "Cancelled")
+            {
+                Require(MachineRequestCodec.TryRead(data.RootElement.GetProperty("RequestRaw").GetString(), out var request)
+                    && request!.ActorId == owner.UniqueMultiplayerID && state.Revision == 0 && state.Batch is null,
+                    "Cancelled reservation does not match the real idle machine and owner.");
+                this.CancelledPlan = request!.RequestId;
+            }
         }
         string? journal = owner.modData.GetValueOrDefault(JournalKey);
         string? receipt = host.modData.GetValueOrDefault(ReceiptKey);
@@ -366,6 +398,7 @@ internal sealed class LanMachineTransactionScenario
         SchemaVersion = 1, ProcessId = Environment.ProcessId, FixtureId = NativeNetworkBootstrap.TransactionFixtureId,
         NetworkRole = this.Host ? "Host" : "Client", this.Completed, this.Failure, this.SavingObserved, this.InstanceId,
         this.PreparedRevision, this.ReadyClock, this.Positioned, this.RefusalObserved, RefusedRequest = this.RefusedRequest?.Id,
+        this.CancellationSettled, CancelledRequest = this.Host ? this.CancelledPlan : this.CancellationRequest?.Id,
         StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
         this.Stages, this.Protocol, this.Lan
     });
@@ -379,7 +412,7 @@ internal sealed class LanMachineTransactionScenario
         if (!condition) throw new InvalidOperationException(message);
     }
 
-    private sealed record ReadySignal(Guid InstanceId, int Revision);
+    private sealed record ReadySignal(Guid InstanceId, int Revision, bool AfterCancellation);
     private sealed record Slot(string Id, int Stack, int Quality, string Metadata);
     private sealed record Evidence(long Revision, Guid? Request, string? Reservation, string? Journal, string? Receipt, int Soybeans, int Tofu);
 }

@@ -42,6 +42,7 @@ internal sealed class HostOwnerTransaction
     internal void ReceiveIntent(Guid sessionId, long verifiedActor, Guid nonce, string raw, MachineRequestEnvelope intent)
     {
         if (!this.Store.TryRead(out var existing) || intent.ActorId != verifiedActor || intent.SessionId != sessionId
+            || !HostReservationStore.TryReadRefusal(Game1.player, verifiedActor, out _)
             || !OwnerIntentRefusal.TryCreate(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, raw, out var refusal)
             || !refusal.Matches(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, intent, raw))
             return;

@@ -87,14 +87,19 @@ internal sealed class HostReservationStore
             || (current?.Request.ActorId == refusal.ActorId && current.Request.RequestId == refusal.RequestId))
             return false;
 
+        if (!TryReadRefusal(host, refusal.ActorId, out string? old)) return false;
         string key = OwnerIntentRefusal.MarkerKey(MachineService.Prefix, refusal.ActorId);
-        string? old = host.modData.GetValueOrDefault(key);
-        if (host.modData.ContainsKey(key) && (!OwnerIntentRefusal.TryRead(old, out var previous)
-            || previous.WorldId != refusal.WorldId || previous.HostId != refusal.HostId || previous.ActorId != refusal.ActorId))
-            return false;
 
         string next = refusal.Encode();
         return old == next || this.TryWrite(host, key, old, next);
+    }
+
+    internal static bool TryReadRefusal(Farmer host, long actorId, out string? raw)
+    {
+        string key = OwnerIntentRefusal.MarkerKey(MachineService.Prefix, actorId);
+        if (!host.modData.TryGetValue(key, out raw)) return true;
+        return OwnerIntentRefusal.TryRead(raw, out var refusal) && refusal.WorldId == Game1.uniqueIDForThisGame
+            && refusal.HostId == host.UniqueMultiplayerID && refusal.ActorId == actorId;
     }
 
     /// <summary>Publish the result before releasing the reservation. The owner can clear its marker after reload.</summary>

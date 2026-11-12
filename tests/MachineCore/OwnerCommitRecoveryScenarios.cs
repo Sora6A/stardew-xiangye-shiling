@@ -29,6 +29,20 @@ internal static class OwnerCommitRecoveryScenarios
             Expect(Isolate, Reserved, beforeMachine, afterInventory, missingJournal, settled: true);
         });
 
+        test("exact live owner decline cancels only an untouched reservation", () =>
+        {
+            const OwnerJournalObservation declined = OwnerJournalObservation.Declined;
+            Expect(CancelReservation, Reserved, beforeMachine, beforeInventory, declined);
+            Expect(ReplayCancelled, Cancelled, beforeMachine, beforeInventory, declined);
+            Expect(Isolate, Reserved, afterMachine, beforeInventory, declined);
+            Expect(Isolate, Reserved, beforeMachine, afterInventory, declined);
+            Expect(Isolate, Reserved, beforeMachine, OwnerInventoryObservation.Partial, declined);
+            Expect(Isolate, Reserved, beforeMachine, afterInventory, declined, settled: true);
+            Expect(Isolate, Applied, afterMachine, afterInventory, declined);
+            Expect(Isolate, Cancelled, beforeMachine, afterInventory, declined);
+            Expect(Isolate, Reserved, beforeMachine, beforeInventory, OwnerJournalObservation.Foreign);
+        });
+
         test("owner recovery replays the result without a second inventory or machine write", () =>
         {
             Expect(RecordAppliedReceipt, Reserved, afterMachine, afterInventory, matchingJournal, settled: true);

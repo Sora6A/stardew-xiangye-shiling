@@ -19,6 +19,8 @@ internal sealed class FarmhandReservationClient
     private (Guid Session, Guid Request) LastRefused;
     // Keep the last actual attempt through connection fences. A new grant has a different plan key.
     private string? AttemptedPlan;
+    private MachineRequestEnvelope? AttemptedRequest;
+    private bool CancellationRequested;
     private bool Saving;
 
     internal FarmhandReservationClient(IMonitor monitor) => this.Commit = new(monitor);
@@ -38,6 +40,16 @@ internal sealed class FarmhandReservationClient
         this.Pending = null;
         this.PendingConnection = Guid.Empty;
         this.PendingNonce = Guid.Empty;
+        this.CancellationRequested = false;
+    }
+
+    /// <summary>Queue a decline for the exact live intent. The native host still owns the final cancellation.</summary>
+    internal bool RequestCancellation(Guid exactPendingId)
+    {
+        if (this.Pending is not { } pending || pending.RequestId != exactPendingId || pending == this.AttemptedRequest)
+            return false;
+        this.CancellationRequested = true;
+        return true;
     }
 
     internal bool TryRemember(MachineRequestEnvelope intent, Guid connectionId, out Guid nonce)
@@ -93,19 +105,24 @@ internal sealed class FarmhandReservationClient
                     this.Commit.TryMarkSeen(owner, plan);
             }
             else if (!this.Saving && plan.Request == this.Pending && this.AttemptedPlan != plan.PlanKey
-                && !Game1.eventUp && !owner.UsingTool
-                && owner.currentLocation is { } location && location.NameOrUniqueName == plan.Request.LocationName
-                && location.objects.TryGetValue(new Vector2(plan.Request.TileX, plan.Request.TileY), out SObject machine)
-                && machine.TileLocation == new Vector2(plan.Request.TileX, plan.Request.TileY)
-                && machine.modData.GetValueOrDefault(MachineService.StateKey) == plan.BeforeRaw && MachineService.TryRead(machine, out _)
-                && Math.Abs((long)owner.Tile.X - plan.Request.TileX) <= 1 && Math.Abs((long)owner.Tile.Y - plan.Request.TileY) <= 1
-                && OwnerInventoryCommit.ObserveJournal(owner, plan) == OwnerJournalObservation.Absent
-                && OwnerInventoryCommit.Observe(owner, plan.WriteSet) == OwnerInventoryObservation.Before)
+                && OwnerInventoryCommit.ObserveJournal(owner, plan) == OwnerJournalObservation.Absent)
             {
-                // Delay while save, map or native slot sync can still settle. Once execution is entered,
-                // even a false result can represent an uncertain rollback and consumes the attempt.
-                this.AttemptedPlan = plan.PlanKey;
-                this.Commit.TryApply(owner, plan);
+                if (this.CancellationRequested)
+                    this.Commit.TryDecline(owner, plan);
+                else if (!Game1.eventUp && !owner.UsingTool
+                    && owner.currentLocation is { } location && location.NameOrUniqueName == plan.Request.LocationName
+                    && location.objects.TryGetValue(new Vector2(plan.Request.TileX, plan.Request.TileY), out SObject machine)
+                    && machine.TileLocation == new Vector2(plan.Request.TileX, plan.Request.TileY)
+                    && machine.modData.GetValueOrDefault(MachineService.StateKey) == plan.BeforeRaw && MachineService.TryRead(machine, out _)
+                    && Math.Abs((long)owner.Tile.X - plan.Request.TileX) <= 1 && Math.Abs((long)owner.Tile.Y - plan.Request.TileY) <= 1
+                    && OwnerInventoryCommit.Observe(owner, plan.WriteSet) == OwnerInventoryObservation.Before)
+                {
+                    // Delay while save, map or native slot sync can still settle. Once execution is entered,
+                    // even a false result can represent an uncertain rollback and consumes the attempt.
+                    this.AttemptedPlan = plan.PlanKey;
+                    this.AttemptedRequest = plan.Request;
+                    this.Commit.TryApply(owner, plan);
+                }
             }
             return;
         }
