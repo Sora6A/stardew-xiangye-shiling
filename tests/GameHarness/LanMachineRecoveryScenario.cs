@@ -15,7 +15,7 @@ using Fixture = GameHarness.LanMachineTransactionScenario;
 
 namespace GameHarness;
 
-/// <summary>Drives a native save with a production reservation whose owner leaves before any debit.</summary>
+/// <summary>Drives native save and cold recovery around a real owner debit on two dedicated fixtures.</summary>
 internal sealed class LanMachineRecoveryScenario
 {
     private const string HarnessId = MachineService.Prefix + ".GameHarness";
@@ -26,15 +26,18 @@ internal sealed class LanMachineRecoveryScenario
     private readonly NativeNetworkBootstrap Bootstrap;
     private readonly bool Host;
     private readonly bool Write;
+    private readonly bool PostDebit;
+    private readonly string FarmName;
+    private readonly ulong FixtureId;
     private readonly Stopwatch Clock = new();
     private readonly List<string> Stages = new();
     private MachineService? Service;
     private SObject? Machine;
     private Signal? Ready, Disconnect;
     private Request? Requested;
-    private Plan? Reservation, Cancelled;
+    private Plan? Reservation, Terminal;
     private NativeBedtimeInteraction? Bedtime;
-    private string? OriginalInventory, OriginalMachine, OriginalHostInventory, Failure, Receipt;
+    private string? OriginalInventory, OriginalMachine, OriginalHostInventory, CommittedInventory, Failure, Receipt;
     private bool Positioned, Leaving, NativePeerDisconnected, Completed;
     private int SavingEvents, SavedEvents;
     private int? SavedTotalDays;
@@ -49,6 +52,9 @@ internal sealed class LanMachineRecoveryScenario
         this.Bootstrap = new(monitor, config);
         this.Host = config.NetworkRole == "Host";
         this.Write = config.NativeRecoveryPhase == "Write";
+        this.FarmName = config.FarmName;
+        this.FixtureId = config.SaveFixtureId;
+        this.PostDebit = this.FixtureId == NativeNetworkBootstrap.MachinePostDebitFixtureId;
     }
 
     internal void QueueStart()
@@ -70,8 +76,7 @@ internal sealed class LanMachineRecoveryScenario
             Require(this.Bootstrap.Failure is null, this.Bootstrap.Failure ?? "Native network bootstrap failed.");
             if (!this.Bootstrap.Ready || !Context.IsWorldReady) return;
             Require(Context.IsMultiplayer && Context.IsMainPlayer == this.Host && !Context.IsSplitScreen && Context.ScreenId == 0
-                && Game1.uniqueIDForThisGame == NativeNetworkBootstrap.MachineRecoveryFixtureId
-                && Game1.player.farmName.Value == NativeNetworkBootstrap.MachineRecoveryFarmName
+                && Game1.uniqueIDForThisGame == this.FixtureId && Game1.player.farmName.Value == this.FarmName
                 && Game1.player.UniqueMultiplayerID == (this.Host ? NativeNetworkBootstrap.HostId : NativeNetworkBootstrap.ClientId),
                 "The active world or actor differs from the machine recovery fixture.");
             this.Service ??= this.Helper.ModRegistry.GetApi(MachineService.Prefix) as MachineService
@@ -101,14 +106,15 @@ internal sealed class LanMachineRecoveryScenario
         if (this.Host && this.Reservation is not null && this.NativePeerDisconnected && !OwnerOnline()
             && !this.Helper.Multiplayer.GetConnectedPlayers().Any())
         {
-            this.ReadUntouched(host, owner);
+            if (this.PostDebit) this.VerifyCommitted(host, owner, this.Reservation);
+            else this.ReadUntouched(host, owner);
             Require(host.modData.GetValueOrDefault(Fixture.ReservationKey) == this.Reservation.Raw,
                 "The host changed the reservation before the cold checkpoint.");
             if (this.Bedtime is null)
             {
-                Require(Constants.SaveFolderName == "XYSNET06_620261118" && host.Name == "XYSNET06",
+                Require(Constants.SaveFolderName == $"{this.FarmName}_{this.FixtureId}" && host.Name == this.FarmName,
                     "The disposable host save folder must match exactly.");
-                this.Record("HostObservedNativeDisconnectWithOriginalSlots");
+                this.Record(this.PostDebit ? "HostObservedNativeDisconnectAfterDebit" : "HostObservedNativeDisconnectWithOriginalSlots");
                 this.Bedtime = new NativeBedtimeInteraction();
                 this.Record("HostApproachedNativeBed");
             }
@@ -147,7 +153,7 @@ internal sealed class LanMachineRecoveryScenario
 
         Plan? plan = ReadPlan(host);
         if (plan is null) return;
-        this.ReadUntouched(host, owner);
+        if (!this.PostDebit) this.ReadUntouched(host, owner);
         this.VerifyPlan(plan, machine, "Reserved");
         if (this.Reservation is null)
         {
@@ -157,25 +163,45 @@ internal sealed class LanMachineRecoveryScenario
                 var evidence = this.Service!.ReadLanTransportDiagnostics().LastConfirmed;
                 Require(OwnerOnline() && evidence is { ActorId: NativeNetworkBootstrap.ClientId, MessageType: "XYS/MachineIntent/2" },
                     "The host did not verify the original online native intent.");
-                this.Record("HostObservedProductionReservedBeforeOwnerDebit");
-                this.Send(new("Disconnect", state.InstanceId, plan.RequestId, plan.Hash), NativeNetworkBootstrap.ClientId);
+                if (this.PostDebit)
+                {
+                    this.FreezeHostFinalization();
+                    this.Record("HostFixtureHeldRealReservedGrant");
+                }
+                else
+                {
+                    this.Record("HostObservedProductionReservedBeforeOwnerDebit");
+                    this.Send(new("Disconnect", state.InstanceId, plan.RequestId, plan.Hash), NativeNetworkBootstrap.ClientId);
+                }
             }
             else
             {
                 Require(this.Requested?.Id == plan.RequestId && ReferenceEquals(owner.currentLocation, farm),
                     "The native grant does not belong to the live farmhand intent.");
-                owner.setTileLocation(machine.TileLocation + new Vector2(3, 1));
-                Require(Math.Abs(owner.Tile.X - machine.TileLocation.X) > 1, "The farmhand remained in production range.");
-                this.Record("ClientLeftRangeBeforeProductionApply");
+                if (this.PostDebit) this.Record("ClientObservedReservedBeforeProductionDebit");
+                else
+                {
+                    owner.setTileLocation(machine.TileLocation + new Vector2(3, 1));
+                    Require(Math.Abs(owner.Tile.X - machine.TileLocation.X) > 1, "The farmhand remained in production range.");
+                    this.Record("ClientLeftRangeBeforeProductionApply");
+                }
             }
         }
         else Require(this.Reservation.Raw == plan.Raw, "The live reservation changed before disconnect.");
 
+        if (this.PostDebit && this.CommittedInventory is null)
+        {
+            if (owner.Items[Fixture.InputSlot]?.Stack != 3 || owner.modData.GetValueOrDefault(Fixture.JournalKey) != plan.OwnerJournal)
+                return; // The slot and farmer journal can replicate on different updates.
+            this.VerifyCommitted(host, owner, plan);
+            this.Record(this.Host ? "HostObservedReplicatedProductionDebitAndJournal" : "ClientObservedProductionDebitAndJournal");
+            if (this.Host) this.Send(new("Disconnect", state.InstanceId, plan.RequestId, plan.Hash), NativeNetworkBootstrap.ClientId);
+        }
         if (!this.Host && this.Disconnect is { } release && release.Instance == state.InstanceId
             && release.Request == plan.RequestId && release.PlanHash == plan.Hash)
         {
             this.Leaving = true;
-            this.Record("ClientRequestedNativeDisconnectWithOriginalSlots");
+            this.Record(this.PostDebit ? "ClientRequestedNativeDisconnectAfterDebit" : "ClientRequestedNativeDisconnectWithOriginalSlots");
             Game1.ExitToTitle();
         }
     }
@@ -184,6 +210,11 @@ internal sealed class LanMachineRecoveryScenario
     {
         this.Machine ??= Game1.getFarm().objects.Values.SingleOrDefault(machine => MachineService.TryGetKind(machine, out _));
         if (this.Machine is not { } machine) return;
+        if (this.PostDebit)
+        {
+            this.TickVerifyCommitted(host, protocol, machine);
+            return;
+        }
         this.VerifyIdle(machine);
         Farmer? owner = this.Host ? Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: false) : Game1.player;
         if (owner is null) return;
@@ -197,7 +228,7 @@ internal sealed class LanMachineRecoveryScenario
             this.Reservation = plan;
             this.Record("ColdHostReadOfflineOriginalSlotsAndReservedGrant");
         }
-        if (plan is { Status: "Cancelled" } && this.Cancelled is null)
+        if (plan is { Status: "Cancelled" } && this.Terminal is null)
         {
             this.VerifyPlan(plan, machine, "Cancelled");
             if (this.Host)
@@ -205,21 +236,65 @@ internal sealed class LanMachineRecoveryScenario
                 Require(!OwnerOnline() && plan.Identity == this.Reservation!.Identity && !owner.modData.ContainsKey(Fixture.JournalKey),
                     "Production must cancel the same reservation with the offline owner still untouched.");
             }
-            this.Cancelled = plan;
+            this.Terminal = plan;
             this.NewSessionId = protocol.SessionId;
             this.Record(this.Host ? "ColdHostCancelledOfflineGrant" : "ColdClientRejoinedWithCancelledGrant");
         }
-        if (this.Cancelled is { } cancelled && plan is null && !owner.modData.ContainsKey(Fixture.JournalKey)
+        this.CompleteTerminal(host, owner, protocol, plan);
+    }
+
+    private void TickVerifyCommitted(Farmer host, ProtocolDiagnosticSnapshot protocol, SObject machine)
+    {
+        Farmer? owner = this.Host ? Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: false) : Game1.player;
+        if (owner is null) return;
+        Plan? plan = ReadPlan(host);
+        if (this.Host && this.Reservation is null)
+        {
+            Require(!OwnerOnline() && !this.Helper.Multiplayer.GetConnectedPlayers().Any() && plan is not null,
+                "The cold host must read the persisted debit while its owner is offline.");
+            this.VerifyIdle(machine);
+            this.VerifyPlan(plan!, machine, "Reserved");
+            this.VerifyCommitted(host, owner, plan!);
+            this.Reservation = plan;
+            this.Record("ColdHostReadReservedWithOfflineDebit");
+            return;
+        }
+        if (plan is { Status: "Applied" } && this.Terminal is null)
+        {
+            this.OriginalMachine ??= plan.Before;
+            this.VerifyPlan(plan, machine, "Applied");
+            Require(!this.Host || (!OwnerOnline() && plan.Identity == this.Reservation!.Identity),
+                "Production must apply the same loaded plan while its owner is offline.");
+            this.VerifyCommitted(host, owner, plan);
+            this.Terminal = plan;
+            this.NewSessionId = protocol.SessionId;
+            this.Record(this.Host ? "ColdHostAppliedSameGrantOffline" : "ColdClientRejoinedWithAppliedGrant");
+        }
+        if (this.Terminal is { } terminal)
+        {
+            Require(MachineService.TryRead(machine, out var state) && state is { Kind: MachineKind.BeanWorkshop, Revision: 1, Batch: not null }
+                && machine.modData.GetValueOrDefault(MachineService.StateKey) == terminal.After,
+                "Cold production finalization must set the real machine to the exact planned revision one.");
+            this.VerifyCommitted(host, owner, terminal, permitSettlement: true);
+            this.CompleteTerminal(host, owner, protocol, plan);
+        }
+    }
+
+    private void CompleteTerminal(Farmer host, Farmer owner, ProtocolDiagnosticSnapshot protocol, Plan? livePlan)
+    {
+        if (this.Terminal is { } terminal && livePlan is null && !owner.modData.ContainsKey(Fixture.JournalKey)
             && host.modData.TryGetValue(Fixture.ReceiptKey, out string receipt)
             && receipt.StartsWith(FormattableString.Invariant(
-                $"1|{NativeNetworkBootstrap.MachineRecoveryFixtureId}|{NativeNetworkBootstrap.HostId}|{cancelled.RequestId:D}|"),
+                $"{1}|{this.FixtureId}|{NativeNetworkBootstrap.HostId}|{terminal.RequestId:D}|"),
                 StringComparison.Ordinal) && receipt.EndsWith(":Seen", StringComparison.Ordinal))
         {
             Require(this.Host ? OwnerOnline() : protocol.Peers.Any(peer => peer.IsHost && peer.Ready),
-                "The cancelled grant settled without the expected real LAN rejoin.");
+                "The terminal grant settled without the expected real LAN rejoin.");
             this.NewSessionId = protocol.SessionId;
             this.Receipt = receipt;
-            this.Complete(this.Host ? "ColdHostSettledCancellationAfterActualRejoin" : "ColdClientSettledCancellationWithoutDebit");
+            this.Complete(this.PostDebit
+                ? (this.Host ? "ColdHostSettledAppliedGrantAfterActualRejoin" : "ColdClientSettledAppliedGrantWithoutSecondDebit")
+                : (this.Host ? "ColdHostSettledCancellationAfterActualRejoin" : "ColdClientSettledCancellationWithoutDebit"));
         }
     }
 
@@ -260,7 +335,8 @@ internal sealed class LanMachineRecoveryScenario
     internal void OnReturnedToTitle()
     {
         if (this.Completed || this.Failure is not null || !this.Bootstrap.Ready) return;
-        if (!this.Host && this.Write && this.Leaving) this.Complete("ClientReturnedToTitleWithoutDebit");
+        if (!this.Host && this.Write && this.Leaving)
+            this.Complete(this.PostDebit ? "ClientReturnedToTitleAfterDebitBeforeAcknowledgement" : "ClientReturnedToTitleWithoutDebit");
         else this.Fail("The bound world returned to title before its recovery checkpoint.");
     }
 
@@ -291,10 +367,41 @@ internal sealed class LanMachineRecoveryScenario
             "Native owner or host inventory changed.");
     }
 
+    private void VerifyCommitted(Farmer host, Farmer owner, Plan plan, bool permitSettlement = false)
+    {
+        Require(owner.UniqueMultiplayerID == NativeNetworkBootstrap.ClientId && owner.Items.Count > Fixture.InputSlot
+            && owner.Items[Fixture.InputSlot] is { QualifiedItemId: Fixture.Soybean, Stack: 3, Quality: 0 }
+            && owner.Items.CountId(Fixture.Soybean) == 3 && owner.Items.CountId(Fixture.Tofu) == 0,
+            "The production farmhand debit must consume exactly three soybeans once and grant no tofu.");
+        string? journal = owner.modData.GetValueOrDefault(Fixture.JournalKey);
+        Require(plan.OwnerJournal is not null && (journal == plan.OwnerJournal
+            || (permitSettlement && (journal is null || journal == plan.OwnerJournal + ":Seen"))),
+            "The owner journal does not match the exact production grant or its settlement.");
+        string hostInventory = InventoryHash(host);
+        string beforeDebit = InventoryHash(owner, originalStack: 6);
+        string committed = InventoryHash(owner);
+        this.OriginalHostInventory ??= hostInventory;
+        this.OriginalInventory ??= beforeDebit;
+        this.CommittedInventory ??= committed;
+        Require(hostInventory == this.OriginalHostInventory && beforeDebit == this.OriginalInventory && committed == this.CommittedInventory,
+            "Inventory outside the planned three-item debit changed.");
+    }
+
+    private void FreezeHostFinalization()
+    {
+        // Fixture-only fault at the real host save gate. The native Saving/Saved handlers still run later.
+        // Neither machine state nor the owner's inventory or journal is assigned by this injection.
+        var store = typeof(MachineService).GetProperty("Reservations", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.GetValue(this.Service) ?? throw new InvalidOperationException("The production host reservation store is unavailable.");
+        var gate = store.GetType().GetMethod("OnSaving", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("The production host save gate is unavailable.");
+        gate.Invoke(store, null);
+    }
+
     private void VerifyPlan(Plan plan, SObject machine, string status)
     {
         bool parsedAfter = MachineStateCodec.TryRead(plan.After, out var after);
-        Require(plan.Status == status && plan.World == NativeNetworkBootstrap.MachineRecoveryFixtureId
+        Require(plan.Status == status && plan.World == this.FixtureId
             && plan.Host == NativeNetworkBootstrap.HostId && plan.Request.ActorId == NativeNetworkBootstrap.ClientId
             && plan.Request.LocationName == Game1.getFarm().NameOrUniqueName && plan.Request.TileX == machine.TileLocation.X
             && plan.Request.TileY == machine.TileLocation.Y && plan.Request.ExpectedRevision == 0
@@ -319,13 +426,28 @@ internal sealed class LanMachineRecoveryScenario
         Require(change.GetProperty("Before").GetString() is { Length: 64 } && change.GetProperty("After").GetString() is { Length: 64 },
             "Production reservation did not describe the expected partially consumed stack.");
         string identity = Digest(string.Join("\n", root.EnumerateObject().Where(field => field.Name != "Status").Select(field => field.ToString())));
-        return new(raw, Digest(raw), identity, root.GetProperty("Status").GetString()!, request!,
-            root.GetProperty("WorldId").GetUInt64(), root.GetProperty("HostId").GetInt64(),
-            root.GetProperty("BeforeRaw").GetString()!, root.GetProperty("AfterRaw").GetString()!, change.GetProperty("Index").GetInt32());
+        ulong world = root.GetProperty("WorldId").GetUInt64();
+        return new(raw, Digest(raw), identity, root.GetProperty("Status").GetString()!, request!, world,
+            root.GetProperty("HostId").GetInt64(), root.GetProperty("BeforeRaw").GetString()!, root.GetProperty("AfterRaw").GetString()!,
+            change.GetProperty("Index").GetInt32(), world == NativeNetworkBootstrap.MachinePostDebitFixtureId ? ReadOwnerJournal(raw) : null);
     }
 
-    private static string InventoryHash(Farmer farmer) => Digest(JsonSerializer.Serialize(farmer.Items.Select(item => item is null
-        ? null : new { item.QualifiedItemId, item.Stack, item.Quality, Metadata = item.modData.Pairs.OrderBy(pair => pair.Key).ToArray() })));
+    private static string ReadOwnerJournal(string raw)
+    {
+        var codec = typeof(MachineService).Assembly.GetType("XiangyeShiling.Networking.OwnerCommitReservationCodec", throwOnError: true)!;
+        object?[] args = { raw, null };
+        Require(codec.GetMethod("TryRead")?.Invoke(null, args) is true && args[1] is not null,
+            "The production codec refused its own saved grant.");
+        return args[1]!.GetType().GetProperty("OwnerJournal")?.GetValue(args[1]) as string
+            ?? throw new InvalidOperationException("The production journal identity is unavailable.");
+    }
+
+    private static string InventoryHash(Farmer farmer, int? originalStack = null) => Digest(JsonSerializer.Serialize(
+        farmer.Items.Select((item, slot) => item is null ? null : new
+        {
+            item.QualifiedItemId, Stack = slot == Fixture.InputSlot ? originalStack ?? item.Stack : item.Stack, item.Quality,
+            Metadata = item.modData.Pairs.OrderBy(pair => pair.Key).ToArray()
+        })));
 
     private static string Digest(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     private static bool OwnerOnline() => Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == NativeNetworkBootstrap.ClientId);
@@ -357,13 +479,17 @@ internal sealed class LanMachineRecoveryScenario
 
     private void Report() => this.Helper.Data.WriteJsonFile(ReportName, new
     {
-        SchemaVersion = 1, ProcessId = Environment.ProcessId, FixtureId = NativeNetworkBootstrap.MachineRecoveryFixtureId,
+        SchemaVersion = 1, ProcessId = Environment.ProcessId, this.FixtureId, this.PostDebit,
         NetworkRole = this.Host ? "Host" : "Client", Phase = this.Write ? "Write" : "Verify", this.Completed, this.Failure,
-        this.Stages, this.OriginalInventory, this.OriginalHostInventory, this.OriginalMachine, this.Receipt,
+        this.Stages, this.OriginalInventory, this.OriginalHostInventory, this.OriginalMachine, this.Receipt, this.CommittedInventory,
         this.SavingEvents, this.SavedEvents, this.NativePeerDisconnected, StartTotalDays = this.Bedtime?.StartTotalDays, this.SavedTotalDays,
         ReservedRaw = this.Reservation?.Raw, ReservedHash = this.Reservation?.Hash, ReservedIdentity = this.Reservation?.Identity,
-        CancelledIdentity = this.Cancelled?.Identity, RequestId = (this.Reservation ?? this.Cancelled)?.RequestId ?? this.Requested?.Id,
-        OriginalSessionId = (this.Reservation ?? this.Cancelled)?.Request.SessionId, this.NewSessionId
+        CancelledIdentity = this.Terminal?.Status == "Cancelled" ? this.Terminal.Identity : null,
+        TerminalIdentity = this.Terminal?.Identity, TerminalStatus = this.Terminal?.Status,
+        FinalMachine = this.Terminal?.Status == "Applied" ? this.Terminal.After : null,
+        OwnerJournal = (this.Reservation ?? this.Terminal)?.OwnerJournal,
+        RequestId = (this.Reservation ?? this.Terminal)?.RequestId ?? this.Requested?.Id,
+        OriginalSessionId = (this.Reservation ?? this.Terminal)?.Request.SessionId, this.NewSessionId
     });
 
     private static void Require(bool condition, string message)
@@ -373,7 +499,7 @@ internal sealed class LanMachineRecoveryScenario
 
     public sealed record Signal(string Kind, Guid Instance, Guid Request, string? PlanHash);
     private sealed record Plan(string Raw, string Hash, string Identity, string Status, MachineRequestEnvelope Request,
-        ulong World, long Host, string Before, string After, int ChangeIndex)
+        ulong World, long Host, string Before, string After, int ChangeIndex, string? OwnerJournal)
     {
         internal Guid RequestId => this.Request.RequestId;
     }

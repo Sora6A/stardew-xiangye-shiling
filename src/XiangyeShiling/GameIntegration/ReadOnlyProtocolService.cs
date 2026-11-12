@@ -284,8 +284,8 @@ internal sealed class ReadOnlyProtocolService
 
     private bool MachineFixtureAllowed() => this.Options.EnableLanTransactionFixture && this.LanTransport.Available && !this.Faulted
         && Context.IsWorldReady && Context.IsMultiplayer && !Context.IsSplitScreen && Context.ScreenId == 0
-        && (Game1.uniqueIDForThisGame == 620261116 && Game1.player.farmName.Value == "XYSNET05"
-            || Game1.uniqueIDForThisGame == 620261118 && Game1.player.farmName.Value == "XYSNET06");
+        && (Game1.player.farmName.Value, Game1.uniqueIDForThisGame) is
+            ("XYSNET05", 620261116UL) or ("XYSNET06", 620261118UL) or ("XYSNET07", 620261120UL);
 
     internal bool TryQueueFixtureOperation(SObject machine, Request request, string? recipeId)
     {
