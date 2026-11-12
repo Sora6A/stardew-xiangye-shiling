@@ -11,7 +11,7 @@ namespace XiangyeShiling.GameIntegration;
 public sealed record OperationResult(bool Applied, string Message);
 
 /// <summary>
-/// P1 单人主机适配器。输入来自当前主线程的真实对象；尚未验证远端背包协议，联机一律拒绝。
+/// P1 本地库存适配器。输入来自游戏主线程的真实对象；联机仅允许绑定夹具中的主机操作自身库存。
 /// 单笔提交前准备所有克隆与 JSON，最后核对原快照；失败恢复两侧，恢复失败隔离整个会话。
 /// </summary>
 public sealed class MachineService
@@ -39,6 +39,8 @@ public sealed class MachineService
     internal bool TryQueueLanFixtureOperation(SObject machine, Request request, string? recipeId)
         => this.Network?.TryQueueFixtureOperation(machine, request, recipeId) ?? false;
     internal bool TryCancelLanFixtureOperation(Guid requestId) => this.Network?.TryCancelFixtureOperation(requestId) ?? false;
+    internal bool AllowsLocalHostOperations() => Context.IsWorldReady && Context.IsMainPlayer
+        && (!Context.IsMultiplayer || this.Network?.AllowsFixtureHostOperations() == true);
     internal void CaptureLoadedReservation() => this.Network?.CaptureLoadedReservation();
     /// <summary>默认禁用、主线程、专用世界的固定旧Welcome重放；不能传入载荷或目标，true不表示对端拒绝。</summary>
     public bool TryReplayPreviousNetworkWelcome(Guid expectedConnectionId) => this.Network?.TryReplayPreviousWelcome(expectedConnectionId) ?? false;
@@ -100,7 +102,7 @@ public sealed class MachineService
         OperationResult Fail(string key) => new(false, this.Text.Get(key));
         if (Environment.CurrentManagedThreadId != this.MainThread)
             return new(false, "Machine operations must run on the game thread.");
-        if (!Context.IsWorldReady || !Context.IsMainPlayer || Context.IsMultiplayer || actor != Game1.player)
+        if (!this.AllowsLocalHostOperations() || actor != Game1.player)
             return Fail("machine.single-player-only");
         if (Game1.eventUp || actor.UsingTool || request.ActorId != actor.UniqueMultiplayerID
             || !actor.currentLocation.objects.TryGetValue(machine.TileLocation, out SObject current) || !ReferenceEquals(current, machine)

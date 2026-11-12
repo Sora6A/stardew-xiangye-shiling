@@ -287,6 +287,10 @@ internal sealed class ReadOnlyProtocolService
         && (Game1.player.farmName.Value, Game1.uniqueIDForThisGame) is
             ("XYSNET05", 620261116UL) or ("XYSNET06", 620261118UL) or ("XYSNET07", 620261120UL);
 
+    internal bool AllowsFixtureHostOperations() => ReferenceEquals(Thread.CurrentThread, this.Owner)
+        && Context.IsMainPlayer && this.IsHost && !Game1.newDay && this.Session?.ActiveSessionId is not null
+        && this.MachineFixtureAllowed();
+
     internal bool TryQueueFixtureOperation(SObject machine, Request request, string? recipeId)
     {
         this.RequireOwner();
