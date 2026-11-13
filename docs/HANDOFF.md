@@ -4,9 +4,11 @@
 
 分支 `codex/first-stable-release`，本轮起点 `4a92cfa65dd66a74ddb18132ed87577068108129`，主机搬动已提交 `ba49b48afcc7bd0ea81a9bb1ce838b3bd411780d`。短额度已重置，本轮启动时短窗口 0%、周窗口 73%。专用双端主机 13704、农工 32532 验证既有争用及豆坊、发酵缸原版手持放置、原版镐保护和空闲重放。两端零保存零错误、73 文件及普通 Mods 哈希一致，已退出并禁用。原 16668 保留。见[实测](validation/P1-native-inventory-2026-11-11.md#原生主机搬动两台设备)。
 
-单人 `XYSP1WalkPersist_620261121` 的 `.local/p1-native-walk-persist/timeout-retry` Write PID 33704 正在运行，冻结生产 `401D8F93…835D`、夹具 `C09A5662…5657`。先读 Write/Verify 审计再启动别的游戏，首轮超时证据仍保留。单人夹具改动独立保留。
+单人 `XYSP1WalkPersist_620261121` 的 Write 33704、冷 Verify 27744 均通过。冻结生产 `401D8F93…835D`、夹具 `C09A5662…5657`。同档三店、自然工时、厨房食用及原版就寝完成，Saving/Saved 各一次。冷载同一两设备和库存，拒绝旧领取与空闲领取，零保存且 75 文件哈希一致；已退出并禁用。证据 `.local/p1-native-walk-persist/timeout-retry/{write,verify}`，首轮超时单独保留。见[实测](validation/P1-ordinary-play-2026-11-07.md#2026-11-13-同档正常就寝与冷重载)。
 
-容量静默问题的旧判据失败、修后 MachineCore 136 项与隔离 Release 通过，原生容量边界仍待。见 [BUG-2026-028](bugfix/BUG-2026-028-host-owner-intent-capacity.md)。下一步收口正常就寝和冷载，继续普通 Windows LAN 按原生连接证明能力。P2 尚未开放，任务分支未推送，尚无正式发布。
+容量静默问题已提交 `6de17a71f5a143a3b4f6568efc5c9761cf67edc3`。旧判据失败、修后 MachineCore 136 项与隔离 Release 通过，原生容量边界仍待。见 [BUG-2026-028](bugfix/BUG-2026-028-host-owner-intent-capacity.md)。
+
+普通存档的直连开关与专用诊断独立且默认关闭。实际原生 Hello 和接收来源符合后发布绑定当前握手挑战的主机能力；农工还核对活跃原版直连和当前主机，再打开实际设备菜单。尚未提交的源码及 XYSNET08 测试夹具已完成 Release、GameAdapter 25、MachineCore 137。冻结候选 `.local/p1-net08-normal-lan/candidate` 生产 `70C9152E…E30E`、夹具 `950FFA77…C22E`、ZIP `6C76630B…E8A2`；两套配置已准备且禁用，存档副本目前仅工作区。待单人写盘及冷载清理后才启动原生双端菜单和争用。普通长期使用的序号、菜单取消和普通入口以后的保存链仍待。P2 尚未开放，任务分支未推送，尚无正式发布。
 
 ## 2026-11-13 联机菜单与同档冷重载进行中
 

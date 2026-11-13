@@ -52,10 +52,11 @@ internal sealed class AutomatedRouteScenario
         this.Helper = helper;
         this.Monitor = monitor;
         this.Settings = settings;
-        this.ContinueAfterPurchases = settings.Scenario == PurchasedRouteScenario;
+        this.ContinueAfterPurchases = settings.Scenario == PurchasedRouteScenario || NativeShopRoutePersistence.IsBound(settings);
         Require(settings.Enabled && settings.SaveFixtureId != 0 && !settings.OpenPreview
-            && (this.ContinueAfterPurchases ? settings.FarmName == PurchasedRouteFarm && settings.SaveFixtureId == PurchasedRouteFixtureId
-                : settings.Scenario == "AutomatedRoute" && settings.FarmName == FarmName),
+            && (settings.Scenario == PurchasedRouteScenario && settings.FarmName == PurchasedRouteFarm && settings.SaveFixtureId == PurchasedRouteFixtureId
+                || NativeShopRoutePersistence.IsBound(settings) && settings.NativeRecoveryPhase == "Write"
+                || settings.Scenario == "AutomatedRoute" && settings.FarmName == FarmName),
             "Bind the processing route to its dedicated single-player fixture.");
     }
 
@@ -401,6 +402,13 @@ internal sealed class AutomatedRouteScenario
     }
 
     internal object ReadPurchasedEvidence() => this.CreateEvidence(this.Finished && this.Failure is null, this.Failure);
+
+    internal (SObject Bean, SObject Crock) ReadCompletedMachines()
+    {
+        Require(this.ContinueAfterPurchases && this.Finished && this.Failure is null && this.MatchesWorld(),
+            "Only the completed purchased route can supply the placed devices for bedtime.");
+        return (this.Bean, this.Crock);
+    }
 
     private object CreateEvidence(bool completed, string? failure) => new
     {

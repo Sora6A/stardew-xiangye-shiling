@@ -41,6 +41,7 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
     private readonly IModHelper Helper;
     private readonly IMonitor Monitor;
     private readonly Config Config;
+    private readonly NativeShopRoutePersistence? Persistence;
     private readonly Harmony Patch = new(MachineService.Prefix + ".GameHarness.NativeShopWalk");
     private readonly Stopwatch Watch = new();
     private readonly List<object> Legs = new(), Actions = new();
@@ -60,7 +61,7 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
     private object? HomeEntry, CompletedWalk;
     private TimeSpan ActionSentAt;
     private static Farmer Player => Game1.player;
-    private bool CompleteRoute => this.Config.Scenario == AutomatedRouteScenario.PurchasedRouteScenario;
+    private bool CompleteRoute => this.Config.Scenario == AutomatedRouteScenario.PurchasedRouteScenario || this.Persistence is not null;
     private bool FullRoute => this.Config.FarmName == ThreeShopFarmName || this.CompleteRoute;
     private string[] Maps => this.CompleteRoute ? CompleteMaps : this.FullRoute ? ThreeShopMaps : PierreMaps;
     private string SaveName => $"{this.Config.FarmName}_{this.Config.SaveFixtureId}";
@@ -79,11 +80,14 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
             && (config.Scenario == "NativeShopWalk" && config.FarmName is FarmName or ThreeShopFarmName
                 || config.Scenario == AutomatedRouteScenario.PurchasedRouteScenario
                     && config.FarmName == AutomatedRouteScenario.PurchasedRouteFarm
-                    && config.SaveFixtureId == AutomatedRouteScenario.PurchasedRouteFixtureId),
+                    && config.SaveFixtureId == AutomatedRouteScenario.PurchasedRouteFixtureId
+                || NativeShopRoutePersistence.IsBound(config)),
             "Bind the walking scenario to its dedicated fixture.");
         this.Helper = helper;
         this.Monitor = monitor;
         this.Config = config;
+        if (NativeShopRoutePersistence.IsBound(config))
+            this.Persistence = new NativeShopRoutePersistence(helper, monitor, config.NativeRecoveryPhase == "Verify");
     }
 
     internal void QueueLoad() => this.LoadDelay = 180;
@@ -97,12 +101,23 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
     internal void OnSaving()
     {
         this.SavingObserved = true;
+        if (this.Persistence is not null)
+        {
+            try { this.Persistence.OnSaving(); }
+            catch (InvalidOperationException error) { this.Failure = error.Message; }
+            return;
+        }
         this.Failure = "A native save occurred during the walk.";
         this.Processing?.OnSaving();
     }
+    internal void OnSaved()
+    {
+        try { this.Persistence?.OnSaved(); }
+        catch (InvalidOperationException error) { this.Failure = error.Message; }
+    }
     internal void OnReturnedToTitle()
     {
-        if (this.Started) this.Failure = "The walk returned to title.";
+        if (this.Loaded) this.Failure = "The route returned to title.";
         this.Processing?.OnReturnedToTitle();
     }
 
@@ -121,14 +136,33 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
                 return;
             }
             Require(this.Failure is null, this.Failure ?? "Walk failed.");
-            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(this.CompleteRoute ? 12 : 8), "Timed out waiting for the native route.");
+            // The persistence world's normal Gus schedule can delay the last purchase until the evening.
+            int timeoutMinutes = this.Persistence is { Verifying: false } ? 17 : this.CompleteRoute ? 12 : 8;
+            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(timeoutMinutes), "Timed out waiting for the native route.");
+            if (this.Persistence is { Verifying: true } cold)
+            {
+                if (!this.Loaded || !Context.IsPlayerFree) return;
+                this.CheckWorld();
+                cold.VerifyColdLoad();
+                this.Finish(null);
+                return;
+            }
+            if (this.Persistence is { SleepStarted: true } bedtime)
+            {
+                if (!Context.IsWorldReady) return;
+                this.CheckWorld();
+                if (bedtime.TickBedtime()) this.Finish(null);
+                return;
+            }
             if (this.Loaded && !this.Started && Context.IsPlayerFree) this.Start();
             if (!this.Started) return;
             this.CheckWorld();
             if (this.Processing is not null)
             {
                 this.Processing.Tick();
-                if (this.Processing.IsFinished) this.Finish(this.Processing.Failure);
+                if (!this.Processing.IsFinished) return;
+                if (this.Persistence is null || this.Processing.Failure is not null) this.Finish(this.Processing.Failure);
+                else if (Context.IsPlayerFree) this.Persistence.BeginBedtime(this.Processing.ReadCompletedMachines());
                 return;
             }
             Require(ReferenceEquals(Simulator.GetValue(null), this), "The native simulator was replaced during the walk.");
@@ -249,7 +283,7 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
 
     internal void OnWarped(GameLocation oldLocation, GameLocation newLocation)
     {
-        if (!this.Started || this.Finished) return;
+        if (!this.Started || this.Finished || this.Persistence?.SleepStarted == true) return;
         if (oldLocation.Name != this.CurrentMap || newLocation.Name != this.NextMap || this.Counter is not null
             || this.InputFrames == 0 || this.Walked < 16 || (this.OpeningDoor && !this.ActionSent)
             || (this.OpeningHome && this.HomeEntry is null))
@@ -467,7 +501,10 @@ internal sealed class NativeShopWalkScenario : IInputSimulator
         this.DetachWalkControls();
         if (this.Options is not null) this.Options.pauseWhenOutOfFocus = this.OriginalPause;
         if (failure is not null) this.Monitor.Log(failure, LogLevel.Error);
-        if (this.CompleteRoute)
+        if (this.Persistence is not null)
+            this.Persistence.Report(failure, this.Persistence.Verifying ? null : this.CompletedWalk ?? this.CreateWalkEvidence(completed: false),
+                this.HomeEntry, this.Processing?.ReadPurchasedEvidence());
+        else if (this.CompleteRoute)
             this.Helper.Data.WriteJsonFile("native-shop-walk-chain-result.json", new
             {
                 SchemaVersion = 1, Completed = failure is null && !this.SavingObserved && this.Processing?.IsFinished == true,
