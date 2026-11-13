@@ -11,7 +11,7 @@ namespace XiangyeShiling.GameIntegration;
 public sealed record OperationResult(bool Applied, string Message);
 
 /// <summary>
-/// P1 本地库存适配器。输入来自游戏主线程的真实对象；联机仅允许绑定夹具中的主机操作自身库存。
+/// P1 本地库存适配器。输入来自游戏主线程的真实对象；联机主机操作自身库存，农工走独立原生授权。
 /// 单笔提交前准备所有克隆与 JSON，最后核对原快照；失败恢复两侧，恢复失败隔离整个会话。
 /// </summary>
 public sealed class MachineService
@@ -40,8 +40,8 @@ public sealed class MachineService
         => this.Network?.TryQueueFixtureOperation(machine, request, recipeId) ?? false;
     internal bool TryCancelLanFixtureOperation(Guid requestId) => this.Network?.TryCancelFixtureOperation(requestId) ?? false;
     internal bool AllowsLocalHostOperations() => Context.IsWorldReady && Context.IsMainPlayer
-        && (!Context.IsMultiplayer || this.Network?.AllowsFixtureHostOperations() == true);
-    internal bool AllowsFarmhandMenu() => this.Network?.AllowsFixtureFarmhandOperations() == true;
+        && (!Context.IsMultiplayer || this.Network?.AllowsHostOperations() == true);
+    internal bool AllowsFarmhandMenu() => this.Network?.AllowsFarmhandOperations() == true;
     internal bool TryQueueLanMenuOperation(SObject machine, Request request, string? recipeId, Func<bool> interaction)
         => this.Network?.TryQueueFixtureOperation(machine, request, recipeId, interaction) ?? false;
     internal FarmhandRequestStatus ReadLanMenuStatus(Guid requestId)

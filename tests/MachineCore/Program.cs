@@ -1,5 +1,6 @@
 using XiangyeShiling.Machines;
 using XiangyeShiling.Menus;
+using XiangyeShiling.Networking;
 
 const string Soy = "(O)Sora6A.XiangyeShiling_Soybean";
 const string Wheat = "(O)262";
@@ -27,6 +28,20 @@ void Reject(Decision decision, Rejection expected)
     Assert(!decision.Accepted && decision.Rejection == expected && decision.Transaction is null,
         $"Expected {expected} with no inventory or machine mutation, got {decision.Rejection}.");
 }
+
+Test("native LAN capability binds a canonical world host actor session and hello challenge", () =>
+{
+    var capability = new LanMachineCapability(620261122, -33, -17, Guid.NewGuid(), Guid.NewGuid());
+    string raw = capability.Encode();
+    Assert(LanMachineCapability.TryRead(raw, out var decoded) && decoded == capability
+        && decoded.MatchesWorld(620261122, -33, -17), "The exact host capability did not round-trip.");
+    Assert(!decoded.MatchesWorld(620261121, -33, -17) && !decoded.MatchesWorld(620261122, -34, -17)
+        && !decoded.MatchesWorld(620261122, -33, -33), "A different world, host or actor matched.");
+    foreach (string invalid in new[] { raw + "|x", "2" + raw[1..], raw.Replace("|-17|", "|-33|"),
+        raw.Replace("|-33|", "|-033|"), raw.Replace(capability.Challenge.ToString("D"), Guid.Empty.ToString("D")),
+        new string('x', 145) })
+        Assert(!LanMachineCapability.TryRead(invalid, out _), "Noncanonical or unbound capability was accepted.");
+});
 
 Test("menu completion follows the clock across midnight and the overnight gap", () =>
 {

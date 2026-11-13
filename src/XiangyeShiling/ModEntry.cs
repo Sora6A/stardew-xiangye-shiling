@@ -8,7 +8,7 @@ using XiangyeShiling.Machines;
 
 namespace XiangyeShiling;
 
-/// <summary>注册内容诊断与 P1 单人机器适配；远端背包协议通过实测前拒绝联机加工。</summary>
+/// <summary>注册内容诊断、机器适配和独立的原生直连事务门禁。</summary>
 /// <remarks>
 /// 接手入口见 docs/ARCHITECTURE.md 与 docs/HANDOFF.md；原型支持边界以实测记录为准。
 /// </remarks>
@@ -26,7 +26,7 @@ public sealed class ModEntry : Mod
         var recipes = helper.Data.ReadJsonFile<List<MachineRecipe>>("assets/machine-recipes.json")
             ?? throw new InvalidOperationException("Missing generated machine recipes.");
         this.Machines = new MachineService(this.Monitor, helper.Translation, recipes);
-        // Ordinary peers use only the read-only protocol; the separate machine intent is bound to an isolated test world.
+        // The original protocol is read-only. Explicit direct-IP and test-world permissions are independent.
         this.Machines.BindNetworkDiagnostics(new ReadOnlyProtocolService(helper, this.Monitor, this.ModManifest,
             helper.ReadConfig<NetworkDiagnosticOptions>(), this.Machines));
         MachinePatches.Install(this.ModManifest.UniqueID, this.Machines, helper.Translation);

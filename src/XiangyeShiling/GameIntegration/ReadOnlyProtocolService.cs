@@ -9,7 +9,7 @@ using SObject = StardewValley.Object;
 namespace XiangyeShiling.GameIntegration;
 
 /// <summary>
-/// P1 的 SMAPI 会话桥。普通协议保持只读，独立的设备请求仅在明确绑定的 LAN 测试世界可用。
+/// P1 的 SMAPI 会话桥。原协议保持只读，独立的设备请求通过原生直连或专用验收入口准入。
 /// 消息回调保留连接证据并排队。游戏线程刷新 peer、验证来源、限流并处理意图。
 /// </summary>
 /// <remarks>
@@ -35,6 +35,8 @@ internal sealed class ReadOnlyProtocolService
     private readonly ProtocolInbox<PendingMessage> Inbox = new();
     private readonly Stopwatch Clock = Stopwatch.StartNew();
     private readonly Dictionary<long, PeerConnection> Connections = new();
+    private readonly Dictionary<long, VerifiedCapability> Capabilities = new();
+    private object? ClientNativeConnection;
     // Replaced atomically by the owner and never mutated after publication; callbacks need no SDK/game lookup.
     private IReadOnlyDictionary<long, Guid> PublishedConnections = new Dictionary<long, Guid>();
     private ReadOnlyProtocolSession? Session;
@@ -56,8 +58,9 @@ internal sealed class ReadOnlyProtocolService
         this.ModId = manifest.UniqueID;
         this.ModVersion = manifest.Version.ToString();
         this.Options = options;
-        this.LanTransport = new(options.EnableReadOnlyNetworkProbes || options.EnableLanTransactionFixture, monitor, this.ModId);
-        if (options.EnableLanTransactionFixture)
+        this.LanTransport = new(options.EnableReadOnlyNetworkProbes || options.EnableLanTransactionFixture
+            || options.EnableLanMachineOperations, monitor, this.ModId);
+        if (options.EnableLanTransactionFixture || options.EnableLanMachineOperations)
         {
             this.HostTransactions = new(machines);
             this.OwnerTransactions = new(monitor);
@@ -80,13 +83,14 @@ internal sealed class ReadOnlyProtocolService
                 or ReadOnlyProtocolCodec.WelcomeType or ReadOnlyProtocolCodec.RequestType or ReadOnlyProtocolCodec.RejectedType
                 or MachineIntentType)) return;
         bool machineIntent = e.Type == MachineIntentType;
-        if (machineIntent && (!ReferenceEquals(Thread.CurrentThread, this.Owner) || !Context.IsMainPlayer || !this.MachineFixtureAllowed()))
+        bool ownerHost = ReferenceEquals(Thread.CurrentThread, this.Owner) && Context.IsMainPlayer;
+        if (machineIntent && (!ownerHost || !this.MachineHostAllowed()))
             return;
         if (!Volatile.Read(ref this.PublishedConnections).TryGetValue(e.FromPlayerID, out Guid connectionId)) return;
         long worldGeneration = Volatile.Read(ref this.Generation);
         long connectionGeneration = Volatile.Read(ref this.ConnectionGeneration);
-        var provenance = machineIntent || (this.Options.EnableReadOnlyNetworkProbes && ReferenceEquals(Thread.CurrentThread, this.Owner)
-            && Context.IsMainPlayer && this.ProbesAllowed())
+        bool sampleHello = e.Type == ReadOnlyProtocolCodec.HelloType && ownerHost && this.DirectIpWorldAllowed();
+        var provenance = machineIntent || sampleHello || (ownerHost && this.ProbesAllowed())
             ? this.LanTransport.Capture(e.FromPlayerID, worldGeneration, connectionGeneration) : null;
         if (machineIntent && provenance is null) return;
         if (!this.Inbox.TryEnqueue(new PendingMessage(worldGeneration, connectionGeneration, connectionId, e, provenance)))
@@ -100,6 +104,8 @@ internal sealed class ReadOnlyProtocolService
         this.Session = null;
         this.ReplayBuffer = null;
         this.Connections.Clear();
+        this.Capabilities.Clear();
+        this.ClientNativeConnection = null;
         Volatile.Write(ref this.PublishedConnections, new Dictionary<long, Guid>());
         this.LocalPlayerId = 0;
         this.Faulted = false;
@@ -116,7 +122,7 @@ internal sealed class ReadOnlyProtocolService
 
     internal void CaptureLoadedReservation()
     {
-        if (this.MachineFixtureAllowed() && Context.IsMainPlayer) this.HostTransactions?.CaptureLoadedRecord();
+        if (Context.IsMainPlayer && this.MachineHostAllowed()) this.HostTransactions?.CaptureLoadedRecord();
     }
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
@@ -142,14 +148,24 @@ internal sealed class ReadOnlyProtocolService
         long now = this.Clock.ElapsedMilliseconds;
         try
         {
+            if (!this.IsHost && this.DirectIpWorldAllowed())
+            {
+                object? currentNative = this.LanTransport.ReadDirectIpHostConnection();
+                if (this.ClientNativeConnection is not null && !ReferenceEquals(currentNative, this.ClientNativeConnection))
+                {
+                    this.Reset();
+                    return;
+                }
+                this.ClientNativeConnection = currentNative;
+            }
             foreach (var message in this.Session.SynchronizePeers(this.CurrentPeers(), now))
                 this.Send(message);
-            if (this.MachineFixtureAllowed() && this.Session.ActiveSessionId is Guid sessionId)
+            if (this.Session.ActiveSessionId is Guid sessionId)
             {
-                if (this.IsHost) this.HostTransactions!.Advance(sessionId);
-                else if (this.CurrentReadyHost() is { } host)
+                if (this.IsHost && this.MachineHostAllowed()) this.HostTransactions!.Advance(sessionId);
+                else if (!this.IsHost && this.CurrentMachineHost() is { } host)
                     this.OwnerTransactions!.Advance(host.PlayerId, sessionId, host.ConnectionId);
-                else this.OwnerTransactions!.FenceIntent();
+                else if (!this.IsHost) this.OwnerTransactions?.FenceIntent();
             }
             else if (!this.IsHost && this.Session.ActiveSessionId is null)
                 this.OwnerTransactions?.FenceIntent();
@@ -169,8 +185,9 @@ internal sealed class ReadOnlyProtocolService
                 if (args.Type == MachineIntentType)
                 {
                     Guid nonce = Guid.Empty;
-                    if (this.IsHost && this.MachineFixtureAllowed() && this.Session.ActiveSessionId is Guid activeSession
+                    if (this.IsHost && this.MachineHostAllowed() && this.Session.ActiveSessionId is Guid activeSession
                         && ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(args.FromPlayerID))
+                        && (this.MachineFixtureAllowed() || this.CanReceiveDirectIpIntent(args.FromPlayerID, connection.Id, pending.LanProvenance))
                         && this.LanTransport.TryConfirm(pending.LanProvenance, args.FromPlayerID, args.Type,
                             this.Generation, Volatile.Read(ref this.ConnectionGeneration), pending.ConnectionId)
                         && this.Session.TryReadMachineIntent(args.FromPlayerID, pending.ConnectionId,
@@ -179,13 +196,9 @@ internal sealed class ReadOnlyProtocolService
                         this.HostTransactions!.ReceiveIntent(activeSession, args.FromPlayerID, nonce, raw!, intent!);
                     continue;
                 }
-                if (pending.LanProvenance is not null && this.IsHost && this.ProbesAllowed()
-                    && ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(args.FromPlayerID)))
-                    this.LanTransport.TryConfirm(pending.LanProvenance, args.FromPlayerID, args.Type,
-                        this.Generation, Volatile.Read(ref this.ConnectionGeneration), pending.ConnectionId);
-                else this.LanTransport.Discard(pending.LanProvenance);
                 OutboundProtocolMessage? response = this.Session.Receive(args.FromPlayerID, args.FromModID,
                     args.Type, () => ReadBody(args), now);
+                this.ObserveReadOnlyProvenance(pending, connection, this.Session.LastObservation);
                 this.Record(ProtocolTraceKind.Processed, args.FromPlayerID, args.Type, this.Session.LastObservation,
                     this.Session.LastQuota, pending.ConnectionId);
                 if (response is not null && this.Send(response) && this.ProbesAllowed())
@@ -212,7 +225,10 @@ internal sealed class ReadOnlyProtocolService
                 && (this.IsHost ? !p.IsHost : p.IsHost))
             .OrderBy(p => p.PlayerID).Take(ReadOnlyProtocolSession.MaxPeers).ToArray();
         foreach (long id in this.Connections.Keys.Where(id => !peers.Any(p => p.PlayerID == id)).ToArray())
+        {
             this.Connections.Remove(id);
+            this.Capabilities.Remove(id);
+        }
         var result = new List<ProtocolPeer>();
         foreach (var peer in peers)
         {
@@ -220,7 +236,10 @@ internal sealed class ReadOnlyProtocolService
             // This catches disconnect/reconnect entirely between polls, while preserving other peers' handshakes.
             if (!this.Connections.TryGetValue(peer.PlayerID, out var connection)
                 || !ReferenceEquals(peer, connection.Peer))
+            {
+                this.Capabilities.Remove(peer.PlayerID);
                 this.Connections[peer.PlayerID] = connection = new(peer, Guid.NewGuid());
+            }
             result.Add(this.Snapshot(peer, connection.Id));
         }
         Volatile.Write(ref this.PublishedConnections, this.Connections.ToDictionary(p => p.Key, p => p.Value.Id));
@@ -257,7 +276,7 @@ internal sealed class ReadOnlyProtocolService
     public LanTransportDiagnosticSnapshot ReadLanTransportDiagnostics()
     {
         this.RequireOwner();
-        return this.LanTransport.Read(this.IsHost && (this.ProbesAllowed() || this.MachineFixtureAllowed()), this.Generation,
+        return this.LanTransport.Read(this.IsHost && (this.ProbesAllowed() || this.MachineHostAllowed()), this.Generation,
             Volatile.Read(ref this.ConnectionGeneration), Volatile.Read(ref this.PublishedConnections));
     }
 
@@ -290,13 +309,84 @@ internal sealed class ReadOnlyProtocolService
         && (Game1.player.farmName.Value, Game1.uniqueIDForThisGame) is
             ("XYSNET05", 620261116UL) or ("XYSNET06", 620261118UL) or ("XYSNET07", 620261120UL);
 
-    internal bool AllowsFixtureHostOperations() => ReferenceEquals(Thread.CurrentThread, this.Owner)
-        && Context.IsMainPlayer && this.IsHost && !Game1.newDay && this.Session?.ActiveSessionId is not null
-        && this.MachineFixtureAllowed();
+    private bool DirectIpWorldAllowed() => this.Options.EnableLanMachineOperations && this.LanTransport.Available && !this.Faulted
+        && Context.IsWorldReady && Context.IsMultiplayer && !Context.IsSplitScreen && Context.ScreenId == 0
+        && Game1.uniqueIDForThisGame != 0;
 
-    internal bool AllowsFixtureFarmhandOperations() => ReferenceEquals(Thread.CurrentThread, this.Owner)
-        && !Context.IsMainPlayer && !this.IsHost && !Game1.newDay && this.MachineFixtureAllowed()
-        && this.CurrentReadyHost() is not null;
+    private bool MachineHostAllowed() => this.MachineFixtureAllowed()
+        || (this.DirectIpWorldAllowed() && this.LanTransport.HasDirectIpHost());
+
+    private void ObserveReadOnlyProvenance(PendingMessage pending, PeerConnection connection, ProtocolObservation observation)
+    {
+        if (pending.LanProvenance is not { } provenance) return;
+        var args = pending.Args;
+        bool capabilityHello = this.IsHost && this.DirectIpWorldAllowed()
+            && observation is { Kind: ProtocolReceiveKind.HelloAccepted, Challenge: not null };
+        if ((!capabilityHello && !(this.IsHost && this.ProbesAllowed()))
+            || !ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(args.FromPlayerID)))
+        {
+            this.LanTransport.Discard(provenance);
+            return;
+        }
+        if (!this.LanTransport.TryConfirm(provenance, args.FromPlayerID, args.Type, this.Generation,
+            Volatile.Read(ref this.ConnectionGeneration), pending.ConnectionId) || !capabilityHello
+            || this.Session?.ActiveSessionId is not Guid session || !this.LanTransport.MatchesCurrentActor(provenance))
+            return;
+
+        // One accepted challenge per live SDK/native pair. A second Hello may still get a read-only Welcome.
+        var capability = new LanMachineCapability(Game1.uniqueIDForThisGame, this.LocalPlayerId,
+            args.FromPlayerID, session, observation.Challenge!.Value);
+        if (this.Capabilities.TryGetValue(args.FromPlayerID, out var previous))
+        {
+            if (ReferenceEquals(previous.Provenance.Scope.Connection, provenance.Scope.Connection))
+            {
+                if (previous.Value == capability)
+                    this.Capabilities[args.FromPlayerID] = new(connection.Id, capability, provenance);
+                return;
+            }
+            // Require a new SDK connection before trusting a replacement native connection.
+            return;
+        }
+
+        if (Game1.player.modData.TryGetValue(LanMachineCapability.Key(this.ModId, capability.ActorId), out string raw)
+            && (!LanMachineCapability.TryRead(raw, out var stored)
+                || !stored.MatchesWorld(capability.WorldId, capability.HostId, capability.ActorId))) return;
+        string key = LanMachineCapability.Key(this.ModId, capability.ActorId);
+        string value = capability.Encode();
+        Game1.player.modData[key] = value;
+        if (Game1.player.modData.GetValueOrDefault(key) == value)
+            this.Capabilities[args.FromPlayerID] = new(connection.Id, capability, provenance);
+    }
+
+    private bool CanReceiveDirectIpIntent(long actor, Guid connection, LanTransportActorObservation.IngressTicket? incoming)
+        => incoming is not null && this.Capabilities.TryGetValue(actor, out var capability) && capability.ConnectionId == connection
+            && capability.Value.SessionId == this.Session?.ActiveSessionId
+            && ReferenceEquals(incoming.Scope.Connection, capability.Provenance.Scope.Connection)
+            && this.LanTransport.MatchesCurrentActor(capability.Provenance)
+            && Game1.player.modData.GetValueOrDefault(LanMachineCapability.Key(this.ModId, actor)) == capability.Value.Encode();
+
+    private ProtocolPeerStatus? CurrentMachineHost()
+    {
+        if (this.CurrentReadyHost() is not { } host) return null;
+        if (this.MachineFixtureAllowed()) return host;
+        if (!this.DirectIpWorldAllowed() || this.Session?.ActiveSessionId is not Guid session
+            || this.ClientNativeConnection is null || !ReferenceEquals(this.ClientNativeConnection, this.LanTransport.ReadDirectIpHostConnection()))
+            return null;
+
+        Farmer master = Game1.MasterPlayer;
+        long actor = Game1.player.UniqueMultiplayerID;
+        return master.modData.TryGetValue(LanMachineCapability.Key(this.ModId, actor), out string raw)
+            && LanMachineCapability.TryRead(raw, out var capability)
+            && capability.MatchesWorld(Game1.uniqueIDForThisGame, host.PlayerId, actor)
+            && capability.SessionId == session && capability.Challenge == host.Challenge ? host : null;
+    }
+
+    internal bool AllowsHostOperations() => ReferenceEquals(Thread.CurrentThread, this.Owner)
+        && Context.IsMainPlayer && this.IsHost && !Game1.newDay && this.Session?.ActiveSessionId is not null
+        && this.MachineHostAllowed();
+
+    internal bool AllowsFarmhandOperations() => ReferenceEquals(Thread.CurrentThread, this.Owner)
+        && !Context.IsMainPlayer && !this.IsHost && !Game1.newDay && this.CurrentMachineHost() is not null;
 
     private ProtocolPeerStatus? CurrentReadyHost()
     {
@@ -307,6 +397,9 @@ internal sealed class ReadOnlyProtocolService
             && ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(host.PlayerId)) ? host : null;
     }
 
+    private sealed record VerifiedCapability(Guid ConnectionId, LanMachineCapability Value,
+        LanTransportActorObservation.IngressTicket Provenance);
+
     internal FarmhandRequestStatus ReadFarmhandStatus(Guid requestId)
     {
         this.RequireOwner();
@@ -316,8 +409,9 @@ internal sealed class ReadOnlyProtocolService
     internal bool TryQueueFixtureOperation(SObject machine, Request request, string? recipeId, Func<bool>? interaction = null)
     {
         this.RequireOwner();
-        if (this.IsHost || !this.MachineFixtureAllowed() || Game1.newDay || this.Session?.ActiveSessionId is not Guid session
-            || this.CurrentReadyHost() is not { } host || Game1.player.UniqueMultiplayerID != request.ActorId
+        if (this.IsHost || (interaction is null && !this.MachineFixtureAllowed()) || Game1.newDay
+            || this.Session?.ActiveSessionId is not Guid session || this.CurrentMachineHost() is not { } host
+            || Game1.player.UniqueMultiplayerID != request.ActorId
             || Game1.eventUp || Game1.player.UsingTool || Game1.player.currentLocation is not { } location
             || !location.objects.TryGetValue(machine.TileLocation, out SObject placed) || !ReferenceEquals(machine, placed)
             || !MachineService.TryRead(machine, out var state) || state!.InstanceId != request.InstanceId
@@ -339,7 +433,7 @@ internal sealed class ReadOnlyProtocolService
     internal bool TryCancelFixtureOperation(Guid requestId)
     {
         this.RequireOwner();
-        return !this.IsHost && this.MachineFixtureAllowed() && this.Session?.ActiveSessionId is not null
+        return !this.IsHost && this.CurrentMachineHost() is not null
             && this.OwnerTransactions!.RequestCancellation(requestId);
     }
 

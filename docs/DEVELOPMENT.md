@@ -11,7 +11,9 @@
 11-03当前新增单人获取/制作指南和缺料反馈；玩家入口见[PLAYER_GUIDE](PLAYER_GUIDE.md)，实现/验收矩阵见[P1_SINGLEPLAYER_STATUS](P1_SINGLEPLAYER_STATUS.md)。目录16、生产/夹具构建及实际SDK18通过，中文UI已查看，最终路线纯文案包核对通过；本轮没有重复无关112核心/116Python或联机矩阵，证据/源码入口/回退见[本轮验证](validation/P1-singleplayer-guide-2026-11-02.md)。
 
 当前交付为 **P1 单人机器原型 / 0.1.0-alpha.2 开发包**。设计基线仍为 0.4，两者含义不同。
-已接入7个物品、5个配方、有限商店、共享菜单与单人事务，以及只读联机握手/拒绝和默认禁用的诊断。种植、采集、远端库存/可写提交未实现；planned不注入，真实双端未验收。
+已接入 7 个物品、5 个配方、有限商店、共享菜单与单人事务。种植、采集及其余计划内容尚未激活。
+
+普通存档的设备直连是默认关闭的 P1 候选。仅隔离测试环境可在主机和农工两端的模组 `config.json` 设置 `EnableLanMachineOperations: true`，以已核对的 Windows 游戏 1.6.15.24356、SMAPI 4.4.0 和原版直接 IP 运行。测试该入口时保持 `EnableLanTransactionFixture` 和只读诊断关闭，权限由真实连接及原生主机能力决定。已通过和待验证范围见 [主机协议](P1_HOST_PROTOCOL.md)。
 
 接手前先读 [当前交接](HANDOFF.md)、[开发维护规范](../CONTRIBUTING.md) 和 [架构入口](ARCHITECTURE.md)。本页负责工具链与运行命令；分支/提交/bugfix/中断记录的要求统一放在贡献规范，避免多处版本漂移。
 

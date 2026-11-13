@@ -24,6 +24,8 @@ internal sealed class NativeNetworkBootstrap
     internal const ulong BedtimeFixtureId = 620261114;
     internal const string TransactionFarmName = "XYSNET05";
     internal const ulong TransactionFixtureId = 620261116;
+    internal const string NormalLanFarmName = "XYSNET08";
+    internal const ulong NormalLanFixtureId = 620261122;
     internal const string MachineRecoveryFarmName = "XYSNET06";
     internal const ulong MachineRecoveryFixtureId = 620261118;
     internal const string MachinePostDebitFarmName = "XYSNET07";
@@ -48,8 +50,7 @@ internal sealed class NativeNetworkBootstrap
         bool ownership = config.Scenario == "NativeInventoryOwnership" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
         bool recovery = config.Scenario == "NativeInventoryRecovery" && IsRecoveryFixture(config);
         bool observation = config.Scenario == "LanTransportObservation" && config.FarmName == FarmName && config.SaveFixtureId == FixtureId;
-        bool transaction = config.Scenario == "LanMachineTransaction" && config.FarmName == TransactionFarmName
-            && config.SaveFixtureId == TransactionFixtureId;
+        bool transaction = IsTransactionFixture(config);
         bool machineRecovery = config.Scenario == "LanMachineRecovery"
             && ((config.FarmName == MachineRecoveryFarmName && config.SaveFixtureId == MachineRecoveryFixtureId)
                 || (config.FarmName == MachinePostDebitFarmName && config.SaveFixtureId == MachinePostDebitFixtureId));
@@ -67,6 +68,10 @@ internal sealed class NativeNetworkBootstrap
     internal static bool IsRecoveryFixture(Config config) =>
         (config.FarmName == RecoveryFarmName && config.SaveFixtureId == RecoveryFixtureId)
         || (config.FarmName == BedtimeFarmName && config.SaveFixtureId == BedtimeFixtureId);
+
+    internal static bool IsTransactionFixture(Config config) => config.Scenario == "LanMachineTransaction"
+        && ((config.FarmName == TransactionFarmName && config.SaveFixtureId == TransactionFixtureId)
+            || (config.FarmName == NormalLanFarmName && config.SaveFixtureId == NormalLanFixtureId));
 
     // 和既有夹具一致，等待标题资源初始化后再调用原版加载入口。
     internal void QueueStart()

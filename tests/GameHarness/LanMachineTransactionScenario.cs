@@ -36,6 +36,9 @@ internal sealed class LanMachineTransactionScenario
     private readonly IMonitor Monitor;
     private readonly NativeNetworkBootstrap Bootstrap;
     private readonly bool Host;
+    private readonly string FarmName;
+    private readonly ulong FixtureId;
+    private readonly bool NormalLan;
     private readonly bool VerifyHostMovement;
     private readonly bool VerifyHostCompetition;
     private readonly bool VerifyFarmhandMenu;
@@ -63,21 +66,27 @@ internal sealed class LanMachineTransactionScenario
     private Guid InstanceId;
     private ProtocolDiagnosticSnapshot? Protocol;
     private LanTransportDiagnosticSnapshot? Lan;
+    private CapabilityEvidence? Capability;
 
     internal LanMachineTransactionScenario(IModHelper helper, IMonitor monitor, Config config)
     {
-        Require(config.Enabled && config.Scenario == "LanMachineTransaction" && config.FarmName == NativeNetworkBootstrap.TransactionFarmName
-            && config.SaveFixtureId == NativeNetworkBootstrap.TransactionFixtureId && !config.OpenPreview,
+        Require(config.Enabled && NativeNetworkBootstrap.IsTransactionFixture(config) && !config.OpenPreview,
             "Bind the transaction harness to the exact disposable loopback farm.");
         this.Helper = helper;
         this.Monitor = monitor;
         this.Host = config.NetworkRole == "Host";
+        this.FarmName = config.FarmName;
+        this.FixtureId = config.SaveFixtureId;
+        this.NormalLan = this.FixtureId == NativeNetworkBootstrap.NormalLanFixtureId;
         this.VerifyHostMovement = config.VerifyLanHostMovement;
         this.VerifyHostCompetition = config.VerifyLanHostCompetition;
         Require(!this.VerifyHostMovement || this.VerifyHostCompetition,
             "The host movement fixture requires the established farm stand and completed contention case.");
-        this.VerifyFarmhandMenu = config.VerifyLanFarmhandMenu;
-        Require(!this.VerifyHostCompetition || !this.VerifyFarmhandMenu, "Run the two native menu fixtures independently.");
+        this.VerifyFarmhandMenu = this.NormalLan || config.VerifyLanFarmhandMenu;
+        Require(this.NormalLan
+                ? !this.VerifyHostMovement && config.VerifyLanHostCompetition != config.VerifyLanFarmhandMenu
+                : !this.VerifyHostCompetition || !this.VerifyFarmhandMenu,
+            "Select one ordinary LAN menu validation mode.");
         this.Bootstrap = new(monitor, config);
     }
 
@@ -97,8 +106,8 @@ internal sealed class LanMachineTransactionScenario
             Require(this.Watch.Elapsed < TimeSpan.FromMinutes(3), "Timed out waiting for production transaction or receipt settlement.");
             if (!this.Bootstrap.Ready) return;
             Require(Context.IsWorldReady && Context.IsMultiplayer && Context.IsMainPlayer == this.Host
-                && !Context.IsSplitScreen && Context.ScreenId == 0 && Game1.uniqueIDForThisGame == NativeNetworkBootstrap.TransactionFixtureId
-                && Game1.player.farmName.Value == NativeNetworkBootstrap.TransactionFarmName
+                && !Context.IsSplitScreen && Context.ScreenId == 0 && Game1.uniqueIDForThisGame == this.FixtureId
+                && Game1.player.farmName.Value == this.FarmName
                 && Game1.player.UniqueMultiplayerID == (this.Host ? NativeNetworkBootstrap.HostId : NativeNetworkBootstrap.ClientId),
                 "The active native world or role differs from the transaction fixture.");
             this.Service ??= this.Helper.ModRegistry.GetApi(Id) as MachineService
@@ -115,7 +124,8 @@ internal sealed class LanMachineTransactionScenario
             if (this.VerifyHostCompetition && this.Before is null) this.ObserveCompetitionSetup(host);
             if (this.Host && this.VerifyHostCompetition && !this.PrepareCompetingHost(host, this.PreparedMachine!)) return;
             long expectedPeer = this.Host ? NativeNetworkBootstrap.ClientId : NativeNetworkBootstrap.HostId;
-            if (!this.Protocol.Peers.Any(peer => peer.PlayerId == expectedPeer && peer.IsHost != this.Host && peer.Ready)) return;
+            var peer = this.Protocol.Peers.SingleOrDefault(peer => peer.PlayerId == expectedPeer && peer.IsHost != this.Host && peer.Ready);
+            if (peer is null || (this.NormalLan && !this.VerifyCapability(host, peer))) return;
             Farmer? owner = this.Host ? Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: true) : Game1.player;
             if (owner is null) return;
             Require(owner.UniqueMultiplayerID == NativeNetworkBootstrap.ClientId && !ReferenceEquals(owner, host),
@@ -148,6 +158,40 @@ internal sealed class LanMachineTransactionScenario
         {
             this.Finish(error is TargetInvocationException { InnerException: { } inner } ? inner.Message : error.Message);
         }
+    }
+
+    private bool VerifyCapability(Farmer host, ProtocolPeerStatus peer)
+    {
+        string key = FormattableString.Invariant($"{Id}/LanMachineCapability/{NativeNetworkBootstrap.ClientId}");
+        if (!host.modData.TryGetValue(key, out string raw)) return false;
+        string[] parts = raw.Split('|');
+        bool parsed = parts.Length == 6 && Guid.TryParseExact(parts[4], "D", out _)
+            && Guid.TryParseExact(parts[5], "D", out _);
+        Require(parsed, "The native host capability marker must have exactly six canonical fields.");
+        Guid session = Guid.ParseExact(parts[4], "D");
+        Guid challenge = Guid.ParseExact(parts[5], "D");
+        string expected = FormattableString.Invariant(
+            $"1|{this.FixtureId}|{host.UniqueMultiplayerID}|{NativeNetworkBootstrap.ClientId}|{session:D}|{challenge:D}");
+        Require(raw == expected && session != Guid.Empty && session == this.Protocol!.SessionId && challenge != Guid.Empty
+            && peer.ConnectionId != Guid.Empty && (this.Host || peer.Challenge == challenge)
+            && !this.Protocol.ProbeConfigured && !this.Protocol.ProbeAllowed,
+            "The capability marker did not bind this exact native host, actor, session and challenge with probes disabled.");
+        if (this.Capability is null)
+        {
+            var hello = this.Lan!.LastConfirmed;
+            if (this.Host)
+            {
+                Require(hello is not null && hello.ActorId == NativeNetworkBootstrap.ClientId && hello.WorldId == this.FixtureId
+                    && hello.ConnectionId == peer.ConnectionId && hello.MessageType == ReadOnlyProtocolCodec.HelloType,
+                    "The host did not observe this actor's Hello on its current native connection.");
+            }
+            this.Capability = new(raw, host.UniqueMultiplayerID, NativeNetworkBootstrap.ClientId, session, challenge,
+                peer.ConnectionId, this.Host ? hello : null);
+            this.Report();
+        }
+        else Require(this.Capability.Raw == raw && this.Capability.Connection == peer.ConnectionId,
+            "The native capability or connection changed mid-transaction.");
+        return true;
     }
 
     internal static SObject PrepareMachine(Farmer host, bool requireHostStanding = false)
@@ -224,9 +268,9 @@ internal sealed class LanMachineTransactionScenario
     [EventPriority(EventPriority.High)]
     internal void OnHostCompetitionTick(object? sender, UpdateTickedEventArgs e)
     {
-        if (!this.Host || !this.VerifyHostCompetition || !this.CancellationSettled || this.Completed || this.Failure is not null
+        if (!this.Host || !this.VerifyHostCompetition || (!this.NormalLan && !this.CancellationSettled) || this.Completed || this.Failure is not null
             || this.HostCompetition is not null || !this.Bootstrap.Ready || this.PreparedMachine is not { } machine
-            || !Context.IsWorldReady || !Context.IsMainPlayer || Game1.uniqueIDForThisGame != NativeNetworkBootstrap.TransactionFixtureId)
+            || !Context.IsWorldReady || !Context.IsMainPlayer || Game1.uniqueIDForThisGame != this.FixtureId)
             return;
         Farmer host = Game1.player;
         if (!host.modData.TryGetValue(ReservationKey, out string reservedRaw)) return;
@@ -335,7 +379,7 @@ internal sealed class LanMachineTransactionScenario
             this.RefusalObserved = true;
             this.Report();
         }
-        if (!this.CancellationSettled && this.CancelledPlan is Guid cancelled && state.Revision == 0 && IsSettled(host, owner, cancelled))
+        if (!this.CancellationSettled && this.CancelledPlan is Guid cancelled && state.Revision == 0 && this.IsSettled(host, owner, cancelled))
         {
             Require(this.RefusalObserved && state.Batch is null && Snapshot(owner).SequenceEqual(this.Before!),
                 "Live cancellation changed the initial device or inventory.");
@@ -343,7 +387,7 @@ internal sealed class LanMachineTransactionScenario
             this.SendReady(0, afterCancellation: true);
             return;
         }
-        if (state.Revision == 1 && this.PreparedRevision == 0 && IsSettled(host, owner, state.LastRequestId))
+        if (state.Revision == 1 && this.PreparedRevision == 0 && this.IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyStarted(owner, state);
             // Prepare a ready batch by advancing only the host's clock. The production code still determines readiness.
@@ -360,10 +404,10 @@ internal sealed class LanMachineTransactionScenario
             this.SendReady(1);
             return;
         }
-        if (state.Revision == 2 && this.PreparedRevision == 1 && IsSettled(host, owner, state.LastRequestId))
+        if (state.Revision == 2 && this.PreparedRevision == 1 && this.IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyCollected(owner, state);
-            Require(this.RefusalObserved && this.CancellationSettled,
+            Require(this.NormalLan || (this.RefusalObserved && this.CancellationSettled),
                 "The host did not observe a refusal and a settled cancellation before actual machine work.");
             Require(!this.VerifyHostCompetition || this.HostCompetition is { } competition
                 && this.Stages.Any(evidence => evidence.Revision == 1 && evidence.Request == competition.FarmhandRequest),
@@ -381,7 +425,7 @@ internal sealed class LanMachineTransactionScenario
                 }, requireHeldPlacement: true);
                 Require(this.HostMovementChecks.Count == 2 && Snapshot(owner).SequenceEqual(ownerInventory)
                     && farm.objects.TryGetValue(device.TileLocation, out SObject original) && ReferenceEquals(original, device)
-                    && device.modData[MachineService.StateKey] == deviceRaw && IsSettled(host, owner, state.LastRequestId),
+                    && device.modData[MachineService.StateKey] == deviceRaw && this.IsSettled(host, owner, state.LastRequestId),
                     "The host movement cases affected the settled farmhand transaction.");
             }
             this.Finish(null);
@@ -394,6 +438,13 @@ internal sealed class LanMachineTransactionScenario
         if (this.StartRequest is null && this.Ready is { Revision: 0 } start && start.InstanceId == this.InstanceId)
         {
             Require(state.Revision == 0 && Snapshot(owner).SequenceEqual(this.Before!), "Native client state differed before sending Start.");
+            if (this.NormalLan)
+            {
+                if (!this.CanOpenNormalFarmhandMenu()) return;
+                this.StartRequest = this.ClickFarmhandMenu(machine, owner, state, "Start");
+                this.Report();
+                return;
+            }
             if (this.RefusedRequest is null)
             {
                 this.RefusedRequest = new Request(Guid.NewGuid(), this.InstanceId, 0, owner.UniqueMultiplayerID);
@@ -417,7 +468,7 @@ internal sealed class LanMachineTransactionScenario
                 this.Report();
                 return;
             }
-            if (!start.AfterCancellation || !IsSettled(host, owner, this.CancellationRequest.Id)) return;
+            if (!start.AfterCancellation || !this.IsSettled(host, owner, this.CancellationRequest.Id)) return;
             this.CancellationSettled = true;
             if (this.VerifyFarmhandMenu)
             {
@@ -434,7 +485,7 @@ internal sealed class LanMachineTransactionScenario
         }
         if (this.StartRequest is { } started && this.CollectRequest is null && this.Ready is { Revision: 1 } collect
             && collect.InstanceId == this.InstanceId && state.Revision == 1 && state.LastRequestId == started.Id
-            && IsSettled(host, owner, started.Id))
+            && this.IsSettled(host, owner, started.Id))
         {
             this.VerifyStarted(owner, state);
             if (this.VerifyFarmhandMenu)
@@ -449,7 +500,7 @@ internal sealed class LanMachineTransactionScenario
             return;
         }
         if (this.CollectRequest is { } collected && state.Revision == 2 && state.LastRequestId == collected.Id
-            && IsSettled(host, owner, collected.Id))
+            && this.IsSettled(host, owner, collected.Id))
         {
             this.VerifyCollected(owner, state);
             if (this.VerifyFarmhandMenu && !this.FinishFarmhandMenu(collected, "Collect")) return;
@@ -483,6 +534,15 @@ internal sealed class LanMachineTransactionScenario
         this.ActiveFarmhandMenu = menu;
         this.PendingMenuEvidence = new(action, request.Id, state.Revision, waiting, null);
         return request;
+    }
+
+    private bool CanOpenNormalFarmhandMenu()
+    {
+        // Ready and the host marker can replicate before the client validates its local native LAN adapter.
+        // Keep the real interaction as the first write entry; this read only checks its availability.
+        var allows = typeof(MachineService).GetMethod("AllowsFarmhandMenu", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("The production farmhand menu authorization is unavailable.");
+        return allows.Invoke(this.Service, null) is true;
     }
 
     private bool FinishFarmhandMenu(Request request, string action)
@@ -519,10 +579,10 @@ internal sealed class LanMachineTransactionScenario
         && state.LastActorId == owner.UniqueMultiplayerID && Snapshot(owner).SequenceEqual(this.Collected!),
         "Collect did not credit exactly two tofu and clear the batch once.");
 
-    private static bool IsSettled(Farmer host, Farmer owner, Guid? request) => request is Guid id
+    private bool IsSettled(Farmer host, Farmer owner, Guid? request) => request is Guid id
         && !host.modData.ContainsKey(ReservationKey) && !owner.modData.ContainsKey(JournalKey)
         && host.modData.TryGetValue(ReceiptKey, out string receipt)
-        && receipt.StartsWith(FormattableString.Invariant($"1|{NativeNetworkBootstrap.TransactionFixtureId}|{NativeNetworkBootstrap.HostId}|{id:D}|"),
+        && receipt.StartsWith(FormattableString.Invariant($"1|{this.FixtureId}|{NativeNetworkBootstrap.HostId}|{id:D}|"),
             StringComparison.Ordinal)
         && receipt.EndsWith(":Seen", StringComparison.Ordinal);
 
@@ -551,7 +611,7 @@ internal sealed class LanMachineTransactionScenario
 
     private Guid? ReadRefusedRequest(string raw)
     {
-        string prefix = FormattableString.Invariant($"1|{NativeNetworkBootstrap.TransactionFixtureId}|{NativeNetworkBootstrap.HostId}|{NativeNetworkBootstrap.ClientId}|");
+        string prefix = FormattableString.Invariant($"1|{this.FixtureId}|{NativeNetworkBootstrap.HostId}|{NativeNetworkBootstrap.ClientId}|");
         string[] fields = raw.Split('|');
         return raw.StartsWith(prefix, StringComparison.Ordinal) && fields.Length == 8
             && Guid.TryParseExact(fields[4], "D", out Guid session) && session == this.Protocol?.SessionId
@@ -623,13 +683,13 @@ internal sealed class LanMachineTransactionScenario
 
     private void Report() => this.Helper.Data.WriteJsonFile("lan-machine-transaction-result.json", new
     {
-        SchemaVersion = 1, ProcessId = Environment.ProcessId, FixtureId = NativeNetworkBootstrap.TransactionFixtureId,
+        SchemaVersion = 1, ProcessId = Environment.ProcessId, this.FixtureId, this.FarmName,
         NetworkRole = this.Host ? "Host" : "Client", this.Completed, this.Failure, this.SavingObserved, this.InstanceId,
         this.PreparedRevision, this.ReadyClock, this.Positioned, this.RefusalObserved, RefusedRequest = this.RefusedRequest?.Id,
         this.CancellationSettled, CancelledRequest = this.Host ? this.CancelledPlan : this.CancellationRequest?.Id,
         StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
         this.VerifyHostCompetition, this.HostCompetition, this.CompetitionSetup, this.SkippedHostArrivalEvent,
-        this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus,
+        this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus, this.NormalLan, this.Capability,
         this.VerifyHostMovement, this.HostMovementChecks, this.Stages, this.Protocol, this.Lan
     });
 
@@ -651,4 +711,6 @@ internal sealed class LanMachineTransactionScenario
         string? FarmhandLocation, string? FarmhandTile, int? FarmhandSoybeans, bool FarmhandPositioned, bool PeerReady,
         bool PlayerFree, bool Warping, bool FadeToBlack, bool EventUp, bool DialogueUp, string? EventId, bool? EventSkippable, string? Menu);
     private sealed record FarmhandMenuEvidence(string Action, Guid Request, long Revision, string Waiting, string? Completion);
+    private sealed record CapabilityEvidence(string Raw, long Host, long Actor, Guid Session, Guid Challenge, Guid Connection,
+        LanTransportEvidence? NativeHello);
 }

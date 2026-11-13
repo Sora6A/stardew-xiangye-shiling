@@ -34,6 +34,40 @@ internal sealed class LanTransportActorObservation
     private long Confirmed, MissingScope, ActorMismatch, StaleConnection;
     private LanTransportEvidence? LastConfirmed;
 
+    internal bool HasDirectIpHost() => this.HookInstalled && HostWorld()
+        && Game1.server is GameServer server && server.GetServer<LidgrenServer>() is { };
+
+    internal object? ReadDirectIpHostConnection()
+    {
+        if (!this.HookInstalled || InstalledBinding is not { } binding
+            || !ReferenceEquals(Thread.CurrentThread, binding.Owner) || Game1.client is not LidgrenClient client) return null;
+        try
+        {
+            return binding.ClientPeer.GetValue(client) is { } peer && binding.ServerConnection.GetValue(peer) is { } connection
+                && Equals(binding.ConnectionStatus.GetValue(connection), binding.ConnectedStatus) ? connection : null;
+        }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            return null;
+        }
+    }
+
+    internal bool MatchesCurrentActor(IngressTicket ticket)
+    {
+        var scope = ticket.Scope;
+        try
+        {
+            return this.HookInstalled && InstalledBinding is { } binding
+                && ReferenceEquals(Thread.CurrentThread, binding.Owner) && IsCurrentWorld(scope)
+                && Equals(binding.ConnectionStatus.GetValue(scope.Connection), binding.ConnectedStatus)
+                && binding.TryResolveActor(scope.Adapter, scope.Connection, out long actor) && actor == scope.ActorId;
+        }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            return false;
+        }
+    }
+
     internal LanTransportActorObservation(bool configured, IMonitor monitor, string modId)
     {
         this.Configured = configured;
@@ -163,8 +197,15 @@ internal sealed class LanTransportActorObservation
         var getConnection = peers.FieldType.GetMethod("get_Item", new[] { typeof(long) });
         if (contains?.ReturnType != typeof(bool) || getActor?.ReturnType != typeof(long)
             || getConnection?.ReturnType != sender.FieldType) return null;
+
+        var clientPeer = typeof(LidgrenClient).GetField("client", Members);
+        var serverConnection = clientPeer?.FieldType.GetProperty("ServerConnection", Members);
+        var connectionStatus = sender.FieldType.GetProperty("Status", Members);
+        if (clientPeer?.FieldType.FullName != "Lidgren.Network.NetClient" || serverConnection?.PropertyType != sender.FieldType
+            || connectionStatus?.PropertyType.FullName != "Lidgren.Network.NetConnectionStatus") return null;
+        object connectedStatus = Enum.Parse(connectionStatus.PropertyType, "Connected");
         return new(serverProcessing, send, closure, lidgren, sender, adapter, peers, hostServer, contains, getActor,
-            getConnection, modMessageType, Thread.CurrentThread);
+            getConnection, modMessageType, Thread.CurrentThread, clientPeer, serverConnection, connectionStatus, connectedStatus);
     }
 
     private static bool MatchesHash(Assembly assembly, string expected)
@@ -219,7 +260,8 @@ internal sealed class LanTransportActorObservation
 
     private sealed record NativeBinding(MethodInfo ReceiveMethod, MethodInfo SendMethod, Type ClosureType,
         Type AdapterType, FieldInfo Sender, FieldInfo Adapter, FieldInfo Peers, FieldInfo HostServer,
-        MethodInfo ContainsConnection, MethodInfo GetActor, MethodInfo GetConnection, byte ModMessageType, Thread Owner)
+        MethodInfo ContainsConnection, MethodInfo GetActor, MethodInfo GetConnection, byte ModMessageType, Thread Owner,
+        FieldInfo ClientPeer, PropertyInfo ServerConnection, PropertyInfo ConnectionStatus, object ConnectedStatus)
     {
         internal bool TryResolveActor(object adapter, object connection, out long actor)
         {
