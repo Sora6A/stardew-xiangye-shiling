@@ -37,6 +37,7 @@ internal sealed class ReadOnlyProtocolService
     private readonly Dictionary<long, PeerConnection> Connections = new();
     private readonly Dictionary<long, VerifiedCapability> Capabilities = new();
     private object? ClientNativeConnection;
+    private (Guid Connection, Guid Challenge, Guid Nonce, ulong Sequence) ClientIntent;
     // Replaced atomically by the owner and never mutated after publication; callbacks need no SDK/game lookup.
     private IReadOnlyDictionary<long, Guid> PublishedConnections = new Dictionary<long, Guid>();
     private ReadOnlyProtocolSession? Session;
@@ -81,8 +82,8 @@ internal sealed class ReadOnlyProtocolService
         // Never read the body here. Existing read-only handling is independent of the opt-in host provenance sample.
         if (e.FromModID != this.ModId || e.Type is not (ReadOnlyProtocolCodec.HelloType
                 or ReadOnlyProtocolCodec.WelcomeType or ReadOnlyProtocolCodec.RequestType or ReadOnlyProtocolCodec.RejectedType
-                or MachineIntentType)) return;
-        bool machineIntent = e.Type == MachineIntentType;
+                or MachineIntentType or DirectIpMachineIntent.MessageType)) return;
+        bool machineIntent = e.Type is MachineIntentType or DirectIpMachineIntent.MessageType;
         bool ownerHost = ReferenceEquals(Thread.CurrentThread, this.Owner) && Context.IsMainPlayer;
         if (machineIntent && (!ownerHost || !this.MachineHostAllowed()))
             return;
@@ -106,6 +107,7 @@ internal sealed class ReadOnlyProtocolService
         this.Connections.Clear();
         this.Capabilities.Clear();
         this.ClientNativeConnection = null;
+        this.ClientIntent = default;
         Volatile.Write(ref this.PublishedConnections, new Dictionary<long, Guid>());
         this.LocalPlayerId = 0;
         this.Faulted = false;
@@ -182,18 +184,9 @@ internal sealed class ReadOnlyProtocolService
                     continue;
                 }
                 var args = pending.Args;
-                if (args.Type == MachineIntentType)
+                if (args.Type is MachineIntentType or DirectIpMachineIntent.MessageType)
                 {
-                    Guid nonce = Guid.Empty;
-                    if (this.IsHost && this.MachineHostAllowed() && this.Session.ActiveSessionId is Guid activeSession
-                        && ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(args.FromPlayerID))
-                        && (this.MachineFixtureAllowed() || this.CanReceiveDirectIpIntent(args.FromPlayerID, connection.Id, pending.LanProvenance))
-                        && this.LanTransport.TryConfirm(pending.LanProvenance, args.FromPlayerID, args.Type,
-                            this.Generation, Volatile.Read(ref this.ConnectionGeneration), pending.ConnectionId)
-                        && this.Session.TryReadMachineIntent(args.FromPlayerID, pending.ConnectionId,
-                            () => OwnerIntentRefusal.TryReadIntent(ReadBody(args), out nonce, out string? requestRaw) ? requestRaw : null,
-                            now, out string? raw, out var intent))
-                        this.HostTransactions!.ReceiveIntent(activeSession, args.FromPlayerID, nonce, raw!, intent!);
+                    this.ReceiveMachineIntent(pending, connection, now);
                     continue;
                 }
                 OutboundProtocolMessage? response = this.Session.Receive(args.FromPlayerID, args.FromModID,
@@ -316,6 +309,31 @@ internal sealed class ReadOnlyProtocolService
     private bool MachineHostAllowed() => this.MachineFixtureAllowed()
         || (this.DirectIpWorldAllowed() && this.LanTransport.HasDirectIpHost());
 
+    private void ReceiveMachineIntent(PendingMessage pending, PeerConnection connection, long now)
+    {
+        var args = pending.Args;
+        if (!this.IsHost || !this.MachineHostAllowed() || this.Session?.ActiveSessionId is not Guid session
+            || !ReferenceEquals(connection.Peer, this.Helper.Multiplayer.GetConnectedPlayer(args.FromPlayerID))) return;
+
+        bool legacy = args.Type == MachineIntentType;
+        var capability = legacy ? null : this.ReadIntentCapability(args.FromPlayerID, connection.Id, pending.LanProvenance);
+        if ((legacy ? !this.MachineFixtureAllowed() : capability is null)
+            || !this.LanTransport.TryConfirm(pending.LanProvenance, args.FromPlayerID, args.Type,
+                this.Generation, Volatile.Read(ref this.ConnectionGeneration), pending.ConnectionId)) return;
+
+        Guid nonce = default;
+        DirectIpMachineIntent? message = null;
+        if (!this.Session.TryReadMachineIntent(args.FromPlayerID, pending.ConnectionId, ReadRequest, now, out string? raw, out var intent))
+            return;
+        if (legacy) this.HostTransactions!.ReceiveIntent(session, args.FromPlayerID, nonce, raw!, intent!);
+        else this.HostTransactions!.ReceiveDirectIpIntent(session, args.FromPlayerID, message!, capability!.Sequence);
+
+        // The shared session consumes one peer quota before reading either wrapper. The saved inner JSON stays exact.
+        string? ReadRequest() => legacy
+            ? OwnerIntentRefusal.TryReadIntent(ReadBody(args), out nonce, out string? requestRaw) ? requestRaw : null
+            : DirectIpMachineIntent.TryRead(ReadBody(args), out message) ? message.RequestRaw : null;
+    }
+
     private void ObserveReadOnlyProvenance(PendingMessage pending, PeerConnection connection, ProtocolObservation observation)
     {
         if (pending.LanProvenance is not { } provenance) return;
@@ -341,7 +359,7 @@ internal sealed class ReadOnlyProtocolService
             if (ReferenceEquals(previous.Provenance.Scope.Connection, provenance.Scope.Connection))
             {
                 if (previous.Value == capability)
-                    this.Capabilities[args.FromPlayerID] = new(connection.Id, capability, provenance);
+                    this.Capabilities[args.FromPlayerID] = previous with { Provenance = provenance };
                 return;
             }
             // Require a new SDK connection before trusting a replacement native connection.
@@ -355,15 +373,16 @@ internal sealed class ReadOnlyProtocolService
         string value = capability.Encode();
         Game1.player.modData[key] = value;
         if (Game1.player.modData.GetValueOrDefault(key) == value)
-            this.Capabilities[args.FromPlayerID] = new(connection.Id, capability, provenance);
+            this.Capabilities[args.FromPlayerID] = new(connection.Id, capability, provenance, new(capability.Challenge));
     }
 
-    private bool CanReceiveDirectIpIntent(long actor, Guid connection, LanTransportActorObservation.IngressTicket? incoming)
+    private VerifiedCapability? ReadIntentCapability(long actor, Guid connection, LanTransportActorObservation.IngressTicket? incoming)
         => incoming is not null && this.Capabilities.TryGetValue(actor, out var capability) && capability.ConnectionId == connection
             && capability.Value.SessionId == this.Session?.ActiveSessionId
             && ReferenceEquals(incoming.Scope.Connection, capability.Provenance.Scope.Connection)
             && this.LanTransport.MatchesCurrentActor(capability.Provenance)
-            && Game1.player.modData.GetValueOrDefault(LanMachineCapability.Key(this.ModId, actor)) == capability.Value.Encode();
+            && Game1.player.modData.GetValueOrDefault(LanMachineCapability.Key(this.ModId, actor)) == capability.Value.Encode()
+            ? capability : null;
 
     private ProtocolPeerStatus? CurrentMachineHost()
     {
@@ -398,7 +417,7 @@ internal sealed class ReadOnlyProtocolService
     }
 
     private sealed record VerifiedCapability(Guid ConnectionId, LanMachineCapability Value,
-        LanTransportActorObservation.IngressTicket Provenance);
+        LanTransportActorObservation.IngressTicket Provenance, DirectIpIntentSequence Sequence);
 
     internal FarmhandRequestStatus ReadFarmhandStatus(Guid requestId)
     {
@@ -424,8 +443,19 @@ internal sealed class ReadOnlyProtocolService
             recipeId is null ? MachineRequestAction.Collect : MachineRequestAction.Start, recipeId);
         if (!MachineRequestCodec.IsValid(intent)) return false;
         string json = MachineRequestCodec.Write(intent);
-        if (!this.OwnerTransactions!.TryRemember(intent, host.ConnectionId, interaction, out Guid nonce)) return false;
-        bool sent = this.Send(new(host.PlayerId, MachineIntentType, OwnerIntentRefusal.WriteIntent(nonce, json)));
+        bool legacy = this.MachineFixtureAllowed();
+        if (!legacy && (this.ClientIntent.Connection != host.ConnectionId || this.ClientIntent.Challenge != host.Challenge))
+            this.ClientIntent = (host.ConnectionId, host.Challenge, Guid.Empty, 0);
+        bool allowNew = legacy || this.ClientIntent.Sequence < ulong.MaxValue;
+        if (!this.OwnerTransactions!.TryRemember(intent, host.ConnectionId, interaction, out Guid nonce, allowNew)) return false;
+        if (!legacy && this.ClientIntent.Nonce != nonce)
+            this.ClientIntent = (host.ConnectionId, host.Challenge, nonce, checked(this.ClientIntent.Sequence + 1));
+
+        var message = legacy
+            ? new OutboundProtocolMessage(host.PlayerId, MachineIntentType, OwnerIntentRefusal.WriteIntent(nonce, json))
+            : new OutboundProtocolMessage(host.PlayerId, DirectIpMachineIntent.MessageType,
+                DirectIpMachineIntent.Write(host.Challenge, this.ClientIntent.Sequence, nonce, json));
+        bool sent = this.Send(message);
         // An interactive request stays pending if dispatch could not be confirmed, so it can retry the same nonce.
         return interaction is not null || sent;
     }

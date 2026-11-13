@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Xna.Framework;
 using StardewValley;
 using XiangyeShiling.Networking;
@@ -38,10 +39,7 @@ internal sealed class HostOwnerTransaction
 
     internal void ReceiveIntent(Guid sessionId, long verifiedActor, Guid nonce, string raw, MachineRequestEnvelope intent)
     {
-        if (!this.Store.TryRead(out var existing) || intent.ActorId != verifiedActor || intent.SessionId != sessionId
-            || !HostReservationStore.TryReadRefusal(Game1.player, verifiedActor, out _)
-            || !OwnerIntentRefusal.TryCreate(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, raw, out var refusal)
-            || !refusal.Matches(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, intent, raw))
+        if (!this.TryReadIntent(sessionId, verifiedActor, nonce, raw, intent, out var existing, out var refusal))
             return;
 
         var key = (verifiedActor, intent.RequestId);
@@ -50,17 +48,11 @@ internal sealed class HostOwnerTransaction
         switch (this.IntentCapacity.Decide(key, live))
         {
             case HostOwnerIntentDisposition.KeepGrant: return;
-            case HostOwnerIntentDisposition.Refuse:
-                Refuse();
-                return;
+            case HostOwnerIntentDisposition.Refuse: Refuse(); return;
         }
 
-        Farmer? owner = Game1.GetPlayer(verifiedActor, onlyOnline: true);
-        // A prior owner marker can still be leaving the replica. Let the same pending intent retry later.
-        if (owner is null || owner.modData.ContainsKey(OwnerInventoryCommit.JournalKey)
-            || !HostReservationStore.TryReadReceipt(Game1.player, verifiedActor, out var previous)) return;
-        if (previous?.RequestId == intent.RequestId || !this.Planner.TryPrepare(Game1.uniqueIDForThisGame, verifiedActor,
-            sessionId, raw, out var plan) || plan is null || plan.Request != intent)
+        if (!this.TryDecidePlan(sessionId, verifiedActor, raw, intent, out var plan)) return;
+        if (plan is null)
         {
             Refuse();
             return;
@@ -76,6 +68,63 @@ internal sealed class HostOwnerTransaction
             this.IntentCapacity.Remember(key);
             this.Store.TryPublishRefusal(refusal);
         }
+    }
+
+    /// <summary>Only the current verified SDK/native peer may supply the challenge-bound sequence.</summary>
+    internal void ReceiveDirectIpIntent(Guid sessionId, long verifiedActor, DirectIpMachineIntent message,
+        DirectIpIntentSequence sequence)
+    {
+        var disposition = sequence.Classify(message);
+        if (disposition is not (DirectIpIntentDisposition.Next or DirectIpIntentDisposition.CurrentRefused)) return;
+
+        MachineRequestEnvelope intent = message.Request;
+        string raw = message.RequestRaw;
+        if (!this.TryReadIntent(sessionId, verifiedActor, message.Nonce, raw, intent, out var existing, out var refusal)) return;
+
+        // Preserve the authoritative record even if a retry arrives over another connection or sequence.
+        if (existing?.Request.ActorId == verifiedActor && existing.Request.RequestId == intent.RequestId) return;
+        if (disposition == DirectIpIntentDisposition.CurrentRefused)
+        {
+            this.Store.TryPublishRefusal(refusal);
+            return;
+        }
+
+        OwnerCommitReservation? plan = null;
+        if (existing is null && !this.TryDecidePlan(sessionId, verifiedActor, raw, intent, out plan)) return;
+        if (plan is null)
+        {
+            if (sequence.TryRecordRefusal(message)) this.Store.TryPublishRefusal(refusal);
+            return;
+        }
+
+        // An ambiguous reserve consumes its sequence without a refusal. Subsequent exact retransmission
+        // sees CurrentReserveAttempt and leaves the native record for Advance and cold recovery.
+        if (sequence.TryBeginReserve(message)) this.Store.TryReserve(plan);
+    }
+
+    private bool TryReadIntent(Guid sessionId, long actor, Guid nonce, string raw, MachineRequestEnvelope intent,
+        out OwnerCommitReservation? existing, [NotNullWhen(true)] out OwnerIntentRefusal? refusal)
+    {
+        existing = null;
+        refusal = null;
+        return intent.ActorId == actor && intent.SessionId == sessionId && this.Store.TryRead(out existing)
+            && HostReservationStore.TryReadRefusal(Game1.player, actor, out _)
+            && OwnerIntentRefusal.TryCreate(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, raw, out refusal)
+            && refusal.Matches(Game1.uniqueIDForThisGame, Game1.player.UniqueMultiplayerID, nonce, intent, raw);
+    }
+
+    // False leaves the same intent retryable. A true result with no plan is a determinate no-grant.
+    private bool TryDecidePlan(Guid sessionId, long actor, string raw, MachineRequestEnvelope intent, out OwnerCommitReservation? plan)
+    {
+        plan = null;
+        Farmer? owner = Game1.GetPlayer(actor, onlyOnline: true);
+        // A prior owner marker can still be leaving the replica. Let the same pending intent retry later.
+        if (owner is null || owner.modData.ContainsKey(OwnerInventoryCommit.JournalKey)
+            || !HostReservationStore.TryReadReceipt(Game1.player, actor, out var previous)) return false;
+        if (previous?.RequestId != intent.RequestId && this.Planner.TryPrepare(Game1.uniqueIDForThisGame, actor,
+            sessionId, raw, out var candidate) && candidate?.Request == intent)
+            plan = candidate;
+        return true;
     }
 
     internal void Advance(Guid sessionId)

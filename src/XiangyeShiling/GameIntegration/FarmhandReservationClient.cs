@@ -86,7 +86,8 @@ internal sealed class FarmhandReservationClient
         => this.TryRemember(intent, connectionId, null, out nonce);
 
     /// <summary>The production predicate is a read-only check of the initiating menu and local target.</summary>
-    internal bool TryRemember(MachineRequestEnvelope intent, Guid connectionId, Func<bool>? isInteractionCurrent, out Guid nonce)
+    internal bool TryRemember(MachineRequestEnvelope intent, Guid connectionId, Func<bool>? isInteractionCurrent,
+        out Guid nonce, bool allowNew = true)
     {
         nonce = default;
         if (connectionId == Guid.Empty || this.LastRefused == (intent.SessionId, intent.RequestId)
@@ -99,7 +100,7 @@ internal sealed class FarmhandReservationClient
         }
         else
         {
-            if (this.Saving || Game1.player.modData.ContainsKey(OwnerInventoryCommit.JournalKey)
+            if (!allowNew || this.Saving || Game1.player.modData.ContainsKey(OwnerInventoryCommit.JournalKey)
                 || (isInteractionCurrent is not null && !CheckInteraction(isInteractionCurrent))) return false;
             this.Pending = intent;
             this.PendingConnection = connectionId;

@@ -67,6 +67,7 @@ internal sealed class LanMachineTransactionScenario
     private ProtocolDiagnosticSnapshot? Protocol;
     private LanTransportDiagnosticSnapshot? Lan;
     private CapabilityEvidence? Capability;
+    private LanTransportEvidence? NativeMachineIntent;
 
     internal LanMachineTransactionScenario(IModHelper helper, IMonitor monitor, Config config)
     {
@@ -407,6 +408,15 @@ internal sealed class LanMachineTransactionScenario
         if (state.Revision == 2 && this.PreparedRevision == 1 && this.IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyCollected(owner, state);
+            if (this.NormalLan)
+            {
+                var intent = this.Lan?.LastConfirmed;
+                Require(this.Capability is { } capability && intent is { MessageType: "XYS/MachineIntent/3" }
+                    && intent.ActorId == capability.Actor && intent.WorldId == this.FixtureId
+                    && intent.ConnectionId == capability.Connection,
+                    "The final native intent was not ordinary v3 on the same proven farmhand connection.");
+                this.NativeMachineIntent = intent;
+            }
             Require(this.NormalLan || (this.RefusalObserved && this.CancellationSettled),
                 "The host did not observe a refusal and a settled cancellation before actual machine work.");
             Require(!this.VerifyHostCompetition || this.HostCompetition is { } competition
@@ -689,7 +699,7 @@ internal sealed class LanMachineTransactionScenario
         this.CancellationSettled, CancelledRequest = this.Host ? this.CancelledPlan : this.CancellationRequest?.Id,
         StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
         this.VerifyHostCompetition, this.HostCompetition, this.CompetitionSetup, this.SkippedHostArrivalEvent,
-        this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus, this.NormalLan, this.Capability,
+        this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus, this.NormalLan, this.Capability, this.NativeMachineIntent,
         this.VerifyHostMovement, this.HostMovementChecks, this.Stages, this.Protocol, this.Lan
     });
 
