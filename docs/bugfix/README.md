@@ -31,5 +31,6 @@
 | [BUG-2026-025](BUG-2026-025-machine-menu-small-viewport.md) | 设备菜单在小逻辑视口裁切 | 旧包实机失败，新包 19 项通过，中文窗口最大化和还原实测通过 | GameHarness 缩放命中、指南和操作锁，满包请求保留 |
 | [BUG-2026-026](BUG-2026-026-machine-menu-navigation.md) | 设备菜单缺少键盘和手柄焦点 | 旧包实机复现，新包 20 项后台游戏回归通过 | GameHarness 键盘与原版手柄菜单回调、缩放、指南和操作锁 |
 | [BUG-2026-027](BUG-2026-027-native-wheat-fingerprint.md) | 普通小麦的库存格指纹不可用 | SDK 先红后绿，实机 21 项通过，双端同步待验 | GameAdapter 两种朝向与改价拒绝，GameHarness 原版 Farmer XML 往返 |
+| [BUG-2026-028](BUG-2026-028-host-owner-intent-capacity.md) | 专用联机会话到达容量时农工菜单持续等待 | 旧判据失败、MachineCore 136 通过，双端容量实测待验 | 不同请求计数、现有授权优先、精确拒绝溢出 |
 
 状态为“待验证”的记录必须说明缺少什么证据；已合并记录附真实PR/提交，不以计划分支代替。索引保留历史，不将开发审查发现的缺陷包装成线上事故。

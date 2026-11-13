@@ -11,11 +11,9 @@ namespace XiangyeShiling.GameIntegration;
 /// </summary>
 internal sealed class HostOwnerTransaction
 {
-    private const int MaxIntentResultsPerSession = 256;
     private readonly HostReservationStore Store;
     private readonly RemoteHostPlanPreparation Planner;
-    private readonly HashSet<(long Actor, Guid Request)> Completed = new();
-    private readonly HashSet<(long Actor, Guid Request)> Refused = new();
+    private readonly HostOwnerIntentCapacity IntentCapacity = new();
     private string? ColdPlanKey;
 
     internal HostOwnerTransaction(MachineService machines)
@@ -27,16 +25,15 @@ internal sealed class HostOwnerTransaction
     internal void Reset()
     {
         this.ColdPlanKey = null;
-        this.Completed.Clear();
-        this.Refused.Clear();
+        this.IntentCapacity.Reset();
     }
 
     internal void CaptureLoadedRecord()
     {
         this.Reset();
-        if (this.Store.TryRead(out var plan) && plan is not null
-            && !Game1.getOnlineFarmers().Any(player => player.UniqueMultiplayerID == plan.Request.ActorId))
-            this.ColdPlanKey = plan.PlanKey;
+        if (!this.Store.TryRead(out var plan) || plan is null) return;
+        this.IntentCapacity.Remember((plan.Request.ActorId, plan.Request.RequestId));
+        if (!Game1.getOnlineFarmers().Any(player => player.UniqueMultiplayerID == plan.Request.ActorId)) this.ColdPlanKey = plan.PlanKey;
     }
 
     internal void ReceiveIntent(Guid sessionId, long verifiedActor, Guid nonce, string raw, MachineRequestEnvelope intent)
@@ -48,19 +45,14 @@ internal sealed class HostOwnerTransaction
             return;
 
         var key = (verifiedActor, intent.RequestId);
+        (long Actor, Guid Request)? live = existing is null ? null : (existing.Request.ActorId, existing.Request.RequestId);
         // A live grant always wins. A changed retry cannot replace it or publish a no-grant result.
-        if (existing?.Request.ActorId == verifiedActor && existing.Request.RequestId == intent.RequestId) return;
-        if (this.Refused.Contains(key))
+        switch (this.IntentCapacity.Decide(key, live))
         {
-            this.Store.TryPublishRefusal(refusal);
-            return;
-        }
-        if (this.Completed.Count + this.Refused.Count >= MaxIntentResultsPerSession) return;
-
-        if (existing is not null || this.Completed.Contains(key))
-        {
-            Refuse();
-            return;
+            case HostOwnerIntentDisposition.KeepGrant: return;
+            case HostOwnerIntentDisposition.Refuse:
+                Refuse();
+                return;
         }
 
         Farmer? owner = Game1.GetPlayer(verifiedActor, onlyOnline: true);
@@ -74,12 +66,14 @@ internal sealed class HostOwnerTransaction
             return;
         }
 
-        // A failed native setter can leave a real record. Only pre-write decisions can publish refusal.
+        // A failed native setter can leave a real record. Do not issue a refusal at that call site.
+        // Account for the grant (including any ambiguous native write) before another request can enter.
+        this.IntentCapacity.Remember(key);
         this.Store.TryReserve(plan);
 
         void Refuse()
         {
-            this.Refused.Add(key);
+            this.IntentCapacity.Remember(key);
             this.Store.TryPublishRefusal(refusal);
         }
     }
@@ -87,6 +81,7 @@ internal sealed class HostOwnerTransaction
     internal void Advance(Guid sessionId)
     {
         if (!this.Store.TryRead(out var plan) || plan is null) return;
+        this.IntentCapacity.Remember((plan.Request.ActorId, plan.Request.RequestId));
         Farmer? owner = Game1.GetPlayer(plan.Request.ActorId, onlyOnline: false);
         if (owner is null || owner.UniqueMultiplayerID != plan.Request.ActorId) return;
 
@@ -106,8 +101,7 @@ internal sealed class HostOwnerTransaction
                     ? ReservedMachineObservation.After : ReservedMachineObservation.Before;
                 if (machineState != expected)
                     this.Store.Isolate("terminal reservation disagrees with the machine");
-                else if (this.Store.TryRetire(plan, seen))
-                    this.Completed.Add((plan.Request.ActorId, plan.Request.RequestId));
+                else this.Store.TryRetire(plan, seen);
                 return;
             }
 
