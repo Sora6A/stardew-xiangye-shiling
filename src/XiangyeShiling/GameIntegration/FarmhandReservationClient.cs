@@ -20,6 +20,8 @@ internal sealed class FarmhandReservationClient
     private readonly OwnerInventoryCommit Commit;
     private MachineRequestEnvelope? Pending;
     private Guid PendingConnection;
+    private ulong PendingWorld;
+    private long PendingHost;
     private Guid PendingNonce;
     private Func<bool>? PendingInteraction;
     private bool ObservedReservation;
@@ -29,11 +31,13 @@ internal sealed class FarmhandReservationClient
     // Keep the last actual attempt through connection fences. A new grant has a different plan key.
     private string? AttemptedPlan;
     private MachineRequestEnvelope? AttemptedRequest;
+    private DetachedObservation? Detached;
     private bool CancellationRequested;
     private bool Saving;
 
     private sealed record TerminalObservation(ulong WorldId, long HostId, long ActorId, Guid RequestId, string Seen,
         FarmhandRequestStatus Status);
+    private sealed record DetachedObservation(ulong WorldId, long HostId, Guid ConnectionId, MachineRequestEnvelope Intent);
 
     internal FarmhandReservationClient(IMonitor monitor) => this.Commit = new(monitor);
 
@@ -49,7 +53,12 @@ internal sealed class FarmhandReservationClient
 
     internal void FenceIntent()
     {
-        if (this.Pending is { } pending) this.LastResult = (pending.RequestId, FarmhandRequestStatus.Unconfirmed);
+        if (this.Pending is { } pending)
+        {
+            this.LastResult = (pending.RequestId, FarmhandRequestStatus.Unconfirmed);
+            if (this.PendingInteraction is not null && this.PendingWorld != 0 && this.PendingHost != 0 && pending != this.AttemptedRequest)
+                this.Detached = new(this.PendingWorld, this.PendingHost, this.PendingConnection, pending);
+        }
         this.ClearPending();
     }
 
@@ -57,6 +66,8 @@ internal sealed class FarmhandReservationClient
     {
         this.Pending = null;
         this.PendingConnection = Guid.Empty;
+        this.PendingWorld = 0;
+        this.PendingHost = 0;
         this.PendingNonce = Guid.Empty;
         this.PendingInteraction = null;
         this.ObservedReservation = false;
@@ -104,6 +115,11 @@ internal sealed class FarmhandReservationClient
                 || (isInteractionCurrent is not null && !CheckInteraction(isInteractionCurrent))) return false;
             this.Pending = intent;
             this.PendingConnection = connectionId;
+            if (isInteractionCurrent is not null)
+            {
+                this.PendingWorld = Game1.uniqueIDForThisGame;
+                this.PendingHost = Game1.MasterPlayer?.UniqueMultiplayerID ?? 0;
+            }
             this.PendingNonce = Guid.NewGuid();
             this.PendingInteraction = isInteractionCurrent;
         }
@@ -142,20 +158,23 @@ internal sealed class FarmhandReservationClient
         if (plan?.Request.ActorId == owner.UniqueMultiplayerID)
         {
             bool current = plan.Request == this.Pending;
+            bool detached = this.MatchesDetachedIntent(plan.WorldId, plan.HostId, connectionId, plan.Request);
             if (current) this.ObservedReservation = true;
             if (plan.Status != OwnerReservationStatus.Reserved)
             {
                 string seen = OwnerInventoryCommit.SeenJournal(plan);
-                if (current)
+                if (current || detached)
                     this.KnownTerminal = new(plan.WorldId, plan.HostId, plan.Request.ActorId, plan.Request.RequestId, seen,
                         plan.Status == OwnerReservationStatus.Applied ? FarmhandRequestStatus.Applied : FarmhandRequestStatus.Cancelled);
                 if (owner.modData.GetValueOrDefault(OwnerInventoryCommit.JournalKey) != seen)
                     this.Commit.TryMarkSeen(owner, plan);
             }
-            else if (!this.Saving && current && this.AttemptedPlan != plan.PlanKey
+            else if (!this.Saving && (current || detached) && this.AttemptedPlan != plan.PlanKey
                 && OwnerInventoryCommit.ObserveJournal(owner, plan) == OwnerJournalObservation.Absent)
             {
-                if (this.CancellationRequested)
+                // A fresh authenticated connection can abandon the old untouched grant. Only the
+                // still-attached menu below can authorize inventory mutation.
+                if (detached || this.CancellationRequested)
                     this.Commit.TryDecline(owner, plan);
                 else if (!Game1.eventUp && !owner.UsingTool
                     && owner.currentLocation is { } location && location.NameOrUniqueName == plan.Request.LocationName
@@ -190,11 +209,21 @@ internal sealed class FarmhandReservationClient
             // from the exact native terminal plan, after the matching receipt and marker have retired.
             this.LastResult = (terminal.RequestId, terminal.Status);
             this.KnownTerminal = null;
+            if (this.Detached is { } detached && detached.WorldId == terminal.WorldId && detached.HostId == terminal.HostId
+                && detached.Intent.ActorId == terminal.ActorId && detached.Intent.RequestId == terminal.RequestId)
+                this.Detached = null;
             if (this.Pending?.RequestId == receipt.RequestId) this.ClearPending();
         }
         else if (this.PendingInteraction is null && this.Pending?.RequestId == receipt.RequestId)
             this.ClearPending();
     }
+
+    // ResetWorld may run while returning to title before reconnecting to the same live host.
+    // Only the in-memory binding from TryRemember can authorize a decline across that transition.
+    private bool MatchesDetachedIntent(ulong world, long host, Guid connection, MachineRequestEnvelope intent)
+        => this.Detached is { } detached && world == detached.WorldId && host == detached.HostId
+            && connection != Guid.Empty && connection != detached.ConnectionId && intent == detached.Intent
+            && intent != this.AttemptedRequest;
 
     private void RefreshCancellation()
     {

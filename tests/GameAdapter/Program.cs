@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework;
 using StardewValley;
 using XiangyeShiling.GameIntegration;
 using XiangyeShiling.Machines;
+using XiangyeShiling.Networking;
 using SObject = StardewValley.Object;
 
 internal static class Program
@@ -216,6 +217,39 @@ internal static class Program
         OwnerInventoryFingerprintScenarios.Run(Test);
         LanTransportObservationScenarios.Run(Test);
         RemoteHostPlanPreparationScenarios.Run(Test);
+        Test("same-process reconnect preserves only an exact never-attempted detached intent", () =>
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            Type client = typeof(MachineService).Assembly.GetType("XiangyeShiling.GameIntegration.FarmhandReservationClient", true)!;
+            // Seed only the already-bound local intent. No game world, connection or inventory authority is simulated.
+            object owner = RuntimeHelpers.GetUninitializedObject(client);
+            var oldConnection = Guid.NewGuid();
+            var newConnection = Guid.NewGuid();
+            var intent = new MachineRequestEnvelope(1, Guid.NewGuid(), Guid.NewGuid(), 19, "Farm", 2, 3,
+                Guid.NewGuid(), 0, MachineRequestAction.Start, "beans");
+            Set("Pending", intent);
+            Set("PendingInteraction", (Func<bool>)(() => false));
+            Set("PendingConnection", oldConnection);
+            Set("PendingWorld", 42UL);
+            Set("PendingHost", 18L);
+            Fence();
+            Check(client.GetMethod("ReadStatus", flags)!.Invoke(owner, new object[] { intent.RequestId })?.ToString() == "Unconfirmed",
+                "The UI should remain Unconfirmed until native terminal evidence.");
+            Check(Matches(42, 18, newConnection, intent), "Same-world reconnect lost exact pending intent after FenceIntent.");
+            Fence();
+            Check(Matches(42, 18, newConnection, intent), "Repeated fences erased the detached intent.");
+            Check(!Matches(43, 18, newConnection, intent) && !Matches(42, 20, newConnection, intent)
+                && !Matches(42, 18, oldConnection, intent) && !Matches(42, 18, Guid.Empty, intent)
+                && !Matches(42, 18, newConnection, intent with { ActorId = 20 })
+                && !Matches(42, 18, newConnection, intent with { TileX = 9 }), "Wrong world, host, actor, connection or request matched.");
+            Set("AttemptedRequest", intent);
+            Check(!Matches(42, 18, newConnection, intent), "A request already passed to Apply was still eligible.");
+
+            void Set(string name, object value) => client.GetField(name, flags)?.SetValue(owner, value);
+            void Fence() => client.GetMethod("FenceIntent", flags)!.Invoke(owner, null);
+            bool Matches(ulong world, long host, Guid connection, MachineRequestEnvelope request)
+                => client.GetMethod("MatchesDetachedIntent", flags)?.Invoke(owner, new object[] { world, host, connection, request }) is true;
+        });
         Test("native host placement hooks register and preserve the empty placement path", () =>
         {
             string id = MachineService.Prefix + ".Tests.HostPlacement." + Guid.NewGuid().ToString("N");
