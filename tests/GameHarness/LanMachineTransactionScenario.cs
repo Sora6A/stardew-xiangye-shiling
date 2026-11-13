@@ -36,10 +36,12 @@ internal sealed class LanMachineTransactionScenario
     private readonly IMonitor Monitor;
     private readonly NativeNetworkBootstrap Bootstrap;
     private readonly bool Host;
+    private readonly bool VerifyHostMovement;
     private readonly bool VerifyHostCompetition;
     private readonly bool VerifyFarmhandMenu;
     private readonly Stopwatch Watch = new();
     private readonly List<Evidence> Stages = new();
+    private readonly List<string> HostMovementChecks = new();
     private MachineService? Service;
     private SObject? PreparedMachine;
     private Slot?[]? HostInventory, Before, Started, Collected;
@@ -70,7 +72,10 @@ internal sealed class LanMachineTransactionScenario
         this.Helper = helper;
         this.Monitor = monitor;
         this.Host = config.NetworkRole == "Host";
+        this.VerifyHostMovement = config.VerifyLanHostMovement;
         this.VerifyHostCompetition = config.VerifyLanHostCompetition;
+        Require(!this.VerifyHostMovement || this.VerifyHostCompetition,
+            "The host movement fixture requires the established farm stand and completed contention case.");
         this.VerifyFarmhandMenu = config.VerifyLanFarmhandMenu;
         Require(!this.VerifyHostCompetition || !this.VerifyFarmhandMenu, "Run the two native menu fixtures independently.");
         this.Bootstrap = new(monitor, config);
@@ -363,6 +368,22 @@ internal sealed class LanMachineTransactionScenario
             Require(!this.VerifyHostCompetition || this.HostCompetition is { } competition
                 && this.Stages.Any(evidence => evidence.Revision == 1 && evidence.Request == competition.FarmhandRequest),
                 "The real farmhand Start did not follow the verified competing host refusal.");
+            if (this.VerifyHostMovement)
+            {
+                GameLocation farm = Game1.getFarm();
+                SObject device = this.PreparedMachine!;
+                string deviceRaw = device.modData[MachineService.StateKey];
+                Slot?[] ownerInventory = Snapshot(owner);
+                ToolRemovalScenarios.Run(host, farm, device.TileLocation, this.Service!, (name, check) =>
+                {
+                    check();
+                    this.HostMovementChecks.Add(name);
+                }, requireHeldPlacement: true);
+                Require(this.HostMovementChecks.Count == 2 && Snapshot(owner).SequenceEqual(ownerInventory)
+                    && farm.objects.TryGetValue(device.TileLocation, out SObject original) && ReferenceEquals(original, device)
+                    && device.modData[MachineService.StateKey] == deviceRaw && IsSettled(host, owner, state.LastRequestId),
+                    "The host movement cases affected the settled farmhand transaction.");
+            }
             this.Finish(null);
         }
         Require(state.Revision is >= 0 and <= 2, "Unexpected extra machine transaction.");
@@ -609,7 +630,7 @@ internal sealed class LanMachineTransactionScenario
         StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
         this.VerifyHostCompetition, this.HostCompetition, this.CompetitionSetup, this.SkippedHostArrivalEvent,
         this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus,
-        this.Stages, this.Protocol, this.Lan
+        this.VerifyHostMovement, this.HostMovementChecks, this.Stages, this.Protocol, this.Lan
     });
 
     private static Slot?[] Snapshot(Farmer farmer) => farmer.Items.Select(Describe).ToArray();

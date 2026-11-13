@@ -216,6 +216,26 @@ internal static class Program
         OwnerInventoryFingerprintScenarios.Run(Test);
         LanTransportObservationScenarios.Run(Test);
         RemoteHostPlanPreparationScenarios.Run(Test);
+        Test("native host placement hooks register and preserve the empty placement path", () =>
+        {
+            string id = MachineService.Prefix + ".Tests.HostPlacement." + Guid.NewGuid().ToString("N");
+            var harmony = new Harmony(id);
+            Type patches = typeof(MachineService).Assembly.GetType("XiangyeShiling.GameIntegration.MachinePatches", throwOnError: true)!;
+            try
+            {
+                // Installing the production hooks needs no initialized world. Native Utility exits on the
+                // null source before reading the location or current farmer.
+                patches.GetMethod("Install", BindingFlags.Static | BindingFlags.Public)!.Invoke(null, new object?[] { id, null, null });
+                MethodInfo utility = AccessTools.Method(typeof(Utility), "tryToPlaceItem",
+                    new[] { typeof(GameLocation), typeof(SObject), typeof(int), typeof(int) });
+                foreach (var method in new[] { utility, AccessTools.Method(typeof(SObject), "GetOneCopyFrom", new[] { typeof(Item) }),
+                    AccessTools.Method(typeof(Farmer), "reduceActiveItemByOne"), AccessTools.Method(typeof(SObject), "performToolAction") })
+                    Check(Harmony.GetPatchInfo(method)?.Owners.Contains(id) == true, "Expected production hook is missing: " + method.Name);
+                Check(utility.Invoke(null, new object?[] { null, null, 0, 0 }) is false,
+                    "The production hook must preserve the original empty-placement result.");
+            }
+            finally { harmony.UnpatchAll(id); }
+        });
         Console.WriteLine($"RESULT {passed} passed, {failed} failed; no game process or save was opened.");
         return failed == 0 ? 0 : 1;
     }

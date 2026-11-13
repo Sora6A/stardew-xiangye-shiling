@@ -25,7 +25,7 @@ alpha.2单人P1原型已接入两设备菜单/背包、7物品5配方及有限�
 | Transactions/CommitCoordinator | 准备、核对、防重入、提交/补偿与隔离 | 不是联机事务协议 |
 | GameIntegration/MachineService | 身份/范围检查，真实快照、克隆、库存/modData 适配 | 保留游戏线程/单人限制 |
 | GameIntegration/ReadOnlyProtocolService | SMAPI事件→连接/世界标识邮箱→UpdateTicked→定向握手/拒绝 | 只读；元数据不是强认证；128排队/16每帧/32peer/每peer每秒8条 |
-| GameIntegration/MachinePatches | 两设备 ID 的菜单、投料、放置和移除路径 | Harmony 来自完整 SMAPI 安装 |
+| GameIntegration/MachinePatches | 两设备 ID 的菜单、投料、放置和移除路径 | Harmony 来自完整 SMAPI 安装；专用 LAN 主机放置同时验证原版克隆与手持扣除，手工具移除绑定实际主机和空闲实例 |
 | GameIntegration/ReadyMachineMarker | 原版地图对象绘制后提示已完成批次的成品 | 限当前单人地图上的两种设备，读取已校验的批次与同一游戏时钟。原始状态变动时刷新弱引用缓存，不写库存、`modData` 或原版机器字段 |
 | Menus/MachineMenu | 显示原料/产量/时间，发送绑定 revision 的请求，专用 LAN 农工显示原生授权与回执状态 | 扣料由本地事务服务执行；网络请求绑定同一活跃连接及发起菜单，待确认期间锁定动作 |
 | Menus/MenuActionSession | 绑定一次菜单打开期间的请求和操作完成状态 | 成功后锁定；普通失败重试保留原请求，专用农工收到确切取消或无授权时可请求新操作 |

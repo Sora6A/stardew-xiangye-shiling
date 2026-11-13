@@ -24,7 +24,7 @@ internal static class ToolRemovalScenarios
     internal static List<SelectionEvidence> LastSelections { get; } = new();
 
     public static void Run(Farmer player, GameLocation location, Vector2 tile, MachineService service,
-        Action<string, Action> test)
+        Action<string, Action> test, bool requireHeldPlacement = false)
     {
         LastSelections.Clear();
         test("bean native pickaxe protects batches and pickup replacement rejects old requests",
@@ -73,6 +73,22 @@ internal static class ToolRemovalScenarios
                 hitX = (int)fixtureTile.X * 64 + 32;
                 hitY = (int)fixtureTile.Y * 64 + 32;
 
+                if (requireHeldPlacement)
+                {
+                    var held = ItemRegistry.Create<SObject>(itemId);
+                    Stock(held);
+                    player.CurrentToolIndex = 0;
+                    Require(ReferenceEquals(player.CurrentItem, held) && held.Stack == 1
+                        && Utility.playerCanPlaceItemHere(location, held, hitX, hitY, player),
+                        key + ": held co-op device did not satisfy the native placement prerequisites");
+                    Require(!held.placementAction(location, hitX, hitY, player) && held.Stack == 1
+                        && ReferenceEquals(player.Items[0], held) && !location.objects.ContainsKey(fixtureTile),
+                        key + ": direct co-op placement bypassed the native inventory debit");
+                    Utility.tryToPlaceItem(location, ItemRegistry.Create<SObject>(itemId), hitX, hitY);
+                    Require(held.Stack == 1 && ReferenceEquals(player.Items[0], held) && !location.objects.ContainsKey(fixtureTile),
+                        key + ": unrelated co-op source placed an object or consumed the selected device");
+                }
+
                 foreach (string phase in new[] { "Processing", "Ready", "Corrupt" })
                 {
                     SObject target = Fresh();
@@ -104,6 +120,15 @@ internal static class ToolRemovalScenarios
                 SObject idle = Fresh();
                 MachineState oldState = State(idle);
                 Request oldRequest = RequestFor(oldState);
+                if (requireHeldPlacement)
+                {
+                    string idleRaw = idle.modData[MachineService.StateKey];
+                    Debris[] beforeDebris = location.debris.ToArray();
+                    location.removeObject(fixtureTile, showDestroyedObject: false);
+                    Require(location.objects.TryGetValue(fixtureTile, out var afterAttempt) && ReferenceEquals(afterAttempt, idle)
+                        && idle.modData[MachineService.StateKey] == idleRaw && SameReferences(location.debris, beforeDebris),
+                        key + ": unattributed co-op removal changed the idle device or drops");
+                }
                 Stock(pickaxe); player.CurrentToolIndex = 0;
                 int otherDevices = location.objects.Values.Count(o => o.QualifiedItemId == itemId) - 1;
                 pickaxe.DoFunction(location, hitX, hitY, 0, player);
@@ -204,7 +229,18 @@ internal static class ToolRemovalScenarios
                 Game1.timeOfDay = originalClock;
                 location.objects.Remove(fixtureTile);
                 var item = ItemRegistry.Create<SObject>(itemId);
-                Require(item.placementAction(location, hitX, hitY, player), key + ": fixture placement failed");
+                if (requireHeldPlacement)
+                {
+                    Stock(item);
+                    player.CurrentToolIndex = 0;
+                    Require(ReferenceEquals(player.CurrentItem, item)
+                        && Utility.playerCanPlaceItemHere(location, item, hitX, hitY, player),
+                        key + ": co-op placement did not begin with the actual selected item");
+                    Require(Utility.tryToPlaceItem(location, item, hitX, hitY) && location.objects.ContainsKey(fixtureTile)
+                        && !ReferenceEquals(location.objects[fixtureTile], item) && item.Stack == 0 && player.Items[0] is null,
+                        key + ": co-op placement did not consume exactly one held device and create its map object");
+                }
+                else Require(item.placementAction(location, hitX, hitY, player), key + ": fixture placement failed");
                 SObject placed = location.objects[fixtureTile];
                 Require(placed.Type == "Crafting" && placed.fragility.Value != 2 && !placed.IsBreakableStone() && !placed.Name.Contains("Boulder"),
                     "Fixture must use the normal movable crafting-object branch");

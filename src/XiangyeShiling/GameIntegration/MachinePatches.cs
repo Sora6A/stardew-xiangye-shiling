@@ -9,7 +9,7 @@ using SObject = StardewValley.Object;
 namespace XiangyeShiling.GameIntegration;
 
 /// <summary>仅拦截两个独立设备 ID，保留其他原版机器。工具、爆炸、NPC 清路和位置移除分别保护。</summary>
-internal static class MachinePatches
+internal static partial class MachinePatches
 {
     private static MachineService Service = null!;
     private static ITranslationHelper Text = null!;
@@ -22,14 +22,16 @@ internal static class MachinePatches
         {
             Patch(typeof(SObject), "checkForAction", nameof(Interact), new[] { typeof(Farmer), typeof(bool) });
             Patch(typeof(SObject), "performObjectDropInAction", nameof(NoVanillaInput));
-            Patch(typeof(SObject), "performToolAction", nameof(ProtectObject));
+            Patch(typeof(SObject), "performToolAction", nameof(ProtectTool), new[] { typeof(Tool) });
             Patch(typeof(SObject), "onExplosion", nameof(ProtectObject));
             Patch(typeof(GameLocation), "checkDestroyItem", nameof(ProtectNpc));
             Patch(typeof(GameLocation), "removeObject", nameof(ProtectRemove));
             Patch(typeof(GameLocation), "destroyObject", nameof(ProtectDestroy), new[] { typeof(Vector2), typeof(bool), typeof(Farmer) });
-            var placement = AccessTools.Method(typeof(SObject), "placementAction");
+            var placement = AccessTools.Method(typeof(SObject), "placementAction",
+                new[] { typeof(GameLocation), typeof(int), typeof(int), typeof(Farmer) });
             harmony.Patch(placement, new HarmonyMethod(typeof(MachinePatches), nameof(BeforePlace)),
                 new HarmonyMethod(typeof(MachinePatches), nameof(AfterPlace)));
+            InstallHostPlacement(harmony);
             var drawOnTile = AccessTools.Method(typeof(SObject), nameof(SObject.draw),
                 new[] { typeof(SpriteBatch), typeof(int), typeof(int), typeof(float) })
                 ?? throw new MissingMethodException(typeof(SObject).FullName, nameof(SObject.draw));
@@ -62,47 +64,56 @@ internal static class MachinePatches
     }
     private static bool ProtectObject(SObject __instance, ref bool __result)
     {
-        if (!BlocksNativeRemoval(__instance)) return true;
+        if (!BlocksUnattributedRemoval(__instance)) return true;
         __result = false;
         return false;
     }
     // BUG-2026-019：原生清路在空格会传 null；必须让原方法返回自己的 false，不能截断 NPC 更新。
     private static bool ProtectNpc(SObject? o, ref bool __result)
     {
-        if (!BlocksNativeRemoval(o)) return true;
+        if (!BlocksUnattributedRemoval(o)) return true;
         __result = false;
         return false;
     }
     private static bool ProtectRemove(GameLocation __instance, Vector2 location, ref SObject? __result)
     {
-        if (!__instance.objects.TryGetValue(location, out SObject item) || !BlocksNativeRemoval(item)) return true;
+        if (!__instance.objects.TryGetValue(location, out SObject item) || !BlocksUnattributedRemoval(item)) return true;
         __result = null;
         return false;
     }
     private static bool ProtectDestroy(GameLocation __instance, Vector2 tileLocation) =>
-        !__instance.objects.TryGetValue(tileLocation, out SObject item) || !BlocksNativeRemoval(item);
+        !__instance.objects.TryGetValue(tileLocation, out SObject item) || !BlocksUnattributedRemoval(item);
 
     private static bool BlocksNativeRemoval(SObject? item) => MachineService.BlocksRemoval(item)
         || (MachineService.TryGetKind(item, out _) && Context.IsWorldReady && Service.Reservations.BlocksMachine(item));
 
-    private static bool BeforePlace(SObject __instance, GameLocation location, int x, int y, ref bool __result, out bool __state)
+    private static bool BeforePlace(SObject __instance, GameLocation location, int x, int y, Farmer? who,
+        ref bool __result, out bool __state)
     {
         __state = false;
         if (!MachineService.TryGetKind(__instance, out _)) return true;
         // BUG-2026-009：原生对同 ID 的占用格可返回 true，却没有插入新对象。
         // 必须在适配边界拒绝任何占用格，不能依赖 Utility 的鼠标放置预检保护既有批次。
-        if (!Context.IsMultiplayer && Context.IsMainPlayer && !Service.Reservations.BlocksMachine(__instance)
+        HostPlacement? host = Context.IsMultiplayer ? ActiveHostPlacement : null;
+        if (Context.IsMainPlayer && (!Context.IsMultiplayer || (host is not null && host.Matches(__instance, who, location, x, y)))
+            && !Service.Reservations.BlocksMachine(__instance)
             && !location.objects.ContainsKey(new Vector2(x / 64, y / 64)) &&
             (!__instance.modData.ContainsKey(MachineService.StateKey) || (MachineService.TryRead(__instance, out var state) && state!.CanMove)))
         {
             __state = true;
+            if (host is not null) host.Entered = true;
             return true;
         }
         __result = false;
         return false;
     }
-    private static void AfterPlace(SObject __instance, GameLocation location, int x, int y, bool __result, bool __state)
+    private static void AfterPlace(SObject __instance, GameLocation location, int x, int y, ref bool __result, bool __state)
     {
+        if (__state && ActiveHostPlacement is { Entered: true } host && ReferenceEquals(host.Source, __instance))
+        {
+            if (__result) __result = host.TryInitializeClone();
+            return;
+        }
         // __state 仅由本次自定义设备的空格预检设置；返回成功还须确认地图中出现对应的新对象。
         // 拒绝、原版物品或其他补丁留下的不同 ID 均不写状态。重放旧实例请求仍由执行器拒绝。
         if (__state && __result && location.objects.TryGetValue(new Vector2(x / 64, y / 64), out SObject placed)

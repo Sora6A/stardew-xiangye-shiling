@@ -24,6 +24,7 @@ public sealed class Config
     public string NativeRecoveryPhase { get; set; } = "";
     public bool VerifyOwnerInventoryFingerprints { get; set; }
     public bool VerifyHostReservationStore { get; set; }
+    public bool VerifyLanHostMovement { get; set; }
     public bool VerifyLanHostCompetition { get; set; }
     public bool VerifyLanFarmhandMenu { get; set; }
 }
