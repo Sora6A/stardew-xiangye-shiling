@@ -14,17 +14,18 @@ namespace GameHarness;
 /// Utility.tryToPlaceItem 自行扣除手持设备；其 bool 不保证落地成功，必须同时核验地图和库存。
 /// 传入格仅作为搜索原点；原生 placementAction 不检查全部家具碰撞，不能据其成功认定场地可放置。
 /// BUG-2026-010：选择原生前置检查通过的空格和相邻站立格，不移除家具/原对象；finally 恢复玩家与库存。
-/// 只删除本用例的设备与新增掉落实体，保留测试前对象/掉落，并留下不含个人信息的选址证据。
+/// 默认移除本用例的设备和新增掉落。一次性保存验证可明确接手已核对的重放设备。
 /// </summary>
 internal static class ToolRemovalScenarios
 {
     internal sealed record SelectionEvidence(string MachineKey, int RequestedX, int RequestedY,
         string[] RequestedFurnitureIds, int SelectedX, int SelectedY, int StandingX, int StandingY, bool NativePrecheck);
+    internal sealed record ReplacementEvidence(string ItemId, int X, int Y, Guid OldInstance, Guid Instance, string Raw);
 
     internal static List<SelectionEvidence> LastSelections { get; } = new();
 
     public static void Run(Farmer player, GameLocation location, Vector2 tile, MachineService service,
-        Action<string, Action> test, bool requireHeldPlacement = false)
+        Action<string, Action> test, bool requireHeldPlacement = false, Action<ReplacementEvidence>? preserveReplacement = null)
     {
         LastSelections.Clear();
         test("bean native pickaxe protects batches and pickup replacement rejects old requests",
@@ -56,6 +57,7 @@ internal static class ToolRemovalScenarios
             MachineRecipe recipe = service.Recipes.Single(r => r.Machine == kind);
             var pickaxe = new Pickaxe();
             Vector2 fixtureTile = default;
+            SObject? savedReplacement = null;
             bool fixtureSelected = false;
             int hitX = 0, hitY = 0;
             try
@@ -183,13 +185,19 @@ internal static class ToolRemovalScenarios
                 // 镐的矿石统计只在原生 stone 分支增加；两种独立 BC ID 不应进入该分支。
                 Require(Game1.stats.RocksCrushed == originalRocks && player.stats.RocksCrushed == originalPersonalRocks,
                     "Machine tool test unexpectedly changed stone statistics");
+                if (preserveReplacement is not null)
+                {
+                    preserveReplacement(new(itemId, (int)fixtureTile.X, (int)fixtureTile.Y, oldState.InstanceId,
+                        newState.InstanceId, replacement.modData[MachineService.StateKey]));
+                    savedReplacement = replacement;
+                }
             }
             finally
             {
                 foreach (Debris added in location.debris.Where(d => !originalDebris.Any(o => ReferenceEquals(o, d))).ToArray())
                     location.debris.Remove(added);
                 // 搜索阶段不动地图；只有选定且原本空闲的格才能成为本用例清理的范围。
-                if (fixtureSelected) location.objects.Remove(fixtureTile);
+                if (fixtureSelected && savedReplacement is null) location.objects.Remove(fixtureTile);
                 // 索引 setter 会通知旧选中物品停止持有；先对临时库存切换，避免触碰原工具属性。
                 player.CurrentToolIndex = originalIndex;
                 player.Items.OverwriteWith(originalInventory);
@@ -210,8 +218,9 @@ internal static class ToolRemovalScenarios
                 if (Game1.stats.RocksCrushed != originalRocks) Game1.stats.RocksCrushed = originalRocks;
                 if (player.stats.RocksCrushed != originalPersonalRocks) player.stats.RocksCrushed = originalPersonalRocks;
                 Require(InventoryMatches(originalInventory, originalQuantities) && SameReferences(location.debris, originalDebris)
-                    && (!fixtureSelected || !location.objects.ContainsKey(fixtureTile))
-                    && (originalTarget is null ? !location.objects.ContainsKey(tile)
+                    && (!fixtureSelected || (savedReplacement is null ? !location.objects.ContainsKey(fixtureTile)
+                        : location.objects.TryGetValue(fixtureTile, out var retained) && ReferenceEquals(retained, savedReplacement)))
+                    && (originalTarget is null ? !location.objects.ContainsKey(tile) || (tile == fixtureTile && savedReplacement is not null)
                         : location.objects.TryGetValue(tile, out var restored) && ReferenceEquals(restored, originalTarget)
                             && originalTarget.modData.Pairs.OrderBy(p => p.Key, StringComparer.Ordinal).SequenceEqual(originalTargetData!))
                     && player.Position == originalPosition && player.FacingDirection == originalFacing

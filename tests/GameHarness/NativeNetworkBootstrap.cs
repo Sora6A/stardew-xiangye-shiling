@@ -54,7 +54,8 @@ internal sealed class NativeNetworkBootstrap
         bool machineRecovery = config.Scenario == "LanMachineRecovery"
             && ((config.FarmName == MachineRecoveryFarmName && config.SaveFixtureId == MachineRecoveryFixtureId)
                 || (config.FarmName == MachinePostDebitFarmName && config.SaveFixtureId == MachinePostDebitFixtureId));
-        bool supported = observation || transaction || machineRecovery || (config.EnableNativeInventoryOwnership && (ownership || recovery));
+        bool supported = observation || transaction || machineRecovery || LanMachineMovePersistence.Matches(config)
+            || (config.EnableNativeInventoryOwnership && (ownership || recovery));
         if (!config.Enabled || config.OpenPreview || !supported
             || config.NetworkRole is not ("Host" or "Client"))
             throw new InvalidOperationException("Native network bootstrap requires a dedicated fixture and Host or Client role.");

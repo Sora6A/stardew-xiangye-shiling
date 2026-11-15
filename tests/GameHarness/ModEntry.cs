@@ -92,6 +92,16 @@ public sealed class ModEntry : Mod
             helper.Events.GameLoop.Saving += (_, _) => transaction.OnSaving();
             return;
         }
+        if (this.Settings.Enabled && this.Settings.Scenario == LanMachineMovePersistence.Scenario)
+        {
+            var movement = new LanMachineMovePersistence(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => movement.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => movement.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => movement.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => movement.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => movement.OnReturnedToTitle();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == "LanTransportObservation")
         {
             var observation = new LanTransportObservationScenario(helper, this.Monitor, this.Settings);

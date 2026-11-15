@@ -8,7 +8,9 @@
 
 单人普通建材与首次升级 `620261125` 已通过。29640 实际原版柜台交易、冶炼、罗宾升级和三次就寝，磁盘春 4/等级 1。实际用余料制作两设备并从新灶台打开烹饪，已停，87 个文件中只有专用副本变化。首轮 `620261123` 春 2 保留。见[实测](validation/P1-ordinary-play-2026-11-07.md#2026-11-16-原版建材和首次农舍升级)。
 
-目前 XYSNET09 编译的新夹具已加入确切农工断开事件、离线原生名单与主屋定位诊断，待该专用双端 Write 和 Verify 运行审计。随后运行冻结普通菜单 Escape 与主机先开工争用 `.local/p1-net08-normal-lan/{menu-escape,host-first}`。首个 Hello 来源缺失故障注入已编译、准备且禁用，候选 `.local/p1-net08-normal-lan/candidate-ready-hello`，夹具 `46035778…2FB6`，在其他游戏清理后执行 `run-ready-hello.ps1 -RunName ready-hello-retry -VerifyFarmhandMenu` 和冻结哈希参数。
+XYSNET09 第三轮 Write 25428/28948、冷 Verify 33256/32352 已通过。两设备原版搬动、农工实际复制、普通就寝写盘、独立磁盘核对和冷载待领取均完成。旧两轮阻断为原版可跳过农场剧情，失败审计保留。四个隔离进程退出，冷载 89 文件一致。见[实测](validation/P1-native-inventory-2026-11-11.md#普通直连搬动后写盘与冷载)。
+
+冻结普通菜单 Escape 已启动主机 24288，随后主机先开工争用 `.local/p1-net08-normal-lan/{menu-escape,host-first}`。首个 Hello 来源缺失故障注入已编译、准备且禁用，候选 `.local/p1-net08-normal-lan/candidate-ready-hello`，夹具 `46035778…2FB6`，在其他游戏清理后执行 `run-ready-hello.ps1 -RunName ready-hello-retry -VerifyFarmhandMenu` 和冻结哈希参数。
 
 ## 2026-11-15 恢复 P1 验收
 
