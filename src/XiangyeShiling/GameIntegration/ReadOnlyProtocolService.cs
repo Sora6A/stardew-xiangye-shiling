@@ -167,7 +167,11 @@ internal sealed class ReadOnlyProtocolService
                 if (this.IsHost && this.MachineHostAllowed()) this.HostTransactions!.Advance(sessionId);
                 else if (!this.IsHost && this.CurrentMachineHost() is { } host)
                     this.OwnerTransactions!.Advance(host.PlayerId, sessionId, host.ConnectionId);
-                else if (!this.IsHost) this.OwnerTransactions?.FenceIntent();
+                else if (!this.IsHost)
+                {
+                    this.OwnerTransactions?.FenceIntent();
+                    this.RefreshDirectIpHello(now);
+                }
             }
             else if (!this.IsHost && this.Session.ActiveSessionId is null)
                 this.OwnerTransactions?.FenceIntent();
@@ -398,6 +402,17 @@ internal sealed class ReadOnlyProtocolService
             && LanMachineCapability.TryRead(raw, out var capability)
             && capability.MatchesWorld(Game1.uniqueIDForThisGame, host.PlayerId, actor)
             && capability.SessionId == session && capability.Challenge == host.Challenge ? host : null;
+    }
+
+    private void RefreshDirectIpHello(long now)
+    {
+        // A read-only Welcome does not prove that the host observed this Hello on its native connection.
+        // Retry only while that same SDK/native host is ready and the transaction capability is still missing.
+        if (!this.DirectIpWorldAllowed() || this.ClientNativeConnection is null
+            || !ReferenceEquals(this.ClientNativeConnection, this.LanTransport.ReadDirectIpHostConnection())
+            || this.CurrentReadyHost() is not { } host) return;
+        if (this.Session!.TryRefreshReadyHello(host.PlayerId, host.ConnectionId, now) is { } refresh)
+            this.Send(refresh);
     }
 
     internal bool AllowsHostOperations() => ReferenceEquals(Thread.CurrentThread, this.Owner)

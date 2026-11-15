@@ -209,6 +209,51 @@ internal static class ReadOnlyTransportScenarios
             Assert(client.RemoteSessionId == session && client.SynchronizePeers(new[] { HostPeer }, 10000).Count == 0,
                 "A delayed matching reply failed or ready client kept retrying.");
         });
+        test("direct IP ready hello refresh retries the same challenge after a read-only welcome", () =>
+        {
+            var client = Client();
+            Guid session = Guid.NewGuid();
+            var host = Host(session);
+            var peer = HostPeer with { ConnectionId = Guid.NewGuid() };
+            host.SynchronizePeers(new[] { ClientPeer }, 0);
+            OutboundProtocolMessage hello = client.SynchronizePeers(new[] { peer }, 0).Single();
+            var welcome = host.Receive(ClientId, ModId, hello.MessageType, () => hello.Json, 0)!;
+            // The read-only host handshake can succeed even if the adapter lost native provenance.
+            client.Receive(HostId, ModId, welcome.MessageType, () => welcome.Json, 0);
+            Assert(client.RemoteSessionId == session && client.SynchronizePeers(new[] { peer }, 4999).Count == 0,
+                "Fixture did not enter read-only Ready.");
+            Assert(client.TryRefreshReadyHello(HostId, peer.ConnectionId, 4999) is null,
+                "Refreshed the ready Hello before the retry interval.");
+
+            for (int attempt = 1; attempt <= 3; attempt++)
+            {
+                long now = attempt * ReadOnlyProtocolSession.HelloRetryMilliseconds;
+                Assert(client.SynchronizePeers(new[] { peer }, now).Count == 0,
+                    "Ordinary read-only Ready unexpectedly sent an unsolicited Hello.");
+                var refresh = client.TryRefreshReadyHello(HostId, peer.ConnectionId, now);
+                Assert(refresh == hello, "Read-only Welcome suppressed the required direct-IP capability refresh or changed its challenge.");
+                Assert(client.TryRefreshReadyHello(HostId, peer.ConnectionId, now) is null,
+                    "Repeated refresh escaped the interval.");
+                var duplicate = host.Receive(ClientId, ModId, refresh!.MessageType, () => refresh.Json, now);
+                Assert(duplicate == welcome, "Host did not accept the exact challenge on the current peer.");
+                client.Receive(HostId, ModId, duplicate!.MessageType, () => duplicate.Json, now);
+                Assert(client.RemoteSessionId == session && client.ReadPeerStatus().Single().Challenge == Hello(hello).Challenge,
+                    "Duplicate Welcome replaced the existing Ready session or challenge.");
+            }
+
+            Assert(client.TryRefreshReadyHello(HostId, peer.ConnectionId, 20000) is null,
+                "The same connection exceeded its three capability refresh attempts.");
+            var replacement = peer with { ConnectionId = Guid.NewGuid() };
+            var next = client.SynchronizePeers(new[] { replacement }, 20001).Single();
+            Assert(Hello(next).Challenge != Hello(hello).Challenge && client.TryRefreshReadyHello(HostId, replacement.ConnectionId, 25001) is null,
+                "Replacement failed to establish its own challenge or refreshed before Ready.");
+            var nextWelcome = host.Receive(ClientId, ModId, next.MessageType, () => next.Json, 25001)!;
+            client.Receive(HostId, ModId, nextWelcome.MessageType, () => nextWelcome.Json, 25001);
+            Assert(client.TryRefreshReadyHello(HostId, peer.ConnectionId, 25001) is null
+                && client.TryRefreshReadyHello(HostId + 10, replacement.ConnectionId, 25001) is null
+                && client.TryRefreshReadyHello(HostId, replacement.ConnectionId, 25001) == next,
+                "The refresh replaced its connection identity or inherited the exhausted old budget.");
+        });
         test("read-only changed connection invalidates handshake while other peers retain host world session", () =>
         {
             Pair pair = Connect();

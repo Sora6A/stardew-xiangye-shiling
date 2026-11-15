@@ -1,5 +1,17 @@
 # 当前开发交接
 
+## 2026-11-15 恢复 P1 验收
+
+分支 `codex/first-stable-release`，本次接续基线 `b7ccecc1c7bdbd0c1c2e063cef04b1c31118f9c2`。周额度已恢复。原先普通游戏进程 16668 本轮起始已不存在，确认无 Stardew/SMAPI 进程且直连端口空闲。后续隔离运行核对启动前后均无外部游戏。
+
+普通直连 Ready 后仍无能力时的同挑战刷新通过 MachineCore 142 项，生产隔离构建零警告零错误，故障注入实机待验。见 [BUG-2026-030](bugfix/BUG-2026-030-direct-ip-ready-hello.md)。同进程重连验收由独立 XYSNET08 夹具接续原冻结生产，实际运行以最新审计为准。XYSNET09 搬动及原版就寝冷载、XYSP1HomeUpgrade 普通建材及首次升级的夹具草稿分别保留，尚未实跑；待 XYSNET08 退出后按顺序完成。任务分支未推送，正式版尚未发布。
+
+## 2026-11-13 重连候选冻结
+
+分支 `codex/first-stable-release`，当前提交 `b7ccecc1c7bdbd0c1c2e063cef04b1c31118f9c2`，31 条提交信息通过。周额度最近核对 89%，仅冻结私有候选并保留本交接，未启动隔离游戏，原 16668 保留。未推送或发布。
+
+`.local/p1-net08-normal-lan/candidate-live-reconnect` 包含实际通过 SDK 26 项的生产 `D2A8A257…9FD8`，ZIP `7CB131C4…D24D` 已按字节核对 DLL、manifest 及两份当前翻译，沿用已通过的基础 V3 夹具 `505E5C3A…13FA`。现有夹具只能复跑普通菜单和争用，未覆盖真实重连。下一轮先在专用 XYSNET08 添加同进程断开、原主机继续、同农工重连的验收模式，观察准确的前态及旧预留、Declined 与清理回执，再检查新连接新序号可正常开工和领取。保持 [BUG-2026-029](bugfix/BUG-2026-029-live-reconnect-reservation.md) 待实机状态。
+
 ## 2026-11-13 专用联机搬动通过
 
 分支 `codex/first-stable-release`，本轮起点 `4a92cfa65dd66a74ddb18132ed87577068108129`，主机搬动已提交 `ba49b48afcc7bd0ea81a9bb1ce838b3bd411780d`。短额度已重置，本轮启动时短窗口 0%、周窗口 73%。专用双端主机 13704、农工 32532 验证既有争用及豆坊、发酵缸原版手持放置、原版镐保护和空闲重放。两端零保存零错误、73 文件及普通 Mods 哈希一致，已退出并禁用。原 16668 保留。见[实测](validation/P1-native-inventory-2026-11-11.md#原生主机搬动两台设备)。

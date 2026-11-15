@@ -18,6 +18,7 @@ public sealed class ReadOnlyProtocolSession
     public const int MessagesPerWindow = 8;
     public const long WindowMilliseconds = 1000;
     public const long HelloRetryMilliseconds = 5000;
+    private const int MaxReadyHelloRefreshes = 3;
     private readonly Thread Owner = Thread.CurrentThread;
     private readonly Dictionary<long, PeerState> Peers = new();
     private readonly long LocalPlayerId;
@@ -78,14 +79,28 @@ public sealed class ReadOnlyProtocolSession
             if (!this.Peers.TryGetValue(peer.PlayerId, out var state))
                 this.Peers.Add(peer.PlayerId, state = new PeerState(peer, now));
             if (!this.IsHost && !state.Ready && now - state.LastHello >= HelloRetryMilliseconds)
-            {
-                // Keep the same pending challenge on retry so a delayed matching reply is still usable.
-                state.LastHello = now;
-                outbound.Add(new(peer.PlayerId, ReadOnlyProtocolCodec.HelloType,
-                    ReadOnlyProtocolCodec.Write(new ProtocolHello(1, state.Challenge, this.LocalPlayerId))));
-            }
+                outbound.Add(this.CreateHello(state, now));
         }
         return outbound;
+    }
+
+    /// <summary>Retry a Ready client's current challenge when the adapter still lacks native capability proof.</summary>
+    internal OutboundProtocolMessage? TryRefreshReadyHello(long hostId, Guid connectionId, long now)
+    {
+        this.RequireOwner();
+        if (this.IsHost || connectionId == Guid.Empty || !this.AdvanceClock(now) || !this.Peers.TryGetValue(hostId, out var peer)
+            || peer.Snapshot.ConnectionId != connectionId || !peer.Ready || peer.ReadyHelloRefreshes >= MaxReadyHelloRefreshes
+            || now - peer.LastHello < HelloRetryMilliseconds) return null;
+        peer.ReadyHelloRefreshes++;
+        return this.CreateHello(peer, now);
+    }
+
+    private OutboundProtocolMessage CreateHello(PeerState peer, long now)
+    {
+        // Keep the challenge for this connection so a pending Welcome and a verified capability still match.
+        peer.LastHello = now;
+        return new(peer.Snapshot.PlayerId, ReadOnlyProtocolCodec.HelloType,
+            ReadOnlyProtocolCodec.Write(new ProtocolHello(1, peer.Challenge, this.LocalPlayerId)));
     }
 
     /// <summary>
@@ -202,6 +217,7 @@ public sealed class ReadOnlyProtocolSession
         public Guid Challenge { get; } = Guid.NewGuid();
         public bool Ready { get; set; }
         public long LastHello { get; set; }
+        public int ReadyHelloRefreshes { get; set; }
         private long WindowStarted;
         private int Count;
 

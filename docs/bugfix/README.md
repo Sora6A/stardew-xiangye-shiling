@@ -33,5 +33,6 @@
 | [BUG-2026-027](BUG-2026-027-native-wheat-fingerprint.md) | 普通小麦的库存格指纹不可用 | SDK 先红后绿，实机 21 项通过，双端同步待验 | GameAdapter 两种朝向与改价拒绝，GameHarness 原版 Farmer XML 往返 |
 | [BUG-2026-028](BUG-2026-028-host-owner-intent-capacity.md) | 专用联机会话到达容量时农工菜单持续等待 | 旧判据失败、MachineCore 136 通过，双端容量实测待验 | 不同请求计数、现有授权优先、精确拒绝溢出 |
 | [BUG-2026-029](BUG-2026-029-live-reconnect-reservation.md) | 同进程重连后未扣料预留无法结束 | 旧组件失败、修后通过，双端实测待验 | 新可信连接、精确未尝试意图、原生前态及撤销 |
+| [BUG-2026-030](BUG-2026-030-direct-ip-ready-hello.md) | 只读 Welcome 收到后直连设备权限未建立 | 旧谓词失败，MachineCore 142 通过，实机原因注入待验 | 同一挑战、五秒间隔、三次上限，保留现有连接序号 |
 
 状态为“待验证”的记录必须说明缺少什么证据；已合并记录附真实PR/提交，不以计划分支代替。索引保留历史，不将开发审查发现的缺陷包装成线上事故。
