@@ -4,7 +4,11 @@
 
 分支 `codex/first-stable-release`，起点 `6833c458b692add0103d70cb46ecfc897942f670`，额度已恢复。同一农工进程 27596 断线重连原主机 34200，通过原生未扣料预留恢复、现有回执及后续真实开工领取。配置禁用，81 文件和原 Mods 哈希一致，零保存零错误，两端已停。见 [实测](validation/P1-native-inventory-2026-11-11.md#普通直连同进程重连后的撤销与继续生产)。
 
-重连退出后，XYSNET09 搬动 Write 隔离主机 13464 已接独占。安装前 81 个既有文件哈希一致。用冻结候选 `.local/p1-net09-move-persist/candidate-manifests` 依次 Write 和 Verify。单人升级新副本 620261125 已冻结且仍在工作区，等 XYSNET09 清理再启动；旧 620261123 的春 2 进度保留。
+重连已提交 `6ac4605ac4b45b2657cbc7d6b0842d13fd3102f5`，33 条提交信息通过。XYSNET09 搬动 Write 首轮 13464/19012，原版工具重放两台设备、农工看到同两台并退标题。主机超时在就寝之前，零保存，83 文件哈希一致，两端已退出。证据 `.local/p1-net09-move-persist/write-v1/audit.json`。待具体诊断离线与农舍进入条件，再重跑 Write 及冷 Verify。
+
+单人普通建材与首次升级 `620261125` 已通过。29640 实际原版柜台交易、冶炼、罗宾升级和三次就寝，磁盘春 4/等级 1。实际用余料制作两设备并从新灶台打开烹饪，已停，87 个文件中只有专用副本变化。首轮 `620261123` 春 2 保留。见[实测](validation/P1-ordinary-play-2026-11-07.md#2026-11-16-原版建材和首次农舍升级)。
+
+目前 XYSNET09 编译的新夹具已加入确切农工断开事件、离线原生名单与主屋定位诊断，待该专用双端 Write 和 Verify 运行审计。随后运行冻结普通菜单 Escape 与主机先开工争用 `.local/p1-net08-normal-lan/{menu-escape,host-first}`。首个 Hello 来源缺失故障注入已编译、准备且禁用，候选 `.local/p1-net08-normal-lan/candidate-ready-hello`，夹具 `46035778…2FB6`，在其他游戏清理后执行 `run-ready-hello.ps1 -RunName ready-hello-retry -VerifyFarmhandMenu` 和冻结哈希参数。
 
 ## 2026-11-15 恢复 P1 验收
 

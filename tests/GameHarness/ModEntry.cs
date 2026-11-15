@@ -114,6 +114,18 @@ public sealed class ModEntry : Mod
             helper.Events.GameLoop.ReturnedToTitle += (_, _) => recovery.OnReturnedToTitle();
             return;
         }
+        if (this.Settings.Enabled && this.Settings.Scenario == NativeFarmhouseUpgradeScenario.Scenario)
+        {
+            var upgrade = new NativeFarmhouseUpgradeScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => upgrade.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => upgrade.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => upgrade.Tick();
+            helper.Events.GameLoop.TimeChanged += (_, _) => upgrade.OnTimeChanged();
+            helper.Events.GameLoop.Saving += (_, _) => upgrade.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => upgrade.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => upgrade.OnReturnedToTitle();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario is "NativeShopWalk" or AutomatedRouteScenario.PurchasedRouteScenario
             or NativeShopRoutePersistence.Scenario)
         {
