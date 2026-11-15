@@ -78,6 +78,13 @@ public sealed class ModEntry : Mod
         }
         if (this.Settings.Enabled && this.Settings.Scenario == "LanMachineTransaction")
         {
+            if (this.Settings.NativeRecoveryPhase == LanMachineReadyHelloFault.Phase)
+            {
+                var fault = new LanMachineReadyHelloFault(helper, this.Settings);
+                helper.Events.GameLoop.GameLaunched += (_, _) => fault.Install();
+                helper.Events.GameLoop.UpdateTicked += (_, _) => fault.Tick();
+                helper.Events.GameLoop.ReturnedToTitle += (_, _) => fault.Remove();
+            }
             var transaction = new LanMachineTransactionScenario(helper, this.Monitor, this.Settings);
             helper.Events.GameLoop.GameLaunched += (_, _) => transaction.QueueStart();
             if (this.Settings.VerifyLanHostCompetition)
