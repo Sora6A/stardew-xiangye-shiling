@@ -42,6 +42,7 @@ internal sealed class LanMachineTransactionScenario
     private readonly bool VerifyHostMovement;
     private readonly bool VerifyHostCompetition;
     private readonly bool VerifyFarmhandMenu;
+    private readonly bool VerifyLiveReconnect;
     private readonly Stopwatch Watch = new();
     private readonly List<Evidence> Stages = new();
     private readonly List<string> HostMovementChecks = new();
@@ -68,6 +69,14 @@ internal sealed class LanMachineTransactionScenario
     private LanTransportDiagnosticSnapshot? Lan;
     private CapabilityEvidence? Capability;
     private LanTransportEvidence? NativeMachineIntent;
+    private readonly List<string> ReconnectStages = new();
+    private CapabilityEvidence? InitialCapability;
+    private Request? InterruptedRequest;
+    private Guid? InterruptedId;
+    private string? InterruptedRaw, InterruptedMachineRaw, InterruptedJournal, InterruptedReceipt;
+    private string? InterruptedCheck;
+    private bool NativeDisconnectObserved, ReturnedForReconnect, RejoinStarted, ReconnectPositioned;
+    private bool ExitBeforeDebit, ReconnectReadySent;
 
     internal LanMachineTransactionScenario(IModHelper helper, IMonitor monitor, Config config)
     {
@@ -84,6 +93,9 @@ internal sealed class LanMachineTransactionScenario
         Require(!this.VerifyHostMovement || this.VerifyHostCompetition,
             "The host movement fixture requires the established farm stand and completed contention case.");
         this.VerifyFarmhandMenu = this.NormalLan || config.VerifyLanFarmhandMenu;
+        this.VerifyLiveReconnect = config.VerifyLanLiveReconnect;
+        Require(!this.VerifyLiveReconnect || (this.NormalLan && config.VerifyLanFarmhandMenu && !this.VerifyHostCompetition),
+            "Live reconnect requires the exact ordinary LAN farmhand menu fixture.");
         Require(this.NormalLan
                 ? !this.VerifyHostMovement && config.VerifyLanHostCompetition != config.VerifyLanFarmhandMenu
                 : !this.VerifyHostCompetition || !this.VerifyFarmhandMenu,
@@ -102,10 +114,19 @@ internal sealed class LanMachineTransactionScenario
         if (!this.Watch.IsRunning || this.Completed || this.Failure is not null) return;
         try
         {
+            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(3), "Timed out waiting for production transaction or receipt settlement.");
+            if (this.ReturnedForReconnect && !this.RejoinStarted)
+            {
+                string path = Path.Combine(this.Helper.DirectoryPath, "lan-live-reconnect.txt");
+                if (Context.IsWorldReady || Game1.client is not null || !File.Exists(path)) return;
+                Require(File.ReadAllText(path).Trim() == this.InterruptedId?.ToString("D"), "Reconnect signal does not match the interrupted request.");
+                this.Bootstrap.QueueClientReconnect();
+                this.RejoinStarted = true;
+                this.ReconnectStage("ClientStartedNativeRejoin");
+            }
             this.Bootstrap.Tick();
             Require(this.Bootstrap.Failure is null, this.Bootstrap.Failure ?? "Native loopback setup failed.");
-            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(3), "Timed out waiting for production transaction or receipt settlement.");
-            if (!this.Bootstrap.Ready) return;
+            if (!this.Bootstrap.Ready || (!this.Host && this.InterruptedRaw is not null && !this.RejoinStarted)) return;
             Require(Context.IsWorldReady && Context.IsMultiplayer && Context.IsMainPlayer == this.Host
                 && !Context.IsSplitScreen && Context.ScreenId == 0 && Game1.uniqueIDForThisGame == this.FixtureId
                 && Game1.player.farmName.Value == this.FarmName
@@ -138,6 +159,8 @@ internal sealed class LanMachineTransactionScenario
                 "The replicated device does not have a readable bean workshop state.");
             if (this.InstanceId == Guid.Empty) this.InstanceId = state!.InstanceId;
             Require(state!.InstanceId == this.InstanceId, "The native machine instance changed.");
+            if (this.VerifyLiveReconnect && this.InitialCapability is not null
+                && !this.ObserveRejoinedPeer(host, owner, farm, machine, state!)) return;
             if (!this.Host && !this.Positioned) this.Positioned = PrepareOwner(owner, farm, machine);
             if (!ReferenceEquals(owner.currentLocation, farm) || owner.Tile != machine.TileLocation + Below) return;
             // The host puts its stack in place before publishing Ready; the client still has to see the native replica.
@@ -173,6 +196,8 @@ internal sealed class LanMachineTransactionScenario
         Guid challenge = Guid.ParseExact(parts[5], "D");
         string expected = FormattableString.Invariant(
             $"1|{this.FixtureId}|{host.UniqueMultiplayerID}|{NativeNetworkBootstrap.ClientId}|{session:D}|{challenge:D}");
+        if (this.VerifyLiveReconnect && this.InitialCapability is { } original && this.Capability is null
+            && (raw == original.Raw || peer.ConnectionId == original.Connection)) return false;
         Require(raw == expected && session != Guid.Empty && session == this.Protocol!.SessionId && challenge != Guid.Empty
             && peer.ConnectionId != Guid.Empty && (this.Host || peer.Challenge == challenge)
             && !this.Protocol.ProbeConfigured && !this.Protocol.ProbeAllowed,
@@ -188,11 +213,165 @@ internal sealed class LanMachineTransactionScenario
             }
             this.Capability = new(raw, host.UniqueMultiplayerID, NativeNetworkBootstrap.ClientId, session, challenge,
                 peer.ConnectionId, this.Host ? hello : null);
+            if (this.VerifyLiveReconnect && this.InitialCapability is { } first)
+            {
+                Require(session == first.Session && challenge != first.Challenge,
+                    "The existing host must keep its session and admit a new farmhand challenge.");
+                this.ReconnectStage(this.Host ? "HostVerifiedNewNativeConnection" : "ClientVerifiedNewNativeConnection");
+            }
             this.Report();
         }
         else Require(this.Capability.Raw == raw && this.Capability.Connection == peer.ConnectionId,
             "The native capability or connection changed mid-transaction.");
         return true;
+    }
+
+    [EventPriority(EventPriority.High)]
+    internal void OnLiveReconnectTick(object? sender, UpdateTickedEventArgs e)
+    {
+        if (!this.Bootstrap.Ready || this.Completed || this.Failure is not null || !Context.IsWorldReady
+            || Game1.uniqueIDForThisGame != this.FixtureId || this.Before is null || this.InterruptedReceipt is not null) return;
+        try
+        {
+            Farmer host = Game1.MasterPlayer;
+            if (this.Host)
+            {
+                if (!this.NativeDisconnectObserved || !host.modData.TryGetValue(ReservationKey, out string raw)) return;
+                Farmer? online = Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: true);
+                if (online is null && this.InterruptedRaw is null
+                    && !this.Helper.Multiplayer.GetConnectedPlayers().Any(p => p.PlayerID == NativeNetworkBootstrap.ClientId))
+                {
+                    var offline = Game1.GetPlayer(NativeNetworkBootstrap.ClientId, onlyOnline: false);
+                    Require(offline is not null, "The live host did not retain the disconnected farmhand.");
+                    this.CaptureInterruptedGrant(raw, host, offline!);
+                    this.ReconnectStage("HostObservedNativeDisconnectWithReservedAndNoDebit");
+                }
+                else if (online is not null && this.InterruptedRaw is not null)
+                    this.ObserveInterruptedTerminal(host, online);
+                return;
+            }
+
+            if (this.InterruptedRequest is not { } request || this.InterruptedRaw is not null
+                || !ReferenceEquals(Game1.activeClickableMenu, this.ActiveFarmhandMenu)
+                || !host.modData.TryGetValue(ReservationKey, out string reserved)) return;
+            this.CaptureInterruptedGrant(reserved, host, Game1.player);
+            Require(this.InterruptedId == request.Id, "The reserved request differs from the actual menu request.");
+            // Let this frame's production tick see the original menu but no valid in-range interaction.
+            // Closing the menu first would let production decline on the old connection before native exit.
+            var device = Game1.getFarm().objects.Values.Single(item => MachineService.TryGetKind(item, out _));
+            Game1.player.setTileLocation(device.TileLocation + new Vector2(3, 1));
+            this.ExitBeforeDebit = true;
+            this.ReconnectStage("ClientObservedReservedBeforeDebit");
+        }
+        catch (Exception error) when (error is not OutOfMemoryException) { this.Finish(error.Message); }
+    }
+
+    [EventPriority(EventPriority.Low)]
+    internal void OnLiveReconnectExitTick(object? sender, UpdateTickedEventArgs e)
+    {
+        if (!this.ExitBeforeDebit || this.Failure is not null) return;
+        this.ExitBeforeDebit = false;
+        try
+        {
+            Require(Context.IsWorldReady && Game1.uniqueIDForThisGame == this.FixtureId
+                && ReferenceEquals(Game1.activeClickableMenu, this.ActiveFarmhandMenu)
+                && Snapshot(Game1.player).SequenceEqual(this.Before!) && !Game1.player.modData.ContainsKey(JournalKey),
+                "The old production tick changed the untouched owner before native disconnect.");
+            this.ReconnectStage("ClientRequestedNativeExitBeforeDebit");
+            Game1.ExitToTitle();
+        }
+        catch (Exception error) when (error is not OutOfMemoryException) { this.Finish(error.Message); }
+    }
+
+    internal void OnLivePeerDisconnected(long id)
+    {
+        if (this.Host && this.VerifyLiveReconnect && id == NativeNetworkBootstrap.ClientId)
+            this.NativeDisconnectObserved = true;
+    }
+
+    private void CaptureInterruptedGrant(string raw, Farmer host, Farmer owner)
+    {
+        using var json = JsonDocument.Parse(raw);
+        var reservation = json.RootElement;
+        bool read = MachineRequestCodec.TryRead(reservation.GetProperty("RequestRaw").GetString(), out var request);
+        var machine = this.Host ? this.PreparedMachine : Game1.getFarm().objects.Values.SingleOrDefault(item => MachineService.TryGetKind(item, out _));
+        bool exactRequest = read && request is { ActorId: NativeNetworkBootstrap.ClientId, Action: MachineRequestAction.Start, ExpectedRevision: 0 }
+            && request.InstanceId == this.InstanceId && request.RecipeId == Recipe && request.SessionId == this.Capability?.Session;
+        bool exactMachine = machine is not null
+            && machine.modData.GetValueOrDefault(MachineService.StateKey) == reservation.GetProperty("BeforeRaw").GetString();
+        bool exactOwner = Snapshot(owner).SequenceEqual(this.Before!);
+        bool exactHost = Snapshot(host).SequenceEqual(this.HostInventory!);
+        bool journalPresent = owner.modData.ContainsKey(JournalKey), receiptPresent = host.modData.ContainsKey(ReceiptKey);
+        string? status = reservation.GetProperty("Status").GetString();
+        this.InterruptedCheck = $"Status={status}, request={exactRequest}, machine={exactMachine}, owner={exactOwner}, "
+            + $"host={exactHost}, journal={owner.modData.GetValueOrDefault(JournalKey) ?? "absent"}, receipt={receiptPresent}, owner soy={owner.Items.CountId(Soybean)}";
+        Require(status == "Reserved" && exactRequest && exactMachine && exactOwner && exactHost && !journalPresent && !receiptPresent,
+            "Interrupted native checkpoint mismatch. " + this.InterruptedCheck);
+        this.InterruptedId = request!.RequestId;
+        this.InterruptedRaw = raw;
+        this.InterruptedMachineRaw = reservation.GetProperty("BeforeRaw").GetString();
+        this.InitialCapability = this.Capability;
+        this.Capability = null;
+    }
+
+    private void ObserveInterruptedTerminal(Farmer host, Farmer owner)
+    {
+        if (this.InterruptedId is not Guid id || this.InterruptedReceipt is not null) return;
+        if (!host.modData.TryGetValue(ReservationKey, out string raw)) return;
+        using var json = JsonDocument.Parse(raw);
+        var plan = json.RootElement;
+        Require(MachineRequestCodec.TryRead(plan.GetProperty("RequestRaw").GetString(), out var request) && request?.RequestId == id,
+            "The reconnected owner must settle exactly the old reservation before a new Start.");
+        string? journal = owner.modData.GetValueOrDefault(JournalKey);
+        if (journal?.EndsWith(":Declined", StringComparison.Ordinal) == true && this.InterruptedJournal is null)
+        {
+            Require(journal.StartsWith(plan.GetProperty("GrantId").GetGuid().ToString("D") + ":", StringComparison.Ordinal),
+                "The native decline was for a different grant.");
+            this.InterruptedJournal = journal;
+            this.ReconnectStage(this.Host ? "HostObservedNativeDeclined" : "ClientObservedNativeDeclined");
+        }
+        string cancelled = this.Host ? "HostObservedNativeCancelled" : "ClientObservedNativeCancelled";
+        if (plan.GetProperty("Status").GetString() == "Cancelled" && !this.ReconnectStages.Contains(cancelled))
+        {
+            Require(raw == this.InterruptedRaw!.Replace("\"Status\":\"Reserved\"", "\"Status\":\"Cancelled\"", StringComparison.Ordinal),
+                "The cancellation changed more than the old production grant's status.");
+            this.ReconnectStage(cancelled);
+        }
+    }
+
+    private bool ObserveRejoinedPeer(Farmer host, Farmer owner, GameLocation farm, SObject machine, MachineState state)
+    {
+        if (this.InterruptedReceipt is null)
+        {
+            Require(state.Revision == 0 && machine.modData.GetValueOrDefault(MachineService.StateKey) == this.InterruptedMachineRaw
+                && Snapshot(owner).SequenceEqual(this.Before!) && Snapshot(host).SequenceEqual(this.HostInventory!),
+                "Native reconnection changed the original inventory or idle device.");
+            this.ObserveInterruptedTerminal(host, owner);
+            if (this.InterruptedId is not Guid id || !this.IsSettled(host, owner, id)) return false;
+            this.InterruptedReceipt = host.modData[ReceiptKey];
+            this.ReconnectStage(this.Host ? "HostRetiredOldGrantWithoutDebit" : "ClientRetiredOldGrantWithoutDebit");
+        }
+        if (!this.Host && !this.ReconnectPositioned)
+        {
+            var standing = machine.TileLocation + Below;
+            if (!ReferenceEquals(owner.currentLocation, farm))
+            {
+                if (!Game1.isWarping && !Game1.fadeToBlack)
+                    Game1.warpFarmer(farm.NameOrUniqueName, (int)standing.X, (int)standing.Y, 0);
+                return false;
+            }
+            if (Game1.isWarping || Game1.fadeToBlack || !Context.IsPlayerFree) return false;
+            owner.setTileLocation(standing);
+            this.ReconnectPositioned = true;
+        }
+        return true;
+    }
+
+    private void ReconnectStage(string stage)
+    {
+        this.ReconnectStages.Add(stage);
+        this.Monitor.Log(stage, LogLevel.Info);
+        this.Report();
     }
 
     internal static SObject PrepareMachine(Farmer host, bool requireHostStanding = false)
@@ -371,6 +550,14 @@ internal sealed class LanMachineTransactionScenario
             this.SendReady(0);
             return;
         }
+        if (this.VerifyLiveReconnect && this.InterruptedReceipt is not null && !this.ReconnectReadySent)
+        {
+            // Tick already verified the host's current farmhand map and tile replica.
+            this.ReconnectReadySent = true;
+            this.ReconnectStage("HostObservedRejoinedOwnerAtMachine");
+            this.SendReady(0, afterCancellation: true);
+            return;
+        }
         if (!this.RefusalObserved && state.Revision == 0 && !host.modData.ContainsKey(ReservationKey)
             && host.modData.TryGetValue(RefusalKey, out string rawRefusal) && this.ReadRefusedRequest(rawRefusal) is Guid refused)
         {
@@ -445,12 +632,24 @@ internal sealed class LanMachineTransactionScenario
 
     private void AdvanceClient(Farmer host, Farmer owner, SObject machine, MachineState state)
     {
+        if (this.VerifyLiveReconnect && state.Revision == 0 && this.StartRequest is { } newStart
+            && host.modData.TryGetValue(RefusalKey, out string refusal) && this.ReadRefusedRequest(refusal) == newStart.Id)
+            throw new InvalidOperationException("Production published no grant for the real Start on the new native connection.");
         if (this.StartRequest is null && this.Ready is { Revision: 0 } start && start.InstanceId == this.InstanceId)
         {
             Require(state.Revision == 0 && Snapshot(owner).SequenceEqual(this.Before!), "Native client state differed before sending Start.");
             if (this.NormalLan)
             {
                 if (!this.CanOpenNormalFarmhandMenu()) return;
+                if (this.VerifyLiveReconnect && this.InterruptedReceipt is null)
+                {
+                    if (this.InterruptedRequest is null)
+                    {
+                        this.InterruptedRequest = this.ClickFarmhandMenu(machine, owner, state, "Start");
+                        this.ReconnectStage("ClientSentRealMenuStartBeforeDisconnect");
+                    }
+                    return;
+                }
                 this.StartRequest = this.ClickFarmhandMenu(machine, owner, state, "Start");
                 this.Report();
                 return;
@@ -652,6 +851,16 @@ internal sealed class LanMachineTransactionScenario
 
     internal void OnReturnedToTitle()
     {
+        if (this.VerifyLiveReconnect && !this.Host && this.InterruptedRaw is not null && !this.ReturnedForReconnect)
+        {
+            this.ReturnedForReconnect = true;
+            this.Bootstrap.RestoreOptions();
+            this.ActiveFarmhandMenu = null;
+            this.PendingMenuEvidence = null;
+            this.Ready = null;
+            this.ReconnectStage("ClientReturnedToTitleBeforeDebit");
+            return;
+        }
         if (this.Bootstrap.Ready && !this.Completed && this.Failure is null)
             this.Finish("Returned to title before the transaction settled.");
     }
@@ -700,6 +909,8 @@ internal sealed class LanMachineTransactionScenario
         StartRequest = this.StartRequest?.Id, CollectRequest = this.CollectRequest?.Id,
         this.VerifyHostCompetition, this.HostCompetition, this.CompetitionSetup, this.SkippedHostArrivalEvent,
         this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus, this.NormalLan, this.Capability, this.NativeMachineIntent,
+        this.VerifyLiveReconnect, this.ReconnectStages, this.InitialCapability, this.InterruptedId, this.InterruptedRaw,
+        this.InterruptedMachineRaw, this.InterruptedJournal, this.InterruptedReceipt, this.InterruptedCheck,
         this.VerifyHostMovement, this.HostMovementChecks, this.Stages, this.Protocol, this.Lan
     });
 

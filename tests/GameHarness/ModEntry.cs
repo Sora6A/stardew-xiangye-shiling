@@ -27,6 +27,7 @@ public sealed class Config
     public bool VerifyLanHostMovement { get; set; }
     public bool VerifyLanHostCompetition { get; set; }
     public bool VerifyLanFarmhandMenu { get; set; }
+    public bool VerifyLanLiveReconnect { get; set; }
 }
 
 /// <summary>
@@ -79,6 +80,12 @@ public sealed class ModEntry : Mod
             helper.Events.GameLoop.GameLaunched += (_, _) => transaction.QueueStart();
             if (this.Settings.VerifyLanHostCompetition)
                 helper.Events.GameLoop.UpdateTicked += transaction.OnHostCompetitionTick;
+            if (this.Settings.VerifyLanLiveReconnect)
+            {
+                helper.Events.GameLoop.UpdateTicked += transaction.OnLiveReconnectTick;
+                helper.Events.GameLoop.UpdateTicked += transaction.OnLiveReconnectExitTick;
+                helper.Events.Multiplayer.PeerDisconnected += (_, e) => transaction.OnLivePeerDisconnected(e.Peer.PlayerID);
+            }
             helper.Events.GameLoop.UpdateTicked += (_, _) => transaction.Tick();
             helper.Events.Multiplayer.ModMessageReceived += (_, e) => transaction.OnMessage(e);
             helper.Events.GameLoop.ReturnedToTitle += (_, _) => transaction.OnReturnedToTitle();

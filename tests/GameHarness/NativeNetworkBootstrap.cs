@@ -80,6 +80,17 @@ internal sealed class NativeNetworkBootstrap
         this.Watch.Start();
     }
 
+    internal void QueueClientReconnect()
+    {
+        if (this.Host || !this.Ready || Context.IsWorldReady || Game1.client is not null || Game1.server is not null)
+            throw new InvalidOperationException("Reconnect requires the same initialized farmhand process at title.");
+        this.Ready = false;
+        this.JoinSelected = false;
+        this.JoinMenu = null;
+        this.LoadDelay = 180;
+        this.Watch.Restart();
+    }
+
     internal void Tick()
     {
         if (!this.Watch.IsRunning || this.Ready || this.Failure is not null) return;

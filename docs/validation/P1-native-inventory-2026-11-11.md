@@ -101,3 +101,11 @@ Verify 主机 PID 31364 先读取离线状态，未调用保存门禁注入。�
 冻结 DLL `496E337F67CE5401BA074BC5A681C66B4FD286B959CA0E9803777E3DC4F058F7`，ZIP `DE4EBDBF4E3EB37DF665D79E63BC8EC85A838FBAA6C716814D9EE042D512329C`，夹具 `505E5C3A4A63A39863FB7EC1995541A75AAB365C87BDF84D7D3F5A1C944C13FA`，与两份当前翻译核对。证据 `.local/p1-net08-normal-lan/{v3-farmhand-menu,v3-host-competition}/audit.json`。序号旧包、跳号、同序号不同内容、确切重发和最大值由 MachineCore 四项覆盖。真实菜单取消及同进程断线重连尚待。
 
 同一冻结构建另外通过旧专用世界 `XYSNET05` 回归，主机 PID 26808、农工 PID 26344，原生主机确认 `XYS/MachineIntent/2`。未知配方拒绝、未扣料主动撤销、主机菜单争用及后续开工领取通过，77 个存档文件一致，配置禁用且原 16668 保留。证据 `.local/p1-net05-machine/legacy-v2-after-v3/audit.json`。
+
+### 普通直连同进程重连后的撤销与继续生产
+
+XYSNET08 只打开普通直连。实际农工菜单发出开工后通过高优先级采样观察真实 Reserved，原生动作退出到标题。主机 34200 继续运行，看到同一预留、离线黄豆 6、无日志。原农工进程 27596 通过原版再加入同一会话，双方验证新连接、新挑战及同一角色。旧预留在新连接中产生原生 Declined、Cancelled，清理后的 Seen 回执两端相同，修订 0、黄豆 6。
+
+夹具等待主机实际看到农工重回设备站位，再从真实设备菜单成功开工和领取。最后修订 2、农工黄豆 3、豆腐 2，实际 V3 终态与回执一致。冻结生产 `D2A8A257D2B40084B3CA2AD505B925E2127214C7749E5CC91BF87418A0099FD8`、ZIP `7CB131C48CE76082FB2C9FC16A6268767B24D12AE8EDFD0E0EFF72C39D2AD24D`、夹具 `F3F1814D158E79BDE75D7CDA1DE5DACEE9A8EEFCA16F914E72144822CDAF428E`。
+
+两端零保存零错误，81 个存档文件和原 Mods 哈希一致，隔离配置禁用并退出。原版写回的启动偏好已保留前值。成功审计 `.local/p1-net08-normal-lan/live-reconnect-position-ready/audit.json`。此前同样证明旧预留安全撤销的一轮在新开工阶段超时，保留在 `.local/p1-net08-normal-lan/live-reconnect-low-exit`。拒绝或停止的早期试跑一并保留。

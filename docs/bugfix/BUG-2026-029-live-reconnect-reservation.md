@@ -1,7 +1,7 @@
 # BUG-2026-029 同进程重连后未扣料预留无法结束
 
-- 状态: 已修复待验证
-- 发现/更新日期: 2026-11-13，Asia/Shanghai
+- 状态: 本地验证通过
+- 发现/更新日期: 2026-11-13 / 2026-11-16，Asia/Shanghai
 - 责任任务/分支: P1-NET-04，`codex/first-stable-release`
 - 性质: 生产代码缺陷，保留修复前组件失败记录
 
@@ -31,7 +31,7 @@ SDK 回归位于 `tests/GameAdapter/Program.cs`，名称为 `same-process reconn
 
 ## 验证结果
 
-隔离生产 Release 零警告零错误。实际双端必须观察农工扣料前退出、原主机仍保留同一预留、同进程重连后真实 Declined、终态回执与后续请求成功。本项实机尚未执行。
+隔离生产 Release 零警告零错误。XYSNET08 隔离双端主机 34200、农工 27596。农工通过真实设备菜单提交，取得 Reserved 后未扣料即原版退出。主机仍在线，离线农工黄豆 6、无日志，同一 Reserved 原文保持。同进程、同农工原版重连取得新连接和挑战，双方观察到 Declined、Cancelled 和同一旧回执，修订保持 0、无扣料。主机核对重新到站位后，农工真实菜单重新开工并领取，双方最终修订 2、黄豆 3、豆腐 2。两端零保存零错误，81 个存档文件和原 Mods 哈希一致，已退出并禁用。见 [实测](../validation/P1-native-inventory-2026-11-11.md#普通直连同进程重连后的撤销与继续生产)。
 
 ## 风险与回滚
 
@@ -39,4 +39,4 @@ SDK 回归位于 `tests/GameAdapter/Program.cs`，名称为 `same-process reconn
 
 ## 关联记录
 
-关联 [开发计划](../DEVELOPMENT_PLAN.md)、[主机协议](../P1_HOST_PROTOCOL.md) 和 [交接](../HANDOFF.md)。工作区变更待验收，尚未推送。
+关联修复 `b7ccecc1c7bdbd0c1c2e063cef04b1c31118f9c2)、[开发计划](../DEVELOPMENT_PLAN.md)、[主机协议](../P1_HOST_PROTOCOL.md) 和 [交接](../HANDOFF.md)。本地验证尚未推送。
