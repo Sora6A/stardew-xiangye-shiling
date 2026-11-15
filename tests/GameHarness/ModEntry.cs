@@ -28,6 +28,8 @@ public sealed class Config
     public bool VerifyLanHostCompetition { get; set; }
     public bool VerifyLanFarmhandMenu { get; set; }
     public bool VerifyLanLiveReconnect { get; set; }
+    public bool VerifyLanMenuEscape { get; set; }
+    public bool VerifyLanHostFirst { get; set; }
 }
 
 /// <summary>
@@ -80,6 +82,8 @@ public sealed class ModEntry : Mod
             helper.Events.GameLoop.GameLaunched += (_, _) => transaction.QueueStart();
             if (this.Settings.VerifyLanHostCompetition)
                 helper.Events.GameLoop.UpdateTicked += transaction.OnHostCompetitionTick;
+            if (this.Settings.VerifyLanMenuEscape || this.Settings.VerifyLanHostFirst)
+                helper.Events.GameLoop.UpdateTicked += transaction.OnMenuRaceTick;
             if (this.Settings.VerifyLanLiveReconnect)
             {
                 helper.Events.GameLoop.UpdateTicked += transaction.OnLiveReconnectTick;

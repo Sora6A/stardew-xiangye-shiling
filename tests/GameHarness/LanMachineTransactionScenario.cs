@@ -17,7 +17,7 @@ namespace GameHarness;
 /// Disposable loopback farm. The harness prepares one idle device and a farmhand's test stack, then observes
 /// the production request, reservation and native replication path. The harness never commits a transaction.
 /// </summary>
-internal sealed class LanMachineTransactionScenario
+internal sealed partial class LanMachineTransactionScenario
 {
     private const string Id = MachineService.Prefix;
     private const string HarnessId = Id + ".GameHarness";
@@ -94,6 +94,11 @@ internal sealed class LanMachineTransactionScenario
             "The host movement fixture requires the established farm stand and completed contention case.");
         this.VerifyFarmhandMenu = this.NormalLan || config.VerifyLanFarmhandMenu;
         this.VerifyLiveReconnect = config.VerifyLanLiveReconnect;
+        this.VerifyMenuEscape = config.VerifyLanMenuEscape;
+        this.VerifyHostFirst = config.VerifyLanHostFirst;
+        Require(!(this.VerifyMenuEscape && this.VerifyHostFirst) && (!(this.VerifyMenuEscape || this.VerifyHostFirst)
+            || (this.NormalLan && config.VerifyLanFarmhandMenu && !this.VerifyLiveReconnect && !this.VerifyHostCompetition && !this.VerifyHostMovement)),
+            "Choose one ordinary farmhand menu verification variant.");
         Require(!this.VerifyLiveReconnect || (this.NormalLan && config.VerifyLanFarmhandMenu && !this.VerifyHostCompetition),
             "Live reconnect requires the exact ordinary LAN farmhand menu fixture.");
         Require(this.NormalLan
@@ -142,9 +147,9 @@ internal sealed class LanMachineTransactionScenario
             Farmer host = Game1.MasterPlayer;
             Require(host.UniqueMultiplayerID == NativeNetworkBootstrap.HostId, "Unexpected native host.");
             if (this.Host && this.PreparedMachine is null)
-                this.PreparedMachine = PrepareMachine(host, requireHostStanding: this.VerifyHostCompetition);
-            if (this.VerifyHostCompetition && this.Before is null) this.ObserveCompetitionSetup(host);
-            if (this.Host && this.VerifyHostCompetition && !this.PrepareCompetingHost(host, this.PreparedMachine!)) return;
+                this.PreparedMachine = PrepareMachine(host, requireHostStanding: this.VerifyHostCompetition || this.VerifyHostFirst);
+            if ((this.VerifyHostCompetition || this.VerifyHostFirst) && this.Before is null) this.ObserveCompetitionSetup(host);
+            if (this.Host && (this.VerifyHostCompetition || this.VerifyHostFirst) && !this.PrepareCompetingHost(host, this.PreparedMachine!)) return;
             long expectedPeer = this.Host ? NativeNetworkBootstrap.ClientId : NativeNetworkBootstrap.HostId;
             var peer = this.Protocol.Peers.SingleOrDefault(peer => peer.PlayerId == expectedPeer && peer.IsHost != this.Host && peer.Ready);
             if (peer is null || (this.NormalLan && !this.VerifyCapability(host, peer))) return;
@@ -164,17 +169,24 @@ internal sealed class LanMachineTransactionScenario
             if (!this.Host && !this.Positioned) this.Positioned = PrepareOwner(owner, farm, machine);
             if (!ReferenceEquals(owner.currentLocation, farm) || owner.Tile != machine.TileLocation + Below) return;
             // The host puts its stack in place before publishing Ready; the client still has to see the native replica.
-            if (this.VerifyHostCompetition && (!ReferenceEquals(host.currentLocation, farm) || host.Tile != machine.TileLocation - Below
-                || host.Items[InputSlot] is not { QualifiedItemId: Soybean, Stack: 3, Quality: 0 })) return;
+            if ((this.VerifyHostCompetition || this.VerifyHostFirst) && (!ReferenceEquals(host.currentLocation, farm)
+                || host.Tile != machine.TileLocation - Below || (state!.Revision == 0
+                    && host.Items[InputSlot] is not { QualifiedItemId: Soybean, Stack: 3, Quality: 0 }))) return;
 
             if (this.HostInventory is null) this.HostInventory = Snapshot(host);
-            Require(Snapshot(host).SequenceEqual(this.HostInventory), "The production transaction changed host inventory.");
+            if (!this.VerifyHostFirst || state!.Revision == 0)
+                Require(Snapshot(host).SequenceEqual(this.HostInventory), "The production transaction changed host inventory.");
             if (this.Before is null)
             {
                 if (state.Revision != 0 || owner.Items[InputSlot] is not Item input || input.QualifiedItemId != Soybean || input.Stack != 6) return;
                 this.CaptureExpectedInventory(owner);
             }
             this.Record(host, owner, state);
+            if (this.VerifyHostFirst)
+            {
+                this.AdvanceHostFirst(host, owner, machine, state);
+                return;
+            }
             if (this.Host) this.AdvanceHost(host, owner, state);
             else this.AdvanceClient(host, owner, machine, state);
         }
@@ -569,9 +581,10 @@ internal sealed class LanMachineTransactionScenario
         }
         if (!this.CancellationSettled && this.CancelledPlan is Guid cancelled && state.Revision == 0 && this.IsSettled(host, owner, cancelled))
         {
-            Require(this.RefusalObserved && state.Batch is null && Snapshot(owner).SequenceEqual(this.Before!),
+            Require((this.VerifyMenuEscape || this.RefusalObserved) && state.Batch is null && Snapshot(owner).SequenceEqual(this.Before!),
                 "Live cancellation changed the initial device or inventory.");
             this.CancellationSettled = true;
+            if (this.VerifyMenuEscape) this.EscapeReceipt = host.modData[ReceiptKey];
             this.SendReady(0, afterCancellation: true);
             return;
         }
@@ -641,6 +654,12 @@ internal sealed class LanMachineTransactionScenario
             if (this.NormalLan)
             {
                 if (!this.CanOpenNormalFarmhandMenu()) return;
+                if (this.VerifyMenuEscape)
+                {
+                    if (!this.AdvanceMenuEscape(host, owner, machine, state, start)) return;
+                    this.Report();
+                    return;
+                }
                 if (this.VerifyLiveReconnect && this.InterruptedReceipt is null)
                 {
                     if (this.InterruptedRequest is null)
@@ -724,6 +743,11 @@ internal sealed class LanMachineTransactionScenario
             "The local farmhand must be free to open its real machine menu.");
         if (!machine.checkForAction(owner) || Game1.activeClickableMenu is not MachineMenu menu)
             throw new InvalidOperationException("Native checkForAction did not open the real farmhand machine menu.");
+        return this.ClickCurrentFarmhandMenu(menu, machine, owner, state, action);
+    }
+
+    private Request ClickCurrentFarmhandMenu(MachineMenu menu, SObject machine, Farmer owner, MachineState state, string action)
+    {
         string raw = machine.modData[MachineService.StateKey];
         Slot?[] before = Snapshot(owner);
         var pending = this.Helper.Reflection.GetField<Request?>(menu, "FarmhandRequest");
@@ -831,6 +855,7 @@ internal sealed class LanMachineTransactionScenario
 
     internal void OnMessage(ModMessageReceivedEventArgs args)
     {
+        if (this.ReadHostFirstSignal(args)) return;
         if (this.Host || this.Completed || this.Failure is not null || !this.Bootstrap.Ready || args.FromModID != HarnessId
             || args.FromPlayerID != NativeNetworkBootstrap.HostId || args.Type != ReadyType) return;
         try
@@ -911,6 +936,8 @@ internal sealed class LanMachineTransactionScenario
         this.VerifyFarmhandMenu, this.PendingMenuEvidence, this.FarmhandMenus, this.NormalLan, this.Capability, this.NativeMachineIntent,
         this.VerifyLiveReconnect, this.ReconnectStages, this.InitialCapability, this.InterruptedId, this.InterruptedRaw,
         this.InterruptedMachineRaw, this.InterruptedJournal, this.InterruptedReceipt, this.InterruptedCheck,
+        this.VerifyMenuEscape, this.EscapeRequest, this.EscapeJournal, this.EscapeReceipt, this.EscapeFeedback, this.EscapeCancelledFeedback,
+        this.VerifyHostFirst, this.HostFirstLocalStart, this.HostFirstRefused, this.HostFirstFeedback, this.HostFirstQueuedMessages,
         this.VerifyHostMovement, this.HostMovementChecks, this.Stages, this.Protocol, this.Lan
     });
 

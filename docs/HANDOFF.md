@@ -10,7 +10,9 @@
 
 XYSNET09 第三轮 Write 25428/28948、冷 Verify 33256/32352 已通过。两设备原版搬动、农工实际复制、普通就寝写盘、独立磁盘核对和冷载待领取均完成。旧两轮阻断为原版可跳过农场剧情，失败审计保留。四个隔离进程退出，冷载 89 文件一致。见[实测](validation/P1-native-inventory-2026-11-11.md#普通直连搬动后写盘与冷载)。
 
-冻结普通菜单 Escape 已启动主机 24288，随后主机先开工争用 `.local/p1-net08-normal-lan/{menu-escape,host-first}`。首个 Hello 来源缺失故障注入已编译、准备且禁用，候选 `.local/p1-net08-normal-lan/candidate-ready-hello`，夹具 `46035778…2FB6`，在其他游戏清理后执行 `run-ready-hello.ps1 -RunName ready-hello-retry -VerifyFarmhandMenu` 和冻结哈希参数。
+普通菜单 Escape 24288/20916 和主机先开工争用 12484/7248 均通过。原生取消不扣料且同菜单可重试；反向争用实际只有主机扣料，农工收到本地化拒绝。两轮零保存零错误，89 文件一致，退出并禁用。证据 `.local/p1-net08-normal-lan/{menu-escape,host-first}/audit.json`。
+
+首个 Hello 来源缺失故障注入 27520/24676 未通过完整审计。农工报告观测到 Ready 时缺少权限，随后双方获得同一原生能力标记，真实菜单开工、领取及双端库存一致。主机夹具验收反复抛出未确认预期重发错误，缺失主机故障报告，须检查主机记录与计时断言后再验。候选 `.local/p1-net08-normal-lan/candidate-ready-hello`，夹具 `46035778…2FB6`，证据 `.local/p1-net08-normal-lan/ready-hello-retry`。89 个存档文件与常用 Mods 保持一致，两进程退出且配置已禁用。BUG-2026-030 仍待完整原生验收，随后核对 P1 并接续 P2。仍未推送或发布。
 
 ## 2026-11-15 恢复 P1 验收
 
