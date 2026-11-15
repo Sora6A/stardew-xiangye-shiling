@@ -101,6 +101,38 @@ class CatalogTests(unittest.TestCase):
         item["implementation"] = "prototype"
         self.assertIn("P1 prototype item scope changed", catalog.validate(self.data))
 
+    def test_p2_activates_only_ready_recipe_and_items(self):
+        item = next(i for i in self.data["items"] if i["key"] == "SoyMilk")
+        recipe = next(r for r in self.data["recipes"] if r["output"]["item"] == item["qualifiedId"])
+        item["implementation"] = "active"
+        item["balance"].update(price=60, edibility=12)
+        item["prototypeArt"] = {"Texture": "Maps/springobjects", "SpriteIndex": 184}
+        recipe["implementation"] = "active"
+        recipe["inputs"][0]["quantity"] = 2
+        recipe["output"]["quantity"] = 1
+        recipe["minutes"] = 60
+        self.assertEqual([], catalog.validate(self.data))
+        files = catalog.generated_files(self.data)
+        runtime = catalog.json.loads(files[Path("src/XiangyeShiling/assets/machine-recipes.json")])
+        new_recipe = next(r for r in runtime if r["Id"] == recipe["id"])
+        self.assertEqual("BeanWorkshop", new_recipe["Machine"])
+        self.assertEqual(item["qualifiedId"], new_recipe["Output"]["ItemId"])
+        self.data["phase"] = "P1"
+        self.assertTrue(any("P2 content enabled in P1" in e for e in catalog.validate(self.data)))
+        self.data["phase"] = "P2"
+        item["implementation"] = "planned"
+        self.assertTrue(any("Active recipe output is disabled" in e for e in catalog.validate(self.data)))
+
+    def test_p2_smoker_recipe_requires_native_rule(self):
+        recipe = next(r for r in self.data["recipes"] if r["station"] == "fish_smoker")
+        recipe["implementation"] = "active"
+        self.assertTrue(any("Fish smoker recipe needs a native output rule" in e for e in catalog.validate(self.data)))
+
+    def test_original_p1_item_cannot_be_disabled(self):
+        item = next(i for i in self.data["items"] if i["key"] == "Tofu")
+        item["implementation"] = "planned"
+        self.assertIn("P1 entry cannot be disabled: Tofu", catalog.validate(self.data))
+
     def test_generated_machine_recipe_matches_catalog_quantities(self):
         files = catalog.generated_files(self.data)
         runtime = catalog.json.loads(files[Path("src/XiangyeShiling/assets/machine-recipes.json")])

@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import re
 import sys
-from prototype import generate as generate_prototype
+from prototype import CUSTOM_MACHINES, LIVE_IMPLEMENTATIONS, generate as generate_content
 
 ROOT = Path(__file__).resolve().parents[1]
 PACK = Path("content/XiangyeShiling.Content")
@@ -17,6 +17,8 @@ GROUP_COUNTS = {
     "prepared_soy": 3, "fermented": 4, "smoked": 2, "dish": 13, "seed": 2, "machine": 2,
 }
 STATION_COUNTS = {"bean_workshop": 6, "fermentation_crock": 4, "fish_smoker": 2, "kitchen": 16, "crafting": 2}
+P1_ITEMS = {"Soybean", "ChineseToon", "Tofu", "SoySauce", "ToonTofu", "BeanWorkshop", "FermentationCrock"}
+P1_RECIPES = {f"{NAMESPACE}_Recipe_{key}" for key in ("Tofu", "SoySauce", "ToonTofu", "BeanWorkshop", "FermentationCrock")}
 
 
 def unique_object(pairs):
@@ -42,6 +44,7 @@ def validate(catalog: dict) -> list[str]:
     require(catalog["schemaVersion"] == 1, "Unsupported schemaVersion")
     require(catalog["designVersion"] == "0.4", "Design baseline must be 0.4")
     require(catalog["namespace"] == NAMESPACE, "Stable namespace changed")
+    require(catalog["phase"] in {"P1", "P2"}, "Unsupported catalog phase")
     items, recipes = catalog["items"], catalog["recipes"]
     require(Counter(i["group"] for i in items) == GROUP_COUNTS, "Frozen item counts changed")
     require(Counter(r["station"] for r in recipes) == STATION_COUNTS, "Frozen recipe counts changed")
@@ -52,9 +55,23 @@ def validate(catalog: dict) -> list[str]:
     by_recipe = {r["id"]: r for r in recipes}
     vanilla = {i["item"] for i in catalog["vanillaItems"]}
     known = set(by_id) | vanilla
+    live_items = {i["qualifiedId"] for i in items if i["implementation"] in LIVE_IMPLEMENTATIONS}
+    live_recipes = {r["id"] for r in recipes if r["implementation"] in LIVE_IMPLEMENTATIONS}
+    textures = {}
+
+    def check_implementation(implementation, key, prototype_keys, kind):
+        require(implementation in LIVE_IMPLEMENTATIONS | {"planned"}, f"Unknown implementation: {key}")
+        if implementation == "prototype":
+            require(key in prototype_keys, f"P1 prototype {kind} scope changed")
+        if key in prototype_keys:
+            require(implementation in LIVE_IMPLEMENTATIONS, f"P1 entry cannot be disabled: {key}")
+        if implementation == "active":
+            require(catalog["phase"] == "P2", f"P2 content enabled in P1: {key}")
+
     consumed = {entry["item"] for r in recipes for entry in r["inputs"]}
     for item in items:
         label = item["key"]
+        check_implementation(item["implementation"], label, P1_ITEMS, "item")
         require(re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", label) is not None, f"Invalid item key: {label}")
         require(item["id"] == f"{NAMESPACE}_{label}", f"ID/namespace mismatch: {label}")
         prefix = "(BC)" if item["group"] == "machine" else "(O)"
@@ -65,11 +82,19 @@ def validate(catalog: dict) -> list[str]:
                 require(bool(item["text"][locale][field].strip()), f"Missing {locale} {field}: {label}")
         require(bool(item["sources"]), f"Missing source: {label}")
         art = item["art"]
-        if item["implementation"] == "prototype":
+        if item["qualifiedId"] in live_items:
             balance = item["balance"]
-            require(type(balance["price"]) is int and balance["price"] >= 0, f"Missing prototype price: {label}")
-            require(item["group"] == "machine" or type(balance["edibility"]) is int, f"Missing prototype edibility: {label}")
-            require("prototypeArt" in item, f"Missing prototype placeholder: {label}")
+            require(type(balance["price"]) is int and balance["price"] >= 0, f"Missing active item price: {label}")
+            require(item["group"] == "machine" or type(balance["edibility"]) is int, f"Missing active item edibility: {label}")
+            if art["status"] == "ready":
+                path = art.get("file", "")
+                require(re.fullmatch(r"assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.png", path) is not None,
+                        f"Invalid content art file: {label}")
+                require(textures.setdefault(art["asset"], path) == path, f"Conflicting texture files: {label}")
+            else:
+                placeholder = item.get("prototypeArt", {})
+                require(bool(placeholder.get("Texture")) and type(placeholder.get("SpriteIndex")) is int
+                        and placeholder["SpriteIndex"] >= 0, f"Missing temporary item art: {label}")
         require(art["asset"].startswith(f"Mods/{NAMESPACE}/"), f"Art namespace mismatch: {label}")
         require(art["spriteIndex"] >= 0, f"Invalid sprite: {label}")
         require(art["size"] == ([16, 32] if prefix == "(BC)" else [16, 16]), f"Invalid sprite size: {label}")
@@ -94,6 +119,8 @@ def validate(catalog: dict) -> list[str]:
     require(len(sprites) == len(set(sprites)), "Conflicting reserved sprites")
     for recipe in recipes:
         label = recipe["id"]
+        check_implementation(recipe["implementation"], label, P1_RECIPES, "recipe")
+        is_live = label in live_recipes
         require(label.startswith(NAMESPACE + "_Recipe_"), f"Recipe namespace mismatch: {label}")
         require(recipe["output"]["item"] in by_id, f"Unknown output: {label}")
         require(bool(recipe["inputs"]), f"Recipe without inputs: {label}")
@@ -103,18 +130,31 @@ def validate(catalog: dict) -> list[str]:
             require(entry["item"] in known, f"Unknown input {entry['item']}: {label}")
         for value in [e["quantity"] for e in recipe["inputs"]] + [recipe["output"]["quantity"]]:
             require(value is None or (type(value) is int and value > 0), f"Invalid quantity: {label}")
-            if recipe["implementation"] != "planned":
+            if is_live:
                 require(value is not None, f"Active recipe has unset quantity: {label}")
-        if recipe["station"] in {"bean_workshop", "fermentation_crock"}:
-            expected = "BeanWorkshop" if recipe["station"] == "bean_workshop" else "FermentationCrock"
+        if recipe["station"] in CUSTOM_MACHINES:
+            expected = CUSTOM_MACHINES[recipe["station"]]
             require(recipe["machine"] == f"(BC){NAMESPACE}_{expected}", f"Wrong machine: {label}")
+        if recipe["station"] == "fish_smoker":
+            require(recipe["machine"] == "(BC)FishSmoker", f"Wrong machine: {label}")
+            require(not is_live, f"Fish smoker recipe needs a native output rule: {label}")
         if recipe["station"] in {"kitchen", "crafting"}:
             shop = "Saloon" if recipe["station"] == "kitchen" else "Carpenter"
             require(recipe["unlock"]["kind"] == "shop-recipe" and recipe["unlock"]["shop"] == shop, f"Wrong recipe unlock: {label}")
+            require(recipe["machine"] is None, f"Non-machine recipe has a machine: {label}")
+            if is_live:
+                output = by_id.get(recipe["output"]["item"], {})
+                require(output.get("internalName") == label, f"Recipe purchase name mismatch: {label}")
+                price = recipe["unlock"].get("price")
+                require(type(price) is int and price > 0, f"Active recipe has no shop price: {label}")
         minutes = recipe["minutes"]
         require(minutes is None or (type(minutes) is int and minutes >= 0), f"Invalid duration: {label}")
-        if recipe["implementation"] != "planned" and recipe["machine"]:
-            require(minutes is not None and minutes > 0, f"Active machine has no duration: {label}")
+        if is_live:
+            require(recipe["output"]["item"] in live_items, f"Active recipe output is disabled: {label}")
+            require(set(input_ids) <= live_items | vanilla, f"Active recipe input is disabled: {label}")
+            if recipe["machine"]:
+                require(type(minutes) is int and minutes > 0, f"Active machine has no duration: {label}")
+                require(recipe["machine"] in live_items or recipe["machine"] == "(BC)FishSmoker", f"Active machine is disabled: {label}")
     # Detect closed production loops with no obtainable starting materials.
     reachable = set(vanilla)
     reachable.update(i["qualifiedId"] for i in items if any(s["kind"] in {"shop", "forage"} for s in i["sources"]))
@@ -130,20 +170,13 @@ def validate(catalog: dict) -> list[str]:
         if len(reachable) == before:
             break
     require(set(by_id) <= reachable, f"Unreachable items: {sorted(set(by_id) - reachable)}")
-    expected_items = {"Soybean", "ChineseToon", "Tofu", "SoySauce", "ToonTofu", "BeanWorkshop", "FermentationCrock"}
-    require({i["key"] for i in items if i["implementation"] == "prototype"} == expected_items, "P1 prototype item scope changed")
-    expected_recipes = {f"{NAMESPACE}_Recipe_{k}" for k in ("Tofu", "SoySauce", "ToonTofu", "BeanWorkshop", "FermentationCrock")}
-    require({r["id"] for r in recipes if r["implementation"] == "prototype"} == expected_recipes, "P1 prototype recipe scope changed")
-    for recipe in recipes:
-        if recipe["implementation"] == "prototype" and recipe["station"] in {"crafting", "kitchen"}:
-            require(by_id[recipe["output"]["item"]].get("internalName") == recipe["id"], f"Recipe purchase name mismatch: {recipe['id']}")
     for shop, stock in catalog.get("prototypeShops", {}).items():
         require(shop in {"SeedShop", "Saloon", "Carpenter"}, "Unknown prototype shop")
         for row in stock:
-            require(row["ItemId"] in known, f"Unknown shop item: {row['ItemId']}")
+            require(row["ItemId"] in live_items | vanilla, f"Unavailable prototype shop item: {row['ItemId']}")
             require(type(row["Price"]) is int and row["Price"] > 0, "Invalid prototype shop price")
             if row.get("IsRecipe"):
-                matching = [r for r in recipes if r["output"]["item"] == row["ItemId"] and r["id"] in expected_recipes]
+                matching = [r for r in recipes if r["output"]["item"] == row["ItemId"] and r["id"] in P1_RECIPES]
                 require(len(matching) == 1 and matching[0]["unlock"].get("shop") == shop
                         and matching[0]["unlock"].get("price") == row["Price"], "Prototype recipe stock differs from unlock")
             else:
@@ -163,9 +196,11 @@ def generated_files(catalog: dict) -> dict[Path, str]:
     for locale, filename in (("en", "default"), ("zh", "zh")):
         strings = {i[f"{field}Key"]: i["text"][locale][field] for i in items for field in ("name", "description")}
         files[PACK / "i18n" / f"{filename}.json"] = json.dumps(strings, ensure_ascii=False, indent=2) + "\n"
+    enabled_items = sum(i["implementation"] in LIVE_IMPLEMENTATIONS for i in items)
+    enabled_recipes = sum(r["implementation"] in LIVE_IMPLEMENTATIONS for r in recipes)
     lines = ["# 内容登记表", "", "由 `data/catalog.json` 生成；修改清单后运行 `python tools/catalog.py --write`。",
              "", "设计基线 0.4；40 个物品 ID、30 个配方 ID。清单是预留范围，不代表已实现。",
-             "P1 激活 7 个物品与 5 个配方，仅用于两条单人原型流程；其他 planned 项不注入游戏。`null` 表示待定，不能作为运行时数据。",
+             f"当前阶段 {catalog['phase']}，游戏数据已启用 {enabled_items} 个物品和 {enabled_recipes} 个配方。`prototype` 为沿用原型条目，`active` 为已启用的 P2 条目，`planned` 仅登记。",
              "料理和熟食可作为终点。煤炭与设备制作材料为待实机核对的暂定方案。", "",
              "## ID 与本地化", "", f"物品：`{NAMESPACE}_<Key>`；配方：`{NAMESPACE}_Recipe_<Key>`。",
              "普通物品使用 `(O)` 前缀，设备使用 `(BC)`；数据表键不带此前缀。显示名不参与 ID。",
@@ -190,12 +225,13 @@ def generated_files(catalog: dict) -> dict[Path, str]:
             uses += ["加工 " + name(r["output"]["item"]) for r in recipes if r["machine"] == item["qualifiedId"]]
         uses += item["terminalUses"]
         art = item["art"]
-        lines.append(f"| `{item['key']}` | {name(item['qualifiedId'])} | {item['group']} | {'；'.join(source_text)} | {'、'.join(uses)} | {art['asset'].rsplit('/', 1)[1]} #{art['spriteIndex']}，待绘制 | {item['implementation']} |")
-    lines += ["", "## 配方", "", "prototype 项已有暂定数量与工时（见 JSON）；其余 planned 项待平衡。机器菜单配方随设备可用，图纸/菜谱由商店学习。",
-              "", "| 配方 ID 后缀 | 设施 | 输入 | 输出 | 解锁 |", "|---|---|---|---|---|"]
+        art_status = "已绘制" if art["status"] == "ready" else "待绘制"
+        lines.append(f"| `{item['key']}` | {name(item['qualifiedId'])} | {item['group']} | {'；'.join(source_text)} | {'、'.join(uses)} | {art['asset'].rsplit('/', 1)[1]} #{art['spriteIndex']}，{art_status} | {item['implementation']} |")
+    lines += ["", "## 配方", "", "数量和工时见清单 JSON。机器菜单配方随设备可用，图纸和菜谱由商店学习。",
+              "", "| 配方 ID 后缀 | 设施 | 输入 | 输出 | 解锁 | 状态 |", "|---|---|---|---|---|---|"]
     for recipe in recipes:
         unlock = recipe["unlock"]
-        lines.append(f"| `{recipe['id'].split('_Recipe_')[1]}` | {recipe['station']} | {'＋'.join(name(e['item']) for e in recipe['inputs'])} | {name(recipe['output']['item'])} | {unlock.get('shop', '随设备可用')} |")
+        lines.append(f"| `{recipe['id'].split('_Recipe_')[1]}` | {recipe['station']} | {'＋'.join(name(e['item']) for e in recipe['inputs'])} | {name(recipe['output']['item'])} | {unlock.get('shop', '随设备可用')} | {recipe['implementation']} |")
     lines += ["", "## 未锁定项", "", "- 新美术、作物阶段、机器状态图；P0 黄豆暂用原版绿豆图标（仅资源引用，不分发原版图片）。",
               "- 分类/职业加成、赠礼、收集与完成度行为须在 P3 核查；P0 黄豆暂不计入出货收集。",
               "- 生长天数、补货数量、价格、食用恢复量、每批产出与耗时。",
@@ -204,7 +240,7 @@ def generated_files(catalog: dict) -> dict[Path, str]:
     lines += ["## P1 暂定供给", "", "皮埃尔全年限量供应黄豆/小麦，格斯限量供应香椿并售香椿拌豆腐菜谱，罗宾售两台设备图纸。",
               "这些库存为原型补给，不代表 P2 的作物、春季采集和季外补货规则已经实现。数值见 catalog.prototypeShops。", ""]
     files[Path("docs/CONTENT_CATALOG.md")] = "\n".join(lines)
-    files.update(generate_prototype(catalog))
+    files.update(generate_content(catalog))
     return files
 
 
@@ -240,9 +276,12 @@ def check_repository(root: Path = ROOT) -> list[str]:
     if f"<Version>{code['Version']}</Version>" not in project:
         errors.append("Project/manifest version mismatch")
     changes = read_json(root / PACK / "content.json")["Changes"]
-    # The generated-file comparison above validates every prototype patch and runtime recipe,
+    # The generated-file comparison above validates every active patch and runtime recipe,
     # including shop/crafting identity; don't maintain a second hand-written content source.
     strings = read_json(root / PACK / "i18n/default.json")
+    for change in changes:
+        if change["Action"] == "Load" and not (root / PACK / change["FromFile"]).is_file():
+            errors.append(f"Missing generated content asset: {change['FromFile']}")
     for key in re.findall(r"\{\{i18n:\s*([^} ]+)\s*\}\}", json.dumps(changes)):
         if key not in strings:
             errors.append(f"Missing CP translation: {key}")

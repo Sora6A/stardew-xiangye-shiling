@@ -3,7 +3,7 @@
 由 `data/catalog.json` 生成；修改清单后运行 `python tools/catalog.py --write`。
 
 设计基线 0.4；40 个物品 ID、30 个配方 ID。清单是预留范围，不代表已实现。
-P1 激活 7 个物品与 5 个配方，仅用于两条单人原型流程；其他 planned 项不注入游戏。`null` 表示待定，不能作为运行时数据。
+当前阶段 P2，游戏数据已启用 7 个物品和 5 个配方。`prototype` 为沿用原型条目，`active` 为已启用的 P2 条目，`planned` 仅登记。
 料理和熟食可作为终点。煤炭与设备制作材料为待实机核对的暂定方案。
 
 ## ID 与本地化
@@ -59,40 +59,40 @@ P1 激活 7 个物品与 5 个配方，仅用于两条单人原型流程；其�
 
 ## 配方
 
-prototype 项已有暂定数量与工时（见 JSON）；其余 planned 项待平衡。机器菜单配方随设备可用，图纸/菜谱由商店学习。
+数量和工时见清单 JSON。机器菜单配方随设备可用，图纸和菜谱由商店学习。
 
-| 配方 ID 后缀 | 设施 | 输入 | 输出 | 解锁 |
-|---|---|---|---|---|
-| `SoyMilk` | bean_workshop | 黄豆 | 豆浆 | 随设备可用 |
-| `TofuPudding` | bean_workshop | 黄豆 | 豆花 | 随设备可用 |
-| `Tofu` | bean_workshop | 黄豆 | 豆腐 | 随设备可用 |
-| `Yuba` | bean_workshop | 黄豆 | 油豆皮 | 随设备可用 |
-| `TofuSheets` | bean_workshop | 黄豆 | 千张 | 随设备可用 |
-| `DriedTofu` | bean_workshop | 黄豆 | 豆干 | 随设备可用 |
-| `SoySauce` | fermentation_crock | 黄豆＋Wheat | 酱油 | 随设备可用 |
-| `SoybeanPaste` | fermentation_crock | 黄豆 | 黄豆酱 | 随设备可用 |
-| `SichuanDouban` | fermentation_crock | 蚕豆＋HotPepper | 川式豆瓣 | 随设备可用 |
-| `SourCabbage` | fermentation_crock | 大白菜 | 酸菜 | 随设备可用 |
-| `SmokedPork` | fish_smoker | 猪肉＋Coal | 腊肉 | 随设备可用 |
-| `SmokedTofu` | fish_smoker | 豆干＋Coal | 熏豆干 | 随设备可用 |
-| `VegetarianChicken` | kitchen | 千张＋酱油＋Oil | 素鸡 | Saloon |
-| `FriedTofu` | kitchen | 豆腐＋Oil | 油豆腐 | Saloon |
-| `OrchidTofu` | kitchen | 豆干＋酱油＋Oil | 兰花干 | Saloon |
-| `StirFriedBamboo` | kitchen | 竹笋＋Oil | 清炒竹笋 | Saloon |
-| `ScallionEggs` | kitchen | 野葱＋Egg | 野葱煎蛋 | Saloon |
-| `ToonEggs` | kitchen | 香椿＋Egg | 香椿炒蛋 | Saloon |
-| `MugwortRiceCake` | kitchen | 艾草＋Rice＋Sugar | 艾草米糕 | Saloon |
-| `ToonTofu` | kitchen | 香椿＋豆腐 | 香椿拌豆腐 | Saloon |
-| `BambooSmokedPork` | kitchen | 竹笋＋腊肉 | 竹笋炒腊肉 | Saloon |
-| `ScallionSmokedTofu` | kitchen | 野葱＋熏豆干 | 野葱炒熏干 | Saloon |
-| `SourCabbageTofu` | kitchen | 酸菜＋豆腐 | 酸菜炖豆腐 | Saloon |
-| `BraisedBamboo` | kitchen | 竹笋＋酱油＋Oil | 油焖笋 | Saloon |
-| `SaucedTofu` | kitchen | 豆干＋黄豆酱 | 酱香豆干 | Saloon |
-| `MapoTofu` | kitchen | 豆腐＋川式豆瓣＋猪肉 | 麻婆豆腐 | Saloon |
-| `TofuPorkRoll` | kitchen | 千张＋猪肉＋酱油 | 千张肉卷 | Saloon |
-| `YubaSoup` | kitchen | 油豆皮＋Egg | 豆皮汤 | Saloon |
-| `BeanWorkshop` | crafting | Wood＋Stone＋CopperBar | 豆坊 | Carpenter |
-| `FermentationCrock` | crafting | Wood＋Stone | 发酵缸 | Carpenter |
+| 配方 ID 后缀 | 设施 | 输入 | 输出 | 解锁 | 状态 |
+|---|---|---|---|---|---|
+| `SoyMilk` | bean_workshop | 黄豆 | 豆浆 | 随设备可用 | planned |
+| `TofuPudding` | bean_workshop | 黄豆 | 豆花 | 随设备可用 | planned |
+| `Tofu` | bean_workshop | 黄豆 | 豆腐 | 随设备可用 | prototype |
+| `Yuba` | bean_workshop | 黄豆 | 油豆皮 | 随设备可用 | planned |
+| `TofuSheets` | bean_workshop | 黄豆 | 千张 | 随设备可用 | planned |
+| `DriedTofu` | bean_workshop | 黄豆 | 豆干 | 随设备可用 | planned |
+| `SoySauce` | fermentation_crock | 黄豆＋Wheat | 酱油 | 随设备可用 | prototype |
+| `SoybeanPaste` | fermentation_crock | 黄豆 | 黄豆酱 | 随设备可用 | planned |
+| `SichuanDouban` | fermentation_crock | 蚕豆＋HotPepper | 川式豆瓣 | 随设备可用 | planned |
+| `SourCabbage` | fermentation_crock | 大白菜 | 酸菜 | 随设备可用 | planned |
+| `SmokedPork` | fish_smoker | 猪肉＋Coal | 腊肉 | 随设备可用 | planned |
+| `SmokedTofu` | fish_smoker | 豆干＋Coal | 熏豆干 | 随设备可用 | planned |
+| `VegetarianChicken` | kitchen | 千张＋酱油＋Oil | 素鸡 | Saloon | planned |
+| `FriedTofu` | kitchen | 豆腐＋Oil | 油豆腐 | Saloon | planned |
+| `OrchidTofu` | kitchen | 豆干＋酱油＋Oil | 兰花干 | Saloon | planned |
+| `StirFriedBamboo` | kitchen | 竹笋＋Oil | 清炒竹笋 | Saloon | planned |
+| `ScallionEggs` | kitchen | 野葱＋Egg | 野葱煎蛋 | Saloon | planned |
+| `ToonEggs` | kitchen | 香椿＋Egg | 香椿炒蛋 | Saloon | planned |
+| `MugwortRiceCake` | kitchen | 艾草＋Rice＋Sugar | 艾草米糕 | Saloon | planned |
+| `ToonTofu` | kitchen | 香椿＋豆腐 | 香椿拌豆腐 | Saloon | prototype |
+| `BambooSmokedPork` | kitchen | 竹笋＋腊肉 | 竹笋炒腊肉 | Saloon | planned |
+| `ScallionSmokedTofu` | kitchen | 野葱＋熏豆干 | 野葱炒熏干 | Saloon | planned |
+| `SourCabbageTofu` | kitchen | 酸菜＋豆腐 | 酸菜炖豆腐 | Saloon | planned |
+| `BraisedBamboo` | kitchen | 竹笋＋酱油＋Oil | 油焖笋 | Saloon | planned |
+| `SaucedTofu` | kitchen | 豆干＋黄豆酱 | 酱香豆干 | Saloon | planned |
+| `MapoTofu` | kitchen | 豆腐＋川式豆瓣＋猪肉 | 麻婆豆腐 | Saloon | planned |
+| `TofuPorkRoll` | kitchen | 千张＋猪肉＋酱油 | 千张肉卷 | Saloon | planned |
+| `YubaSoup` | kitchen | 油豆皮＋Egg | 豆皮汤 | Saloon | planned |
+| `BeanWorkshop` | crafting | Wood＋Stone＋CopperBar | 豆坊 | Carpenter | prototype |
+| `FermentationCrock` | crafting | Wood＋Stone | 发酵缸 | Carpenter | prototype |
 
 ## 未锁定项
 

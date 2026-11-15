@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "designVersion": "0.4",
   "namespace": "Sora6A.XiangyeShiling",
-  "phase": "P1",
+  "phase": "P2",
   "notes": [
-    "P1 single-player prototype only: seven items, five recipes; remaining content stays planned.",
+    "P2 enables frozen content in reviewed groups. P1 items and recipes stay available while later entries are planned.",
     "Null numeric values require P1/P2 balancing; they are never executable recipe values.",
     "Coal is a proposed reuse of vanilla smoker fuel and must be checked in P2.",
     "Machine crafting inputs are provisional; Egg currently reserves the normal white egg ID, with category/large-egg support pending P1.",
