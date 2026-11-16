@@ -96,6 +96,10 @@ internal sealed partial class LanMachineTransactionScenario
         this.VerifyLiveReconnect = config.VerifyLanLiveReconnect;
         this.VerifyMenuEscape = config.VerifyLanMenuEscape;
         this.VerifyHostFirst = config.VerifyLanHostFirst;
+        this.VerifyLatePage = config.NativeRecoveryPhase == LatePagePhase;
+        Require(!this.VerifyLatePage || (this.NormalLan && config.VerifyLanFarmhandMenu && !this.VerifyLiveReconnect
+            && !this.VerifyHostCompetition && !this.VerifyHostMovement && !this.VerifyMenuEscape && !this.VerifyHostFirst),
+            "Late-page production requires the ordinary farmhand menu fixture in isolation.");
         Require(!(this.VerifyMenuEscape && this.VerifyHostFirst) && (!(this.VerifyMenuEscape || this.VerifyHostFirst)
             || (this.NormalLan && config.VerifyLanFarmhandMenu && !this.VerifyLiveReconnect && !this.VerifyHostCompetition && !this.VerifyHostMovement)),
             "Choose one ordinary farmhand menu verification variant.");
@@ -119,7 +123,8 @@ internal sealed partial class LanMachineTransactionScenario
         if (!this.Watch.IsRunning || this.Completed || this.Failure is not null) return;
         try
         {
-            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(3), "Timed out waiting for production transaction or receipt settlement.");
+            Require(this.Watch.Elapsed < TimeSpan.FromMinutes(this.VerifyLatePage ? 6 : 3),
+                "Timed out waiting for production transaction, native clock or receipt settlement.");
             if (this.ReturnedForReconnect && !this.RejoinStarted)
             {
                 string path = Path.Combine(this.Helper.DirectoryPath, "lan-live-reconnect.txt");
@@ -166,7 +171,7 @@ internal sealed partial class LanMachineTransactionScenario
             Require(state!.InstanceId == this.InstanceId, "The native machine instance changed.");
             if (this.VerifyLiveReconnect && this.InitialCapability is not null
                 && !this.ObserveRejoinedPeer(host, owner, farm, machine, state!)) return;
-            if (!this.Host && !this.Positioned) this.Positioned = PrepareOwner(owner, farm, machine);
+            if (!this.Host && !this.Positioned) this.Positioned = PrepareOwner(owner, farm, machine, this.SelectedOutput);
             if (!ReferenceEquals(owner.currentLocation, farm) || owner.Tile != machine.TileLocation + Below) return;
             // The host puts its stack in place before publishing Ready; the client still has to see the native replica.
             if ((this.VerifyHostCompetition || this.VerifyHostFirst) && (!ReferenceEquals(host.currentLocation, farm)
@@ -523,10 +528,10 @@ internal sealed partial class LanMachineTransactionScenario
         }
     }
 
-    internal static bool PrepareOwner(Farmer owner, GameLocation farm, SObject machine)
+    internal static bool PrepareOwner(Farmer owner, GameLocation farm, SObject machine, string output = Tofu)
     {
         Require(ReferenceEquals(owner, Game1.player) && owner.Items.Count > InputSlot && owner.Items[InputSlot] is null
-            && owner.Items.CountId(Soybean) == 0 && owner.Items.CountId(Tofu) == 0 && !owner.modData.ContainsKey(JournalKey),
+            && owner.Items.CountId(Soybean) == 0 && owner.Items.CountId(output) == 0 && !owner.modData.ContainsKey(JournalKey),
             "The dedicated farmhand must start with an empty test slot and no recipe items or journal.");
         var standing = machine.TileLocation + Below;
         if (!ReferenceEquals(owner.currentLocation, farm))
@@ -545,13 +550,13 @@ internal sealed partial class LanMachineTransactionScenario
     {
         this.Before = Snapshot(owner);
         Require(this.Before[InputSlot] is { Id: Soybean, Stack: 6, Quality: 0 } && owner.Items.CountId(Soybean) == 6
-            && owner.Items.CountId(Tofu) == 0 && !owner.modData.ContainsKey(JournalKey), "Invalid prepared farmhand inventory.");
+            && owner.Items.CountId(this.SelectedOutput) == 0 && !owner.modData.ContainsKey(JournalKey), "Invalid prepared farmhand inventory.");
         this.Started = this.Before.ToArray();
-        this.Started[InputSlot] = this.Before[InputSlot]! with { Stack = 3 };
+        this.Started[InputSlot] = this.Before[InputSlot]! with { Stack = 6 - this.StartDebit };
         this.Collected = this.Started.ToArray();
         int free = Array.FindIndex(this.Collected, slot => slot is null);
         Require(free >= 0, "The farmhand needs an empty slot for the collection.");
-        this.Collected[free] = Describe(ItemRegistry.Create(Tofu, 2));
+        this.Collected[free] = Describe(ItemRegistry.Create(this.SelectedOutput, 2));
     }
 
     private void AdvanceHost(Farmer host, Farmer owner, MachineState state)
@@ -591,15 +596,22 @@ internal sealed partial class LanMachineTransactionScenario
         if (state.Revision == 1 && this.PreparedRevision == 0 && this.IsSettled(host, owner, state.LastRequestId))
         {
             this.VerifyStarted(owner, state);
-            // Prepare a ready batch by advancing only the host's clock. The production code still determines readiness.
-            long delta = state.Batch!.ReadyAt - MachineService.Now();
-            if (delta > 0)
+            if (this.VerifyLatePage)
             {
-                int now = Game1.timeOfDay / 100 * 60 + Game1.timeOfDay % 100;
-                int ready = checked(now + (int)delta);
-                Require(ready < 1440, "Refuse to move the fixture clock across midnight.");
-                Game1.timeOfDay = ready / 60 * 100 + ready % 60;
-                Game1.netWorldState.Value.UpdateFromGame1();
+                if (!this.ObserveLatePageHostClock(state.Batch!)) return;
+            }
+            else
+            {
+                // The original short transaction fixtures prepare a ready batch by advancing the host clock.
+                long delta = state.Batch!.ReadyAt - MachineService.Now();
+                if (delta > 0)
+                {
+                    int now = Game1.timeOfDay / 100 * 60 + Game1.timeOfDay % 100;
+                    int ready = checked(now + (int)delta);
+                    Require(ready < 1440, "Refuse to move the fixture clock across midnight.");
+                    Game1.timeOfDay = ready / 60 * 100 + ready % 60;
+                    Game1.netWorldState.Value.UpdateFromGame1();
+                }
             }
             this.ReadyClock = Game1.timeOfDay;
             this.SendReady(1);
@@ -752,7 +764,8 @@ internal sealed partial class LanMachineTransactionScenario
         Slot?[] before = Snapshot(owner);
         var pending = this.Helper.Reflection.GetField<Request?>(menu, "FarmhandRequest");
         var feedback = this.Helper.Reflection.GetField<string>(menu, "Feedback");
-        Point button = this.Helper.Reflection.GetMethod(menu, "ActionBounds").Invoke<Rectangle>(0).Center;
+        int row = this.VerifyLatePage ? this.NavigateLatePageMenu(menu, machine, owner, state, action) : 0;
+        Point button = this.Helper.Reflection.GetMethod(menu, "ActionBounds").Invoke<Rectangle>(row).Center;
         menu.receiveLeftClick(button.X, button.Y);
         Request request = pending.GetValue() ?? throw new InvalidOperationException("The actual menu did not queue its request.");
         string waiting = feedback.GetValue();
@@ -760,6 +773,9 @@ internal sealed partial class LanMachineTransactionScenario
             && request.ExpectedRevision == state.Revision && !menu.readyToClose()
             && waiting == this.Translate("machine.network-awaiting"),
             "The real menu did not show its bound asynchronous pending state.");
+        if (this.VerifyLatePage)
+            Require(this.Helper.Reflection.GetField<string?>(menu, "FarmhandRecipe").GetValue()
+                == (action == "Start" ? this.SelectedRecipe : null), "The real menu queued a different recipe or a non-collection action.");
         menu.receiveLeftClick(button.X, button.Y);
         Require(ReferenceEquals(pending.GetValue(), request) && feedback.GetValue() == waiting
             && machine.modData.GetValueOrDefault(MachineService.StateKey) == raw && before.SequenceEqual(Snapshot(owner)),
@@ -804,13 +820,15 @@ internal sealed partial class LanMachineTransactionScenario
         this.Helper.Reflection.GetField<ITranslationHelper>(this.Service!, "Text").GetValue().Get(key).ToString();
 
     private void VerifyStarted(Farmer owner, MachineState state) => Require(state.Revision == 1
-        && state.Batch is { RecipeId: Recipe, Output: { ItemId: Tofu, Quantity: 2 } }
-        && state.Batch.Inputs.Sum(input => input.Quantity) == 3 && state.LastActorId == owner.UniqueMultiplayerID
-        && Snapshot(owner).SequenceEqual(this.Started!), "Start did not debit exactly three soybeans and advance once.");
+        && state.Batch is { Output: { Quantity: 2, Quality: 0 } } batch && batch.RecipeId == this.SelectedRecipe
+        && batch.Output.ItemId == this.SelectedOutput && batch.Inputs.Sum(input => input.Quantity) == this.StartDebit
+        && batch.Inputs.All(input => input.Slot == InputSlot && input.ItemId == Soybean && input.Quality == 0)
+        && (!this.VerifyLatePage || batch.ReadyAt - batch.StartedAt == LatePageMinutes) && state.LastActorId == owner.UniqueMultiplayerID
+        && Snapshot(owner).SequenceEqual(this.Started!), "Start did not debit exactly the selected recipe or advance once.");
 
     private void VerifyCollected(Farmer owner, MachineState state) => Require(state.Revision == 2 && state.Batch is null
         && state.LastActorId == owner.UniqueMultiplayerID && Snapshot(owner).SequenceEqual(this.Collected!),
-        "Collect did not credit exactly two tofu and clear the batch once.");
+        "Collect did not credit exactly two of the selected output and clear the batch once.");
 
     private bool IsSettled(Farmer host, Farmer owner, Guid? request) => request is Guid id
         && !host.modData.ContainsKey(ReservationKey) && !owner.modData.ContainsKey(JournalKey)
@@ -907,8 +925,9 @@ internal sealed partial class LanMachineTransactionScenario
         }
         string? journal = owner.modData.GetValueOrDefault(JournalKey);
         string? receipt = host.modData.GetValueOrDefault(ReceiptKey);
+        if (this.VerifyLatePage) this.RecordLatePageSettlement(host, owner, state, receipt);
         var evidence = new Evidence(state.Revision, state.LastRequestId, status, journal, receipt,
-            owner.Items.CountId(Soybean), owner.Items.CountId(Tofu));
+            owner.Items.CountId(Soybean), owner.Items.CountId(Tofu), owner.Items.CountId(this.SelectedOutput));
         if (evidence == this.LastEvidence) return;
         Require(this.Stages.Count < 64, "Too many distinct native transaction observations.");
         this.LastEvidence = evidence;
@@ -938,7 +957,8 @@ internal sealed partial class LanMachineTransactionScenario
         this.InterruptedMachineRaw, this.InterruptedJournal, this.InterruptedReceipt, this.InterruptedCheck,
         this.VerifyMenuEscape, this.EscapeRequest, this.EscapeJournal, this.EscapeReceipt, this.EscapeFeedback, this.EscapeCancelledFeedback,
         this.VerifyHostFirst, this.HostFirstLocalStart, this.HostFirstRefused, this.HostFirstFeedback, this.HostFirstQueuedMessages,
-        this.VerifyHostMovement, this.HostMovementChecks, this.Stages, this.Protocol, this.Lan
+        this.VerifyHostMovement, this.HostMovementChecks, this.Stages, this.Protocol, this.Lan,
+        this.VerifyLatePage, this.SelectedRecipe, this.SelectedOutput, this.LatePageSelections, this.LatePageSettlements, this.LatePageClock
     });
 
     private static Slot?[] Snapshot(Farmer farmer) => farmer.Items.Select(Describe).ToArray();
@@ -952,7 +972,7 @@ internal sealed partial class LanMachineTransactionScenario
 
     private sealed record ReadySignal(Guid InstanceId, int Revision, bool AfterCancellation);
     private sealed record Slot(string Id, int Stack, int Quality, string Metadata);
-    private sealed record Evidence(long Revision, Guid? Request, string? Reservation, string? Journal, string? Receipt, int Soybeans, int Tofu);
+    private sealed record Evidence(long Revision, Guid? Request, string? Reservation, string? Journal, string? Receipt, int Soybeans, int Tofu, int SelectedOutput);
     private sealed record HostCompetitionEvidence(Guid FarmhandRequest, long Revision, int HostSoybeans, int FarmhandSoybeans,
         string MachineRaw, string ReservationRaw, string Feedback);
     private sealed record CompetitionSetupEvidence(string? HostLocation, string HostTile, int HostSoybeans, bool HostPositioned,

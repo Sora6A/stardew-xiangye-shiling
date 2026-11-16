@@ -6,6 +6,12 @@
 
 其余工作区为 P3 专用夹具和入口。多人末页运行以全量开发包起始，在 XYSNET08 23020/12432 已原生完成加工请求，等待实际工时及领取。负责方清理后，以发行候选独立测试原生物品分类、售价、职业、用餐、赠礼与图像，再推进跨季冷读、旧档及真新档。P3 全量验收矩阵完成后才推送 PR 并发布。
 
+发行打包提交 `9778db8b6baa3c6d32cd9056ad24f1e96539d875`，Python 125 项通过。开发候选末页 23020/12432 已原版 220 分钟自然领取成功，双端配置禁用且退出；`p3-late-page-v2` 审计。发行候选物品首轮 8232 通过物品/纹理门禁和三笔真实价格，因开始食用时进档黑屏未结束而失败。夹具改为等待 `IsPlayerFree` 与黑屏结束，待复验。跨季序列由独立运行器持有游戏，最初部署重复 manifest 已识别并更换。当前候选工作矩阵见 [发行候选验收](validation/P3-release-2026-11-16.md)。
+
+发行物品复验 9256 通过，原版三笔售出 66/126/345g，麻婆豆腐 180 体力/81 生命，罗宾原版赠礼 +45 后同日拒绝，105 文件与原 Mods 一致，退出并禁用。报告 `.local/p2-native/p3-release-itemuse-v2`。原版跨季写入 29856 通过，一次夏末到秋 1 原版存档；证据 `.local/p3-season-persistence/write-arrival-v3/audit-rechecked.json`。冷读由同一执行器继续，先查进程和 `verify-arrival-v3` 结果。真新档 `P3FreshInstall` 已编译未启动，独立 `.local/p3-fresh-install/run.ps1`；正式候选双人末页已准备，待其他游戏退出后以 `.local/p1-net08-normal-lan/run-p3-late-page.ps1` 的 `p3-late-page-release-v1` 运行。候选 ZIP 字节仍为 B7D21222…0A65。当前剩余包含冷读、旧档、新档、发行包双端及菜单图像合成；本地提交或验收材料均未推送。
+
+秋 1 冷读 20428 已原生领取五份并就寝保存到秋 2。再次冷读与旧档执行器负责收尾，短额度接近限制，接续先核实 `verifycollected-arrival-v3` 和 `legacy-arrival-v3` 的审计及进程，再复用已准备真新档和正式双端。当前最晚维护检查覆盖 42 条提交，正式 DLL 的 GameAdapter 26 项全部通过。
+
 ## 2026-11-16 P2 全量数据启用
 
 分支 `codex/first-stable-release`，来源提交 `615d4ad396824aed9dd768ca1ba5b401c1c526fd`。登记 40 物品/30 配方全部启用。新增 8 条自建设备规则、原版熏鱼机两条加煤的原生配方、15 条其余厨房菜谱与原创食品/设备图集。Python 125、MachineCore 144、GameAdapter 26 与生产/夹具 Release 通过。验证脚本 `.local/p2-native/run.ps1` 准备独立 Mods 与冻结哈希。工作区包含全量生成数据、三类集成夹具、文档与图像。

@@ -58,6 +58,40 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.Scenario == P3FreshInstallScenario.Scenario)
+        {
+            var fresh = new P3FreshInstallScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => fresh.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => fresh.Tick();
+            helper.Events.GameLoop.SaveCreating += (_, _) => fresh.OnSaveCreating();
+            helper.Events.GameLoop.SaveCreated += (_, _) => fresh.OnSaveCreated();
+            helper.Events.GameLoop.Saving += (_, _) => fresh.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => fresh.OnSaved();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => fresh.OnLoaded();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => fresh.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P3ItemUseScenario.Scenario)
+        {
+            var items = new P3ItemUseScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => items.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => items.OnLoaded();
+            helper.Events.GameLoop.Saving += (_, _) => items.OnSaving();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => items.Tick();
+            helper.Events.Display.Rendered += (_, _) => items.OnRendered();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P3SeasonPersistenceScenario.Scenario)
+        {
+            var season = new P3SeasonPersistenceScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => season.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => season.OnLoaded();
+            helper.Events.GameLoop.Saving += (_, _) => season.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => season.OnSaved();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => season.Tick();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => season.OnReturnedToTitle();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == P2ForageScenario.Scenario)
         {
             var forage = new P2ForageScenario(helper, this.Monitor, this.Settings);

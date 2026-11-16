@@ -213,3 +213,9 @@ Schema2带首个Ready Baseline/current指纹/引用一致/burst发送序号；�
 | P2Kitchen | XYSP2Kitchen | 620261131 | `p2-kitchen-result.json` |
 
 作物、采集、烟熏及设备菜单使用春季第 1 年的单人开发副本。厨房另用已完成第一次农舍升级、冰箱为空、未学会新增菜谱的单人开发副本。夹具可为原版组件准备日历、材料或站位，具体边界和实测结果见 [来源记录](../../docs/validation/P2-sources-2026-11-16.md)与[设备和厨房记录](../../docs/validation/P2-production-2026-11-16.md)。
+
+## P3 发行候选实机夹具
+
+使用同一固定发行 ZIP 和独立 Mods。`P3ItemUse` 绑定 `XYSP3ItemUse_620261134`，原版商店成交、食用、NPC 赠礼及实际纹理登记，零保存。`P3SeasonPersistence` 的 `NativeRecoveryPhase` 依次为 `Write`、`Verify`、`VerifyCollected`，绑定 `XYSP3Season_620261132`。前两轮原版就寝写盘，最后一轮冷读及重复领取拒绝。`Legacy` 绑定独立旧档 `XYSP3Legacy_620261133`，零保存。用发行包测试新档时配置 `P3FreshInstall`、`XYSP3Fresh`、`SaveFixtureId=0`，存档目录须没有同名前缀。新档通过实际原版角色创建写一份初始存档，随后用独立资金和铜锭准备原生购买、制作、自然加工与领取，最后核对初始存档哈希。
+
+普通直连仍使用 XYSNET08 的精确绑定。`LanMachineTransaction` 的 `NativeRecoveryPhase=P3LatePage` 和 `VerifyLanFarmhandMenu=true` 走原版第三页豆干、主机原版时钟及双端回执。单机执行器须在退出并禁用当前场景后再启动另一轮。全部证据、靠近发布时的实际候选哈希和覆盖范围见 [发行候选验收](../../docs/validation/P3-release-2026-11-16.md)。
