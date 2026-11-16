@@ -18,7 +18,7 @@ alpha.2单人P1原型已接入两设备菜单/背包、7物品5配方及有限�
 |---|---|---|
 | data/catalog.json | 40 物品/30 配方冻结源；P1 原型和按批启用的 P2 数据共用稳定 ID | `planned` 仅登记，启用后须给出数值、图像和所依赖的物品 |
 | tools/catalog.py、prototype.py | 生成 CP 数据/i18n、登记表和两台自建设备的配方 JSON | `--write` 更新全部生成物；新增厨房解锁从配方生成商店条目，原版熏鱼机规则单独接入 |
-| CP 内容包 | 增量修改 Objects/BigCraftables/CraftingRecipes/CookingRecipes/Shops | 不整表覆盖，不分发原版图像 |
+| CP 内容包 | 增量修改 Objects、BigCraftables、配方、Shops、Crops 和 Locations | 商店按原生季节条件与全农场日库存，采集沿用原版地图容量和拾取。完整原版表和素材留在游戏内 |
 | ModEntry | 配方、补丁、读档/换场景/新增设备初始化、会话重置 | 加载诊断不是完整验收 |
 | Machines | 无游戏依赖的规则、模型、schema 1 JSON | Accepted 只意味着计划有效 |
 | Networking | 严格请求/可信快照准入/lease与回执，以及只读握手/限流/邮箱 | 无游戏依赖；只读分支不调用准入/账本/提交，不操作库存；见 P1_HOST_PROTOCOL |

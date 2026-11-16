@@ -2,7 +2,7 @@
   "Name": "Xiangye Shiling",
   "Author": "Sora6A",
   "Version": "0.1.0-alpha.2",
-  "Description": "P1 single-player prototype with shared processing machines and limited shop supplies.",
+  "Description": "Shared Bean Workshop and Fermentation Crock menus, batch processing and multiplayer synchronization.",
   "UniqueID": "Sora6A.XiangyeShiling",
   "EntryDll": "XiangyeShiling.dll",
   "MinimumApiVersion": "4.4.0",

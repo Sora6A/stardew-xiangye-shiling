@@ -8,7 +8,7 @@
     "Null numeric values require P1/P2 balancing; they are never executable recipe values.",
     "Coal is a proposed reuse of vanilla smoker fuel and must be checked in P2.",
     "Machine crafting inputs are provisional; Egg currently reserves the normal white egg ID, with category/large-egg support pending P1.",
-    "P1 prototype shops provide soybean/wheat at Pierre and Chinese toon at Gus year-round in limited quantities. Final crops/forage/restock rules await P2; these supplies are for the two P1 routes."
+    "Formal sources supersede overlapping prototype stock after activation. Pierre's limited purchase of vanilla wheat remains an interim P1 supply."
   ],
   "vanillaItems": [
     {
@@ -79,7 +79,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -92,16 +93,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 45,
+        "edibility": 7
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "WildScallion",
@@ -129,7 +131,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -142,16 +145,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 30,
+        "edibility": 5
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "ChineseToon",
@@ -163,11 +167,11 @@
       "text": {
         "en": {
           "name": "Chinese Toon",
-          "description": "Fragrant toon shoots for Toon Tofu Salad. Limited supplies are sold by Gus at the Stardrop Saloon."
+          "description": "Fragrant toon shoots for Toon Tofu Salad. Look for them in the Forest, Mountain, and Bus Stop in spring."
         },
         "zh": {
           "name": "香椿",
-          "description": "鲜香椿可用于香椿拌豆腐。格斯的星之果实餐吧有少量出售。"
+          "description": "鲜香椿可做香椿拌豆腐。春天可在森林、山区和巴士站拾取。"
         }
       },
       "nameKey": "item.ChineseToon.name",
@@ -179,7 +183,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -192,16 +197,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "prototype",
+        "status": "provisional",
         "price": 65,
         "edibility": 5
       },
-      "implementation": "prototype",
+      "implementation": "active",
       "prototypeArt": {
         "Texture": "Maps/springobjects",
         "SpriteIndex": 20
@@ -233,7 +239,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -246,16 +253,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 25,
+        "edibility": 4
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "Soybean",
@@ -267,11 +275,11 @@
       "text": {
         "en": {
           "name": "Soybean",
-          "description": "Plump soybeans for tofu and soy sauce. Limited supplies are sold at Pierre's General Store."
+          "description": "Plump soybeans for tofu and soy sauce. Grow them in summer or fall, or buy limited spring and winter stock from Pierre."
         },
         "zh": {
           "name": "黄豆",
-          "description": "饱满的黄豆，可加工豆腐或酱油。皮埃尔的杂货店有少量出售。"
+          "description": "饱满的黄豆，可加工豆腐或酱油。夏秋种植，春冬可向皮埃尔少量购买。"
         }
       },
       "nameKey": "item.Soybean.name",
@@ -283,7 +291,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -293,7 +302,19 @@
             "summer",
             "fall"
           ],
-          "growthDays": null
+          "implementation": "active",
+          "daysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            1
+          ],
+          "art": {
+            "asset": "Mods/Sora6A.XiangyeShiling/Crops",
+            "file": "assets/crops.png",
+            "spriteIndex": 0
+          }
         },
         {
           "kind": "shop",
@@ -302,18 +323,19 @@
             "spring",
             "winter"
           ],
-          "dailyStock": null,
-          "price": null,
-          "role": "limited-off-season-restock"
+          "dailyStock": 10,
+          "price": 60,
+          "role": "limited-off-season-restock",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "prototype",
+        "status": "provisional",
         "price": 40,
         "edibility": -300
       },
-      "implementation": "prototype",
+      "implementation": "active",
       "prototypeArt": {
         "Texture": "Maps/springobjects",
         "SpriteIndex": 188
@@ -329,11 +351,11 @@
       "text": {
         "en": {
           "name": "Napa Cabbage",
-          "description": "Sweet napa cabbage for fermenting into sour cabbage."
+          "description": "Sweet napa cabbage for fermenting. Grow it in fall, or buy a limited supply from Pierre out of season."
         },
         "zh": {
           "name": "大白菜",
-          "description": "清甜的大白菜，可在发酵缸腌成酸白菜。"
+          "description": "清甜的大白菜，可腌成酸白菜。秋季种植，季外可向皮埃尔少量购买。"
         }
       },
       "nameKey": "item.NapaCabbage.name",
@@ -345,7 +367,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -354,7 +377,19 @@
           "seasons": [
             "fall"
           ],
-          "growthDays": null
+          "implementation": "active",
+          "daysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            2
+          ],
+          "art": {
+            "asset": "Mods/Sora6A.XiangyeShiling/Crops",
+            "file": "assets/crops.png",
+            "spriteIndex": 1
+          }
         },
         {
           "kind": "shop",
@@ -364,18 +399,19 @@
             "summer",
             "winter"
           ],
-          "dailyStock": null,
-          "price": null,
-          "role": "limited-off-season-restock"
+          "dailyStock": 5,
+          "price": 100,
+          "role": "limited-off-season-restock",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 65,
+        "edibility": 12
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "Pork",
@@ -403,7 +439,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -416,16 +453,17 @@
             "winter"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 110,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 45,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "BroadBeans",
@@ -453,7 +491,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -466,16 +505,17 @@
             "winter"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 55,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 28,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "SoyMilk",
@@ -1788,11 +1828,11 @@
       "text": {
         "en": {
           "name": "Soybean Seeds",
-          "description": "Soybean seeds for summer and fall; growth time is provisional."
+          "description": "Plant in summer or fall. Takes 8 days to mature."
         },
         "zh": {
           "name": "黄豆种子",
-          "description": "夏秋播种的黄豆种子，生长天数待平衡。"
+          "description": "夏秋播种，8 天成熟。"
         }
       },
       "nameKey": "item.SoybeanSeeds.name",
@@ -1804,7 +1844,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1815,16 +1856,17 @@
             "fall"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 35,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 17,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "NapaCabbageSeeds",
@@ -1836,11 +1878,11 @@
       "text": {
         "en": {
           "name": "Napa Cabbage Seeds",
-          "description": "Napa cabbage seeds for fall; growth time is provisional."
+          "description": "Plant in fall. Takes 9 days to mature."
         },
         "zh": {
           "name": "大白菜种子",
-          "description": "秋季播种的大白菜种子，生长天数待平衡。"
+          "description": "秋季播种，9 天成熟。"
         }
       },
       "nameKey": "item.NapaCabbageSeeds.name",
@@ -1852,7 +1894,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1862,16 +1905,17 @@
             "fall"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 42,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 21,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "BeanWorkshop",
@@ -2860,5 +2904,10 @@
         "Price": 1500
       }
     ]
+  },
+  "springForageChance": {
+    "Forest": 0.32,
+    "Mountain": 0.21,
+    "BusStop": 0.35
   }
 }

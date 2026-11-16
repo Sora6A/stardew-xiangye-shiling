@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import sys
 from prototype import CUSTOM_MACHINES, LIVE_IMPLEMENTATIONS, generate as generate_content
+from fish_smoker import FISH_SMOKER, fish_smoker_patch
 
 ROOT = Path(__file__).resolve().parents[1]
 PACK = Path("content/XiangyeShiling.Content")
@@ -19,6 +20,9 @@ GROUP_COUNTS = {
 STATION_COUNTS = {"bean_workshop": 6, "fermentation_crock": 4, "fish_smoker": 2, "kitchen": 16, "crafting": 2}
 P1_ITEMS = {"Soybean", "ChineseToon", "Tofu", "SoySauce", "ToonTofu", "BeanWorkshop", "FermentationCrock"}
 P1_RECIPES = {f"{NAMESPACE}_Recipe_{key}" for key in ("Tofu", "SoySauce", "ToonTofu", "BeanWorkshop", "FermentationCrock")}
+SEASONS = {"spring", "summer", "fall", "winter"}
+FORAGE_MAPS = {"Forest", "Mountain", "BusStop"}
+EGG_CATEGORY = "-5"
 
 
 def unique_object(pairs):
@@ -32,6 +36,24 @@ def unique_object(pairs):
 
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=unique_object)
+
+
+def obtainable_items(items, recipes, roots, *, active_sources_only=False):
+    sources = [(item["qualifiedId"], source) for item in items for source in item["sources"]
+               if not active_sources_only or source.get("implementation") == "active"]
+    reachable = roots | {item_id for item_id, source in sources if source["kind"] in {"shop", "forage"}}
+    while True:
+        before = len(reachable)
+        for item_id, source in sources:
+            if source["kind"] == "crop" and source["seed"] in reachable:
+                reachable.add(item_id)
+        for recipe in recipes:
+            machine = recipe["machine"]
+            if (not machine or machine == FISH_SMOKER or machine in reachable) and all(
+                    entry["item"] in reachable for entry in recipe["inputs"]):
+                reachable.add(recipe["output"]["item"])
+        if len(reachable) == before:
+            return reachable
 
 
 def validate(catalog: dict) -> list[str]:
@@ -58,6 +80,8 @@ def validate(catalog: dict) -> list[str]:
     live_items = {i["qualifiedId"] for i in items if i["implementation"] in LIVE_IMPLEMENTATIONS}
     live_recipes = {r["id"] for r in recipes if r["implementation"] in LIVE_IMPLEMENTATIONS}
     textures = {}
+    crop_seeds = set()
+    forage_maps = set()
 
     def check_implementation(implementation, key, prototype_keys, kind):
         require(implementation in LIVE_IMPLEMENTATIONS | {"planned"}, f"Unknown implementation: {key}")
@@ -67,6 +91,13 @@ def validate(catalog: dict) -> list[str]:
             require(implementation in LIVE_IMPLEMENTATIONS, f"P1 entry cannot be disabled: {key}")
         if implementation == "active":
             require(catalog["phase"] == "P2", f"P2 content enabled in P1: {key}")
+
+    def check_texture(art, label):
+        asset, path = art["asset"], art.get("file", "")
+        require(asset.startswith(f"Mods/{NAMESPACE}/"), f"Art namespace mismatch: {label}")
+        require(re.fullmatch(r"assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.png", path) is not None,
+                f"Invalid content art file: {label}")
+        require(textures.setdefault(asset, path) == path, f"Conflicting texture files: {label}")
 
     consumed = {entry["item"] for r in recipes for entry in r["inputs"]}
     for item in items:
@@ -87,10 +118,7 @@ def validate(catalog: dict) -> list[str]:
             require(type(balance["price"]) is int and balance["price"] >= 0, f"Missing active item price: {label}")
             require(item["group"] == "machine" or type(balance["edibility"]) is int, f"Missing active item edibility: {label}")
             if art["status"] == "ready":
-                path = art.get("file", "")
-                require(re.fullmatch(r"assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.png", path) is not None,
-                        f"Invalid content art file: {label}")
-                require(textures.setdefault(art["asset"], path) == path, f"Conflicting texture files: {label}")
+                check_texture(art, label)
             else:
                 placeholder = item.get("prototypeArt", {})
                 require(bool(placeholder.get("Texture")) and type(placeholder.get("SpriteIndex")) is int
@@ -100,7 +128,14 @@ def validate(catalog: dict) -> list[str]:
         require(art["size"] == ([16, 32] if prefix == "(BC)" else [16, 16]), f"Invalid sprite size: {label}")
         for source in item["sources"]:
             kind = source["kind"]
+            is_live = source.get("implementation") == "active"
             require(kind in {"forage", "crop", "shop", "recipe"}, f"Unknown source kind: {label}")
+            if is_live:
+                require(catalog["phase"] == "P2" and item["qualifiedId"] in live_items,
+                        f"Active source needs an enabled P2 item: {label}")
+                seasons = source.get("seasons", [])
+                require(bool(seasons) and len(seasons) == len(set(seasons)) and set(seasons) <= SEASONS,
+                        f"Invalid source seasons: {label}")
             if kind == "recipe":
                 recipe = by_recipe.get(source["recipe"])
                 require(recipe is not None and recipe["output"]["item"] == item["qualifiedId"], f"Broken producer: {label}")
@@ -108,15 +143,44 @@ def validate(catalog: dict) -> list[str]:
                 seed = by_id.get(source["seed"])
                 require(seed is not None and seed["group"] == "seed", f"Broken seed: {label}")
                 require(bool(source["seasons"]), f"Missing crop seasons: {label}")
+                if is_live:
+                    require(source["seed"] in live_items and source["seed"] not in crop_seeds,
+                            f"Disabled or shared crop seed: {label}")
+                    crop_seeds.add(source["seed"])
+                    seed_seasons = [s["seasons"] for s in (seed or {}).get("sources", [])
+                                    if s["kind"] == "shop" and s.get("implementation") == "active"]
+                    require(seed_seasons == [source["seasons"]], f"Seed sale seasons differ from crop seasons: {label}")
+                    days = source.get("daysInPhase", [])
+                    require(len(days) == 5 and all(type(day) is int and day > 0 for day in days),
+                            f"Invalid crop growth phases: {label}")
+                    crop_art = source["art"]
+                    check_texture(crop_art, label)
+                    require(type(crop_art["spriteIndex"]) is int and crop_art["spriteIndex"] >= 0,
+                            f"Invalid crop sprite index: {label}")
             elif kind == "shop":
                 require(source["shop"] in {"SeedShop", "Saloon"}, f"Wrong ingredient shop: {label}")
+                if is_live:
+                    price, stock = source.get("price"), source.get("dailyStock")
+                    require(type(price) is int and price > 0, f"Invalid active stock price: {label}")
+                    require(type(stock) is int and (stock == -1 or stock > 0), f"Invalid active daily stock: {label}")
+                    if source.get("role") == "limited-off-season-restock":
+                        growth_seasons = {s for crop in item["sources"] if crop["kind"] == "crop" for s in crop["seasons"]}
+                        require(set(source["seasons"]) == SEASONS - growth_seasons,
+                                f"Off-season stock overlaps crop availability: {label}")
+                        require(type(stock) is int and stock > 0, f"Off-season stock must be finite: {label}")
             elif kind == "forage":
                 require(source["seasons"] == ["spring"], f"Forage outside spring: {label}")
-                require(bool(source["locations"]), f"Missing forage whitelist: {label}")
+                require(bool(source["locations"]) and len(source["locations"]) == len(set(source["locations"]))
+                        and set(source["locations"]) <= FORAGE_MAPS, f"Invalid forage whitelist: {label}")
+                if is_live:
+                    forage_maps.update(source["locations"])
         if item["group"] in {"forage", "crop", "shop_ingredient", "bean_product", "fermented", "smoked"}:
             require(item["qualifiedId"] in consumed or "eat" in item["terminalUses"], f"No non-sale use: {label}")
     sprites = [(i["art"]["asset"], i["art"]["spriteIndex"]) for i in items]
     require(len(sprites) == len(set(sprites)), "Conflicting reserved sprites")
+    forage_chances = catalog.get("springForageChance", {})
+    require(forage_maps == set(forage_chances) and all(type(v) in {int, float} and 0 < v <= 1 for v in forage_chances.values()),
+            "Active spring forage maps need one valid chance each")
     for recipe in recipes:
         label = recipe["id"]
         check_implementation(recipe["implementation"], label, P1_RECIPES, "recipe")
@@ -128,6 +192,7 @@ def validate(catalog: dict) -> list[str]:
         require(len(input_ids) == len(set(input_ids)), f"Duplicate input: {label}")
         for entry in recipe["inputs"]:
             require(entry["item"] in known, f"Unknown input {entry['item']}: {label}")
+            require(entry["item"] != EGG_CATEGORY or recipe["station"] == "kitchen", f"Egg category outside cooking: {label}")
         for value in [e["quantity"] for e in recipe["inputs"]] + [recipe["output"]["quantity"]]:
             require(value is None or (type(value) is int and value > 0), f"Invalid quantity: {label}")
             if is_live:
@@ -136,8 +201,7 @@ def validate(catalog: dict) -> list[str]:
             expected = CUSTOM_MACHINES[recipe["station"]]
             require(recipe["machine"] == f"(BC){NAMESPACE}_{expected}", f"Wrong machine: {label}")
         if recipe["station"] == "fish_smoker":
-            require(recipe["machine"] == "(BC)FishSmoker", f"Wrong machine: {label}")
-            require(not is_live, f"Fish smoker recipe needs a native output rule: {label}")
+            require(recipe["machine"] == FISH_SMOKER, f"Wrong machine: {label}")
         if recipe["station"] in {"kitchen", "crafting"}:
             shop = "Saloon" if recipe["station"] == "kitchen" else "Carpenter"
             require(recipe["unlock"]["kind"] == "shop-recipe" and recipe["unlock"]["shop"] == shop, f"Wrong recipe unlock: {label}")
@@ -154,22 +218,19 @@ def validate(catalog: dict) -> list[str]:
             require(set(input_ids) <= live_items | vanilla, f"Active recipe input is disabled: {label}")
             if recipe["machine"]:
                 require(type(minutes) is int and minutes > 0, f"Active machine has no duration: {label}")
-                require(recipe["machine"] in live_items or recipe["machine"] == "(BC)FishSmoker", f"Active machine is disabled: {label}")
-    # Detect closed production loops with no obtainable starting materials.
-    reachable = set(vanilla)
-    reachable.update(i["qualifiedId"] for i in items if any(s["kind"] in {"shop", "forage"} for s in i["sources"]))
-    while True:
-        before = len(reachable)
-        for item in items:
-            if any(s["kind"] == "crop" and s["seed"] in reachable for s in item["sources"]):
-                reachable.add(item["qualifiedId"])
-        for recipe in recipes:
-            machine = recipe["machine"]
-            if all(e["item"] in reachable for e in recipe["inputs"]) and (not machine or machine == "(BC)FishSmoker" or machine in reachable):
-                reachable.add(recipe["output"]["item"])
-        if len(reachable) == before:
-            break
+                require(recipe["machine"] in live_items or recipe["machine"] == FISH_SMOKER, f"Active machine is disabled: {label}")
+    try:
+        fish_smoker_patch(r for r in recipes if r["id"] in live_recipes)
+    except ValueError as error:
+        errors.append(str(error))
+    # Check the frozen graph and the actually installed subset, including legacy supplies until superseded.
+    reachable = obtainable_items(items, recipes, vanilla)
     require(set(by_id) <= reachable, f"Unreachable items: {sorted(set(by_id) - reachable)}")
+    legacy_supplies = {row["ItemId"] for stock in catalog.get("prototypeShops", {}).values() for row in stock if not row.get("IsRecipe")}
+    reachable = obtainable_items([item for item in items if item["qualifiedId"] in live_items],
+                                 [recipe for recipe in recipes if recipe["id"] in live_recipes],
+                                 vanilla | legacy_supplies, active_sources_only=True)
+    require(live_items <= reachable, f"Unreachable active items: {sorted(live_items - reachable)}")
     for shop, stock in catalog.get("prototypeShops", {}).items():
         require(shop in {"SeedShop", "Saloon", "Carpenter"}, "Unknown prototype shop")
         for row in stock:
@@ -213,7 +274,9 @@ def generated_files(catalog: dict) -> dict[Path, str]:
             if kind == "forage":
                 source_text.append("春季 " + ", ".join(source["locations"]) + "（地图待验）")
             elif kind == "crop":
-                source_text.append(name(source["seed"]) + "；" + ", ".join(source["seasons"]))
+                days = source.get("daysInPhase", [])
+                growth = f"，{sum(days)} 天" if days else ""
+                source_text.append(name(source["seed"]) + "；" + ", ".join(source["seasons"]) + growth)
             elif kind == "shop":
                 source_text.append(source["shop"] + (" 季外限量" if "role" in source else " 商店"))
             else:
@@ -237,8 +300,8 @@ def generated_files(catalog: dict) -> dict[Path, str]:
               "- 生长天数、补货数量、价格、食用恢复量、每批产出与耗时。",
               "- 鸡蛋暂以原版普通白鸡蛋 ID 登记，P1 核查大小/颜色替代规则。",
               "- 熏鱼机煤炭耗用、正常鱼类加工回归；实际补丁只能追加规则。", ""]
-    lines += ["## P1 暂定供给", "", "皮埃尔全年限量供应黄豆/小麦，格斯限量供应香椿并售香椿拌豆腐菜谱，罗宾售两台设备图纸。",
-              "这些库存为原型补给，不代表 P2 的作物、春季采集和季外补货规则已经实现。数值见 catalog.prototypeShops。", ""]
+    lines += ["## 商店与地图数据", "", "正式来源按各条目的季节和库存生成。启用作物季外供给和野菜拾取后，重叠的原型库存退出。",
+              "原型小麦补给和既有图纸、菜谱仍按 `prototypeShops` 的登记生成。地图权重与店铺数值留待整版平衡。", ""]
     files[Path("docs/CONTENT_CATALOG.md")] = "\n".join(lines)
     files.update(generate_content(catalog))
     return files

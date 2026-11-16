@@ -38,13 +38,15 @@ def main():
             bundle.write(path, f"XiangyeShiling/i18n/{path.name}")
         for path in sorted((project / "assets").glob("*.json")):
             bundle.write(path, f"XiangyeShiling/assets/{path.name}")
-        for path in sorted((ROOT / PACK).rglob("*.json")):
-            bundle.write(path, (Path("XiangyeShiling.Content") / path.relative_to(ROOT / PACK)).as_posix())
-        bundle.writestr("DEVELOPMENT.txt", "P1 single-player prototype, not a finished release.\n"
+        content_pack = ROOT / PACK
+        changes = read_json(content_pack / "content.json")["Changes"]
+        art = {content_pack / change["FromFile"] for change in changes if change["Action"] == "Load"}
+        for path in sorted(set(content_pack.rglob("*.json")) | art):
+            bundle.write(path, (Path("XiangyeShiling.Content") / path.relative_to(content_pack)).as_posix())
+        bundle.writestr("DEVELOPMENT.txt", "Xiangye Shiling P2 development build.\n"
                         "Requires Stardew Valley 1.6.15, SMAPI 4.4.0+, Content Patcher 2.9.0+.\n"
-                        "Two machine routes, limited shop supplies, blueprint/cooking recipes; vanilla placeholder art.\n"
-                        "Machine transactions are single-player only. Multiplayer writes remain disabled.\n"
-                        "Read-only multiplayer handshake/rejection is included; real two-client validation is pending.\n"
+                        "P1 machine transactions passed single-player and opt-in Windows native direct-IP loopback testing.\n"
+                        "See docs/CONTENT_CATALOG.md for enabled data and docs/DEVELOPMENT_PLAN.md for acceptance.\n"
                         "Back up saves and use a dedicated test profile. See docs/DEVELOPMENT.md in the repository.\n")
     print(f"Development bundle: {output}")
     return 0

@@ -58,6 +58,26 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.Scenario == P2ForageScenario.Scenario)
+        {
+            var forage = new P2ForageScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => forage.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => forage.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => forage.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => forage.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => forage.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2CropShopScenario.Scenario)
+        {
+            var crops = new P2CropShopScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => crops.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => crops.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => crops.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => crops.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => crops.OnReturnedToTitle();
+            return;
+        }
         bool boundMemory = this.Settings.VerifyOwnerInventoryFingerprints || this.Settings.VerifyHostReservationStore;
         if (this.Settings.Enabled && boundMemory
             && (this.Settings.Scenario != "Memory" || this.Settings.OpenPreview

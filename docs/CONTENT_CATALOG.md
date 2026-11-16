@@ -3,7 +3,7 @@
 由 `data/catalog.json` 生成；修改清单后运行 `python tools/catalog.py --write`。
 
 设计基线 0.4；40 个物品 ID、30 个配方 ID。清单是预留范围，不代表已实现。
-当前阶段 P2，游戏数据已启用 7 个物品和 5 个配方。`prototype` 为沿用原型条目，`active` 为已启用的 P2 条目，`planned` 仅登记。
+当前阶段 P2，游戏数据已启用 15 个物品和 5 个配方。`prototype` 为沿用原型条目，`active` 为已启用的 P2 条目，`planned` 仅登记。
 料理和熟食可作为终点。煤炭与设备制作材料为待实机核对的暂定方案。
 
 ## ID 与本地化
@@ -16,14 +16,14 @@
 
 | Key | 中文 | 类别 | 来源 | 去向 | 图像位置 | 状态 |
 |---|---|---|---|---|---|---|
-| `BambooShoots` | 竹笋 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 清炒竹笋、竹笋炒腊肉、油焖笋 | Objects #0，待绘制 | planned |
-| `WildScallion` | 野葱 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 野葱煎蛋、野葱炒熏干 | Objects #1，待绘制 | planned |
-| `ChineseToon` | 香椿 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 香椿炒蛋、香椿拌豆腐 | Objects #2，待绘制 | prototype |
-| `Mugwort` | 艾草 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 艾草米糕 | Objects #3，待绘制 | planned |
-| `Soybean` | 黄豆 | crop | 黄豆种子；summer, fall；SeedShop 季外限量 | 豆浆、豆花、豆腐、油豆皮、千张、豆干、酱油、黄豆酱 | Objects #4，待绘制 | prototype |
-| `NapaCabbage` | 大白菜 | crop | 大白菜种子；fall；SeedShop 季外限量 | 酸菜 | Objects #5，待绘制 | planned |
-| `Pork` | 猪肉 | shop_ingredient | Saloon 商店 | 腊肉、麻婆豆腐、千张肉卷 | Objects #6，待绘制 | planned |
-| `BroadBeans` | 蚕豆 | shop_ingredient | Saloon 商店 | 川式豆瓣 | Objects #7，待绘制 | planned |
+| `BambooShoots` | 竹笋 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 清炒竹笋、竹笋炒腊肉、油焖笋 | Objects #0，已绘制 | active |
+| `WildScallion` | 野葱 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 野葱煎蛋、野葱炒熏干 | Objects #1，已绘制 | active |
+| `ChineseToon` | 香椿 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 香椿炒蛋、香椿拌豆腐 | Objects #2，已绘制 | active |
+| `Mugwort` | 艾草 | forage | 春季 Forest, Mountain, BusStop（地图待验） | 艾草米糕 | Objects #3，已绘制 | active |
+| `Soybean` | 黄豆 | crop | 黄豆种子；summer, fall，8 天；SeedShop 季外限量 | 豆浆、豆花、豆腐、油豆皮、千张、豆干、酱油、黄豆酱 | Objects #4，已绘制 | active |
+| `NapaCabbage` | 大白菜 | crop | 大白菜种子；fall，9 天；SeedShop 季外限量 | 酸菜 | Objects #5，已绘制 | active |
+| `Pork` | 猪肉 | shop_ingredient | Saloon 商店 | 腊肉、麻婆豆腐、千张肉卷 | Objects #6，已绘制 | active |
+| `BroadBeans` | 蚕豆 | shop_ingredient | Saloon 商店 | 川式豆瓣 | Objects #7，已绘制 | active |
 | `SoyMilk` | 豆浆 | bean_product | Recipe_SoyMilk | eat、gift、sell | Objects #8，待绘制 | planned |
 | `TofuPudding` | 豆花 | bean_product | Recipe_TofuPudding | eat、gift、sell | Objects #9，待绘制 | planned |
 | `Tofu` | 豆腐 | bean_product | Recipe_Tofu | 油豆腐、香椿拌豆腐、酸菜炖豆腐、麻婆豆腐、eat、gift、sell | Objects #10，待绘制 | prototype |
@@ -52,8 +52,8 @@
 | `MapoTofu` | 麻婆豆腐 | dish | Recipe_MapoTofu | eat、gift、sell | Objects #33，待绘制 | planned |
 | `TofuPorkRoll` | 千张肉卷 | dish | Recipe_TofuPorkRoll | eat、gift、sell | Objects #34，待绘制 | planned |
 | `YubaSoup` | 豆皮汤 | dish | Recipe_YubaSoup | eat、gift、sell | Objects #35，待绘制 | planned |
-| `SoybeanSeeds` | 黄豆种子 | seed | SeedShop 商店 | 种植 黄豆 | Objects #36，待绘制 | planned |
-| `NapaCabbageSeeds` | 大白菜种子 | seed | SeedShop 商店 | 种植 大白菜 | Objects #37，待绘制 | planned |
+| `SoybeanSeeds` | 黄豆种子 | seed | SeedShop 商店 | 种植 黄豆 | Objects #36，已绘制 | active |
+| `NapaCabbageSeeds` | 大白菜种子 | seed | SeedShop 商店 | 种植 大白菜 | Objects #37，已绘制 | active |
 | `BeanWorkshop` | 豆坊 | machine | Recipe_BeanWorkshop | 加工 豆浆、加工 豆花、加工 豆腐、加工 油豆皮、加工 千张、加工 豆干 | Machines #0，待绘制 | prototype |
 | `FermentationCrock` | 发酵缸 | machine | Recipe_FermentationCrock | 加工 酱油、加工 黄豆酱、加工 川式豆瓣、加工 酸菜 | Machines #1，待绘制 | prototype |
 
@@ -102,7 +102,7 @@
 - 鸡蛋暂以原版普通白鸡蛋 ID 登记，P1 核查大小/颜色替代规则。
 - 熏鱼机煤炭耗用、正常鱼类加工回归；实际补丁只能追加规则。
 
-## P1 暂定供给
+## 商店与地图数据
 
-皮埃尔全年限量供应黄豆/小麦，格斯限量供应香椿并售香椿拌豆腐菜谱，罗宾售两台设备图纸。
-这些库存为原型补给，不代表 P2 的作物、春季采集和季外补货规则已经实现。数值见 catalog.prototypeShops。
+正式来源按各条目的季节和库存生成。启用作物季外供给和野菜拾取后，重叠的原型库存退出。
+原型小麦补给和既有图纸、菜谱仍按 `prototypeShops` 的登记生成。地图权重与店铺数值留待整版平衡。

@@ -123,15 +123,50 @@ class CatalogTests(unittest.TestCase):
         item["implementation"] = "planned"
         self.assertTrue(any("Active recipe output is disabled" in e for e in catalog.validate(self.data)))
 
-    def test_p2_smoker_recipe_requires_native_rule(self):
+    def test_p2_smoker_recipe_rejects_different_fuel(self):
         recipe = next(r for r in self.data["recipes"] if r["station"] == "fish_smoker")
         recipe["implementation"] = "active"
-        self.assertTrue(any("Fish smoker recipe needs a native output rule" in e for e in catalog.validate(self.data)))
+        fuel = next(entry for entry in recipe["inputs"] if entry["role"] == "fuel")
+        fuel["quantity"] = 2
+        self.assertTrue(any("one native coal" in e for e in catalog.validate(self.data)))
 
     def test_original_p1_item_cannot_be_disabled(self):
         item = next(i for i in self.data["items"] if i["key"] == "Tofu")
         item["implementation"] = "planned"
         self.assertIn("P1 entry cannot be disabled: Tofu", catalog.validate(self.data))
+
+    def test_p2_seeds_and_limited_stock_follow_crop_seasons(self):
+        changes = catalog.json.loads(catalog.generated_files(self.data)[catalog.PACK / "content.json"])["Changes"]
+        crops = next(change["Entries"] for change in changes if change["Target"] == "Data/Crops")
+        pierre = {stock["ItemId"]: stock for change in changes if change.get("TargetField") == ["SeedShop", "Items"]
+                  for stock in change["Entries"].values()}
+        for key, growth, seed_condition, restock_condition, limit in (
+            ("Soybean", 8, "SEASON summer fall", "SEASON spring winter", 10),
+            ("NapaCabbage", 9, "SEASON fall", "SEASON spring summer winter", 5),
+        ):
+            item = f"{catalog.NAMESPACE}_{key}"
+            seed = item + "Seeds"
+            self.assertEqual(item, crops[seed]["HarvestItemId"])
+            self.assertEqual(growth, sum(crops[seed]["DaysInPhase"]))
+            self.assertEqual(seed_condition, pierre["(O)" + seed]["Condition"])
+            self.assertEqual(restock_condition, pierre["(O)" + item]["Condition"])
+            self.assertEqual(limit, pierre["(O)" + item]["AvailableStock"])
+            self.assertEqual("Global", pierre["(O)" + item]["AvailableStockLimit"])
+            self.assertEqual(1, sum(stock["ItemId"] == "(O)" + item for change in changes
+                                   if change.get("TargetField") == ["SeedShop", "Items"] for stock in change["Entries"].values()))
+
+    def test_p2_forage_adds_one_group_to_each_vanilla_map(self):
+        changes = catalog.json.loads(catalog.generated_files(self.data)[catalog.PACK / "content.json"])["Changes"]
+        patches = [change for change in changes if change["Target"] == "Data/Locations"]
+        self.assertEqual(set(self.data["springForageChance"]), {patch["TargetField"][0] for patch in patches})
+        expected = {item["qualifiedId"] for item in self.data["items"] if item["group"] == "forage"}
+        for patch in patches:
+            self.assertEqual("Forage", patch["TargetField"][1])
+            self.assertEqual(1, len(patch["Entries"]))
+            row, = patch["Entries"].values()
+            self.assertEqual(expected, set(row["RandomItemId"]))
+            self.assertEqual("Spring", row["Season"])
+            self.assertNotIn("(O)399", row["RandomItemId"])
 
     def test_generated_machine_recipe_matches_catalog_quantities(self):
         files = catalog.generated_files(self.data)

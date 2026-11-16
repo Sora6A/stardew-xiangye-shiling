@@ -74,6 +74,8 @@ dotnet build tools/NetworkWelcomeReplayCheck/NetworkWelcomeReplayCheck.csproj -c
 修改清单后执行 `python tools/catalog.py --write`，提交源 JSON、生成的 CP content.json/i18n、src/XiangyeShiling/assets/machine-recipes.json 和 `docs/CONTENT_CATALOG.md`。检查器会拒绝未同步生成文件、重复 JSON 键、超出冻结数量、未知原料及不可获得的生产闭环。
 
 P2 内容从 `planned` 按批改为 `active`，沿用的 P1 条目标为 `prototype`。启用配方时，其自定义原料、产物和自建设备须已启用。自绘图像在条目的 `art.file` 中登记，生成器将它加载到命名空间资产，验收仍需检查游戏内实际渲染。
+
+作物和季节商店以条目的活动 `sources` 生成。`daysInPhase` 是原版生长各阶段的天数，成长季与种子货架须一致。季外原料使用共享的原版日库存。春季采集增量修改三张地图各自的 `Forage` 列表，每图仅加一个四选一条目。开发包包含内容包实际引用的 PNG，避免遗漏作物和物品纹理。
 `null` 表示尚未确定的平衡值；带有待定数量或工时的配方不得标为已实现。
 
 C#场景直接编译规则/提交/菜单/世界判据、Networking及GameHarness实际共享网络证据源码，不引用游戏。2026-10-02前轮85项通过（此前81＋4实际quota观测），Python77项通过（此前37＋40人工报告配对）；见 [前轮配对验证](validation/P1-network-pair-2026-10-02.md)。身份绑定工具的专项与本机审计见 [本轮验证](validation/P1-network-fixture-2026-10-02.md)。纯会话接收观测与委托读取测试不等于真实SMAPI事件/双端网络或库存验证。旧45/68和游戏组件/UI结果保留，不作为新DLL实机通过。

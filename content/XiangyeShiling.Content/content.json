@@ -2,19 +2,71 @@
   "Format": "2.9.0",
   "Changes": [
     {
+      "Action": "Load",
+      "Target": "Mods/Sora6A.XiangyeShiling/Objects",
+      "FromFile": "assets/objects.png"
+    },
+    {
+      "Action": "Load",
+      "Target": "Mods/Sora6A.XiangyeShiling/Crops",
+      "FromFile": "assets/crops.png"
+    },
+    {
       "Action": "EditData",
       "Target": "Data/Objects",
       "Entries": {
+        "Sora6A.XiangyeShiling_BambooShoots": {
+          "Name": "Sora6A.XiangyeShiling_BambooShoots",
+          "DisplayName": "{{i18n: item.BambooShoots.name}}",
+          "Description": "{{i18n: item.BambooShoots.description}}",
+          "Price": 45,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 0,
+          "Type": "Basic",
+          "Category": -81,
+          "Edibility": 7,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_WildScallion": {
+          "Name": "Sora6A.XiangyeShiling_WildScallion",
+          "DisplayName": "{{i18n: item.WildScallion.name}}",
+          "Description": "{{i18n: item.WildScallion.description}}",
+          "Price": 30,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 1,
+          "Type": "Basic",
+          "Category": -81,
+          "Edibility": 5,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
         "Sora6A.XiangyeShiling_ChineseToon": {
           "Name": "Sora6A.XiangyeShiling_ChineseToon",
           "DisplayName": "{{i18n: item.ChineseToon.name}}",
           "Description": "{{i18n: item.ChineseToon.description}}",
           "Price": 65,
-          "Texture": "Maps/springobjects",
-          "SpriteIndex": 20,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 2,
           "Type": "Basic",
           "Category": -81,
           "Edibility": 5,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_Mugwort": {
+          "Name": "Sora6A.XiangyeShiling_Mugwort",
+          "DisplayName": "{{i18n: item.Mugwort.name}}",
+          "Description": "{{i18n: item.Mugwort.description}}",
+          "Price": 25,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 3,
+          "Type": "Basic",
+          "Category": -81,
+          "Edibility": 4,
           "CanBeGivenAsGift": true,
           "ExcludeFromShippingCollection": true,
           "ExcludeFromRandomSale": true
@@ -24,8 +76,50 @@
           "DisplayName": "{{i18n: item.Soybean.name}}",
           "Description": "{{i18n: item.Soybean.description}}",
           "Price": 40,
-          "Texture": "Maps/springobjects",
-          "SpriteIndex": 188,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 4,
+          "Type": "Basic",
+          "Category": -75,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_NapaCabbage": {
+          "Name": "Sora6A.XiangyeShiling_NapaCabbage",
+          "DisplayName": "{{i18n: item.NapaCabbage.name}}",
+          "Description": "{{i18n: item.NapaCabbage.description}}",
+          "Price": 65,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 5,
+          "Type": "Basic",
+          "Category": -75,
+          "Edibility": 12,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_Pork": {
+          "Name": "Sora6A.XiangyeShiling_Pork",
+          "DisplayName": "{{i18n: item.Pork.name}}",
+          "Description": "{{i18n: item.Pork.description}}",
+          "Price": 45,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 6,
+          "Type": "Basic",
+          "Category": -14,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_BroadBeans": {
+          "Name": "Sora6A.XiangyeShiling_BroadBeans",
+          "DisplayName": "{{i18n: item.BroadBeans.name}}",
+          "Description": "{{i18n: item.BroadBeans.description}}",
+          "Price": 28,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 7,
           "Type": "Basic",
           "Category": -75,
           "Edibility": -300,
@@ -71,6 +165,34 @@
           "Type": "Cooking",
           "Category": -7,
           "Edibility": 70,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SoybeanSeeds": {
+          "Name": "Sora6A.XiangyeShiling_SoybeanSeeds",
+          "DisplayName": "{{i18n: item.SoybeanSeeds.name}}",
+          "Description": "{{i18n: item.SoybeanSeeds.description}}",
+          "Price": 17,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 36,
+          "Type": "Seeds",
+          "Category": -74,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_NapaCabbageSeeds": {
+          "Name": "Sora6A.XiangyeShiling_NapaCabbageSeeds",
+          "DisplayName": "{{i18n: item.NapaCabbageSeeds.name}}",
+          "Description": "{{i18n: item.NapaCabbageSeeds.description}}",
+          "Price": 21,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 37,
+          "Type": "Seeds",
+          "Category": -74,
+          "Edibility": -300,
           "CanBeGivenAsGift": true,
           "ExcludeFromShippingCollection": true,
           "ExcludeFromRandomSale": true
@@ -126,19 +248,121 @@
     },
     {
       "Action": "EditData",
+      "Target": "Data/Crops",
+      "Entries": {
+        "Sora6A.XiangyeShiling_SoybeanSeeds": {
+          "Seasons": [
+            "Summer",
+            "Fall"
+          ],
+          "DaysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            1
+          ],
+          "RegrowDays": -1,
+          "HarvestItemId": "Sora6A.XiangyeShiling_Soybean",
+          "Texture": "Mods/Sora6A.XiangyeShiling/Crops",
+          "SpriteIndex": 0,
+          "CountForMonoculture": false,
+          "CountForPolyculture": false
+        },
+        "Sora6A.XiangyeShiling_NapaCabbageSeeds": {
+          "Seasons": [
+            "Fall"
+          ],
+          "DaysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            2
+          ],
+          "RegrowDays": -1,
+          "HarvestItemId": "Sora6A.XiangyeShiling_NapaCabbage",
+          "Texture": "Mods/Sora6A.XiangyeShiling/Crops",
+          "SpriteIndex": 1,
+          "CountForMonoculture": false,
+          "CountForPolyculture": false
+        }
+      }
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Locations",
+      "TargetField": [
+        "Forest",
+        "Forage"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_SpringForage": {
+          "Id": "Sora6A.XiangyeShiling_SpringForage",
+          "Season": "Spring",
+          "RandomItemId": [
+            "(O)Sora6A.XiangyeShiling_BambooShoots",
+            "(O)Sora6A.XiangyeShiling_WildScallion",
+            "(O)Sora6A.XiangyeShiling_ChineseToon",
+            "(O)Sora6A.XiangyeShiling_Mugwort"
+          ],
+          "Chance": 0.32
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_SpringForage - Forest"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Locations",
+      "TargetField": [
+        "Mountain",
+        "Forage"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_SpringForage": {
+          "Id": "Sora6A.XiangyeShiling_SpringForage",
+          "Season": "Spring",
+          "RandomItemId": [
+            "(O)Sora6A.XiangyeShiling_BambooShoots",
+            "(O)Sora6A.XiangyeShiling_WildScallion",
+            "(O)Sora6A.XiangyeShiling_ChineseToon",
+            "(O)Sora6A.XiangyeShiling_Mugwort"
+          ],
+          "Chance": 0.21
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_SpringForage - Mountain"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Locations",
+      "TargetField": [
+        "BusStop",
+        "Forage"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_SpringForage": {
+          "Id": "Sora6A.XiangyeShiling_SpringForage",
+          "Season": "Spring",
+          "RandomItemId": [
+            "(O)Sora6A.XiangyeShiling_BambooShoots",
+            "(O)Sora6A.XiangyeShiling_WildScallion",
+            "(O)Sora6A.XiangyeShiling_ChineseToon",
+            "(O)Sora6A.XiangyeShiling_Mugwort"
+          ],
+          "Chance": 0.35
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_SpringForage - BusStop"
+    },
+    {
+      "Action": "EditData",
       "Target": "Data/Shops",
       "TargetField": [
         "SeedShop",
         "Items"
       ],
       "Entries": {
-        "Sora6A.XiangyeShiling_P1_SeedShop_0": {
-          "Id": "Sora6A.XiangyeShiling_P1_SeedShop_0",
-          "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
-          "Price": 60,
-          "AvailableStock": 10,
-          "IgnoreShopPriceModifiers": true
-        },
         "Sora6A.XiangyeShiling_P1_SeedShop_1": {
           "Id": "Sora6A.XiangyeShiling_P1_SeedShop_1",
           "ItemId": "(O)262",
@@ -157,13 +381,6 @@
         "Items"
       ],
       "Entries": {
-        "Sora6A.XiangyeShiling_P1_Saloon_0": {
-          "Id": "Sora6A.XiangyeShiling_P1_Saloon_0",
-          "ItemId": "(O)Sora6A.XiangyeShiling_ChineseToon",
-          "Price": 100,
-          "AvailableStock": 5,
-          "IgnoreShopPriceModifiers": true
-        },
         "Sora6A.XiangyeShiling_P1_Saloon_1": {
           "Id": "Sora6A.XiangyeShiling_P1_Saloon_1",
           "ItemId": "(O)Sora6A.XiangyeShiling_ToonTofu",
@@ -198,6 +415,76 @@
         }
       },
       "LogName": "P1 prototype stock - Carpenter"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "SeedShop",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Soybean_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_Soybean_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+          "Price": 60,
+          "AvailableStock": 10,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON spring winter",
+          "AvailableStockLimit": "Global"
+        },
+        "Sora6A.XiangyeShiling_NapaCabbage_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_NapaCabbage_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_NapaCabbage",
+          "Price": 100,
+          "AvailableStock": 5,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON spring summer winter",
+          "AvailableStockLimit": "Global"
+        },
+        "Sora6A.XiangyeShiling_SoybeanSeeds_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_SoybeanSeeds_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_SoybeanSeeds",
+          "Price": 35,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON summer fall"
+        },
+        "Sora6A.XiangyeShiling_NapaCabbageSeeds_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_NapaCabbageSeeds_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_NapaCabbageSeeds",
+          "Price": 42,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON fall"
+        }
+      },
+      "LogName": "Catalog stock - SeedShop"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Pork_Saloon": {
+          "Id": "Sora6A.XiangyeShiling_Pork_Saloon",
+          "ItemId": "(O)Sora6A.XiangyeShiling_Pork",
+          "Price": 110,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true
+        },
+        "Sora6A.XiangyeShiling_BroadBeans_Saloon": {
+          "Id": "Sora6A.XiangyeShiling_BroadBeans_Saloon",
+          "ItemId": "(O)Sora6A.XiangyeShiling_BroadBeans",
+          "Price": 55,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Catalog stock - Saloon"
     }
   ]
 }
