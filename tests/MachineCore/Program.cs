@@ -60,6 +60,24 @@ Test("menu completion follows the clock across midnight and the overnight gap", 
         && BatchCompletion.FromDeadline(long.MaxValue, day).DaysAhead > 2, "Stored future deadlines must remain representable.");
 });
 
+Test("machine recipe pages preserve every ordered catalog row and stop at either end", () =>
+{
+    foreach (var (recipeCount, pageCount) in new[] { (0, 1), (1, 1), (3, 2), (4, 2), (6, 3), (10, 5) })
+    {
+        var page = new MachineRecipePage(recipeCount);
+        Assert(page.Count == pageCount && page.Move(-1) == page, "Wrong number of pages or first-page boundary.");
+        var indices = new List<int>();
+        for (int index = 0; index < pageCount; index++)
+        {
+            Assert(page.Index == index && page.VisibleCount <= 2, "A page has too many physical rows or skipped an index.");
+            indices.AddRange(Enumerable.Range(page.FirstRecipe, page.VisibleCount));
+            if (index + 1 < pageCount) page = page.Move(1);
+        }
+        Assert(page.Move(1) == page && page.Move(-pageCount).Index == 0
+            && indices.SequenceEqual(Enumerable.Range(0, recipeCount)), "A recipe was skipped, duplicated, or unreachable.");
+    }
+});
+
 Test("multi-input shortage yields no partial deduction", () =>
 {
     InventorySlot?[] inventory = { new(Soy, 99, 0, 999), new(Wheat, 1, 0, 999) };
@@ -230,6 +248,19 @@ Test("menu starts a fresh intent only after an authoritative refusal", () =>
         "An authoritative no-grant or cancellation must release the rejected request ID.");
     session.Complete(true);
     Assert(session.Acquire(empty, 10) is null, "A finished menu must stay locked after a successful action.");
+});
+
+Test("menu creates a distinct intent for an explicitly selected recipe on the same revision", () =>
+{
+    var session = new MenuActionSession();
+    Request first = session.Acquire(empty, 10, recipe.Id)!;
+    session.Complete(false);
+    Assert(session.Acquire(empty, 10, recipe.Id) == first, "Retrying one recipe changed its request.");
+    Assert(session.Acquire(empty with { Revision = 1 }, 10, "other") is null,
+        "Selecting another recipe must not silently acquire a newer revision.");
+    Request other = session.Acquire(empty, 10, "other")!;
+    Assert(other.Id != first.Id && other.ExpectedRevision == first.ExpectedRevision && other.ActorId == first.ActorId,
+        "A different recipe must keep the observed revision and use a fresh request ID.");
 });
 
 Test("successful menu action cannot acquire another request until reopened", () =>

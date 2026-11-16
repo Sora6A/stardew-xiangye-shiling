@@ -11,7 +11,7 @@ using SObject = StardewValley.Object;
 namespace XiangyeShiling.Menus;
 
 /// <summary>
-/// 两台设备共用单人菜单：缺料预览与两页获取/制作指南只读本地资料，不获取事务请求。
+/// 两台设备共用菜单：缺料预览、配方分页与获取/制作指南只读本地资料，不获取事务请求。
 /// 界面库存数量只是即时提示；实际输入/时间/数量仍由服务在提交前重新读取和核验。
 /// </summary>
 public sealed class MachineMenu : IClickableMenu
@@ -28,6 +28,8 @@ public sealed class MachineMenu : IClickableMenu
     private readonly SObject Machine;
     private readonly ITranslationHelper Text;
     private readonly IReadOnlyList<MachineRecipe> Recipes;
+    private MachineRecipePage RecipePage;
+    private MachineState? DisplayedState;
     private string Feedback = "";
     private Color FeedbackColor = Color.DarkRed;
     private bool GuideOpen;
@@ -49,6 +51,8 @@ public sealed class MachineMenu : IClickableMenu
         this.Text = text;
         MachineService.TryGetKind(machine, out var kind);
         this.Recipes = service.Recipes.Where(r => r.Machine == kind).ToArray();
+        this.RecipePage = new(this.Recipes.Count);
+        this.DisplayedState = MachineService.TryRead(this.Machine, out var state) ? state : null;
         this.FitViewport();
         if (Game1.options.snappyMenus && Game1.options.gamepadControls)
             this.snapToDefaultClickableComponent();
@@ -72,9 +76,7 @@ public sealed class MachineMenu : IClickableMenu
             close.bounds = this.BoundsAt(PanelWidth - 36, -8, 48, 48);
             close.baseScale = close.scale = 4f * this.LayoutScale;
         }
-        this.populateClickableComponentList();
-        if (Game1.options.gamepadControls)
-            this.snapCursorToCurrentSnappedComponent();
+        this.RefreshComponents();
     }
 
     public override void gameWindowSizeChanged(Rectangle oldBounds, Rectangle newBounds) => this.FitViewport();
@@ -93,12 +95,37 @@ public sealed class MachineMenu : IClickableMenu
     private Rectangle GuideBounds => this.BoundsAt(PanelWidth - 224, 40, 180, 46);
     private Rectangle PreviousBounds => this.BoundsAt(44, PanelHeight - 74, 150, 46);
     private Rectangle NextBounds => this.BoundsAt(PanelWidth - 194, PanelHeight - 74, 150, 46);
+    private int VisibleActionCount => this.DisplayedState is null ? 0
+        : this.DisplayedState.Batch is not null ? 1 : this.RecipePage.VisibleCount;
+    private bool HasMultipleRecipePages => this.DisplayedState is { Batch: null } && this.RecipePage.Count > 1;
+    private bool ShowPageControls => this.GuideOpen || this.HasMultipleRecipePages;
+    private int GuidePageCount => 1 + new MachineRecipePage(this.Service.Recipes.Count).Count;
+    private int PageIndex => this.GuideOpen ? this.GuidePage : this.RecipePage.Index;
+    private int PageCount => this.GuideOpen ? this.GuidePageCount : this.RecipePage.Count;
+
+    private MachineState? ReadState()
+    {
+        var latest = MachineService.TryRead(this.Machine, out var state) ? state : null;
+        bool layoutChanged = (this.DisplayedState is null) != (latest is null)
+            || (this.DisplayedState?.Batch is null) != (latest?.Batch is null);
+        this.DisplayedState = latest;
+        if (layoutChanged && !this.GuideOpen) this.RefreshComponents();
+        return latest;
+    }
+
+    private void RefreshComponents()
+    {
+        this.populateClickableComponentList();
+        if (Game1.options.gamepadControls)
+            this.snapCursorToCurrentSnappedComponent();
+    }
 
     public override void populateClickableComponentList()
     {
         int? selected = this.currentlySnappedComponent?.myID;
-        int first = this.GuideOpen ? (this.GuidePage == 0 ? NextId : PreviousId)
-            : this.Recipes.Count > 0 ? FirstRecipeId : -1;
+        int pageButton = this.PageIndex + 1 < this.PageCount ? NextId : PreviousId;
+        int actionCount = this.VisibleActionCount;
+        int first = this.GuideOpen ? pageButton : actionCount > 0 ? FirstRecipeId : -1;
         var guide = new ClickableComponent(this.GuideBounds, "Guide")
         {
             myID = GuideId, rightNeighborID = CloseId, downNeighborID = first
@@ -112,26 +139,29 @@ public sealed class MachineMenu : IClickableMenu
             this.allClickableComponents.Add(close);
         }
 
-        // 指南只暴露本页控件。键盘与手柄都走点击入口，由页码和事务会话决定能否执行。
-        if (this.GuideOpen)
+        // 只暴露当前页的控件，键盘、手柄与鼠标共用同一个点击入口。
+        if (!this.GuideOpen)
         {
-            this.allClickableComponents.Add(new(this.PreviousBounds, "Previous")
-            { myID = PreviousId, upNeighborID = GuideId, rightNeighborID = NextId });
-            this.allClickableComponents.Add(new(this.NextBounds, "Next")
-            { myID = NextId, upNeighborID = GuideId, leftNeighborID = PreviousId });
-        }
-        else
-        {
-            for (int i = 0; i < this.Recipes.Count; i++)
-                this.allClickableComponents.Add(new(this.ActionBounds(i), this.Recipes[i].Id)
+            for (int i = 0; i < actionCount; i++)
+                this.allClickableComponents.Add(new(this.ActionBounds(i), this.GetRecipe(i)?.Id ?? "Collect")
                 {
                     myID = FirstRecipeId + i,
                     upNeighborID = i == 0 ? GuideId : FirstRecipeId + i - 1,
-                    downNeighborID = i + 1 < this.Recipes.Count ? FirstRecipeId + i + 1 : -1
+                    downNeighborID = i + 1 < actionCount ? FirstRecipeId + i + 1 : this.ShowPageControls ? pageButton : -1
                 });
         }
+        if (this.ShowPageControls)
+        {
+            int above = this.GuideOpen ? GuideId : FirstRecipeId + actionCount - 1;
+            this.allClickableComponents.Add(new(this.PreviousBounds, "Previous")
+            { myID = PreviousId, upNeighborID = above, rightNeighborID = NextId });
+            this.allClickableComponents.Add(new(this.NextBounds, "Next")
+            { myID = NextId, upNeighborID = above, leftNeighborID = PreviousId });
+        }
 
-        this.currentlySnappedComponent = selected.HasValue ? this.getComponentWithID(selected.Value) ?? guide : null;
+        this.currentlySnappedComponent = selected.HasValue ? this.getComponentWithID(selected.Value)
+            ?? (!this.GuideOpen && selected.Value >= FirstRecipeId && actionCount > 0
+                ? this.getComponentWithID(FirstRecipeId + actionCount - 1) : guide) : null;
     }
 
     public override void snapToDefaultClickableComponent()
@@ -152,16 +182,20 @@ public sealed class MachineMenu : IClickableMenu
     {
         this.GuideOpen = open;
         if (open) this.GuidePage = 0;
-        this.populateClickableComponentList();
-        if (Game1.options.gamepadControls)
-            this.snapCursorToCurrentSnappedComponent();
+        this.RefreshComponents();
     }
 
-    private void TurnGuidePage(int page)
+    private void TurnPage(int direction)
     {
-        this.GuidePage = page;
-        this.populateClickableComponentList();
+        if (!this.ShowPageControls) return;
+        int previousPage = this.PageIndex;
+        if (this.GuideOpen) this.GuidePage = Math.Clamp(this.GuidePage + direction, 0, this.GuidePageCount - 1);
+        else this.RecipePage = this.RecipePage.Move(direction);
+        if (this.PageIndex != previousPage) this.RefreshComponents();
     }
+
+    private MachineRecipe? GetRecipe(int visibleRow) => this.DisplayedState is { Batch: null }
+        ? this.Recipes[this.RecipePage.FirstRecipe + visibleRow] : null;
 
     private IReadOnlyList<(Ingredient Ingredient, int Missing)> Missing(MachineRecipe recipe) => recipe.Inputs
         .Select(input => (Ingredient: input, Missing: Math.Max(0, input.Quantity - Game1.player.Items.CountId(input.ItemId))))
@@ -170,24 +204,23 @@ public sealed class MachineMenu : IClickableMenu
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
         this.FitViewport();
+        var state = this.ReadState();
         this.LastClickTick = Game1.ticks;
         if (this.upperRightCloseButton?.containsPoint(x, y) == true) { this.CloseOrCancel(); return; }
         // 先处理只读导航，不能让指南上的点击落到背后的加工/领取按钮；成功锁定也不能阻止查看说明。
         if (this.GuideBounds.Contains(x, y)) { this.SetGuideOpen(!this.GuideOpen); return; }
-        if (this.GuideOpen)
+        if (this.ShowPageControls)
         {
-            if (this.PreviousBounds.Contains(x, y) && this.GuidePage > 0) this.TurnGuidePage(0);
-            if (this.NextBounds.Contains(x, y) && this.GuidePage < 1) this.TurnGuidePage(1);
-            return;
+            if (this.PreviousBounds.Contains(x, y)) { this.TurnPage(-1); return; }
+            if (this.NextBounds.Contains(x, y)) { this.TurnPage(1); return; }
         }
-        if (this.Session.IsComplete || this.FarmhandRequest is not null || this.FarmhandFenced) return;
-        if (!MachineService.TryRead(this.Machine, out var state)) return;
-        MachinePhase phase = state!.PhaseAt(MachineService.Now());
-        for (int i = 0; i < this.Recipes.Count; i++)
+        if (this.GuideOpen || this.Session.IsComplete || this.FarmhandRequest is not null || this.FarmhandFenced
+            || state is null || state.PhaseAt(MachineService.Now()) == MachinePhase.Processing) return;
+        for (int i = 0; i < this.VisibleActionCount; i++)
         {
-            if (!this.ActionBounds(i).Contains(x, y) || phase == MachinePhase.Processing) continue;
-            var missing = this.Missing(this.Recipes[i]);
-            if (phase == MachinePhase.Idle && missing.Count > 0)
+            if (!this.ActionBounds(i).Contains(x, y)) continue;
+            MachineRecipe? recipe = this.GetRecipe(i);
+            if (recipe is not null && this.Missing(recipe) is { Count: > 0 } missing)
             {
                 string ingredients = string.Join(", ", missing.Select(value =>
                     $"{ItemRegistry.GetDataOrErrorItem(value.Ingredient.ItemId).DisplayName} × {value.Missing}"));
@@ -195,9 +228,14 @@ public sealed class MachineMenu : IClickableMenu
                 this.FeedbackColor = Color.DarkRed;
                 return;
             }
-            Request? request = this.Session.Acquire(state, Game1.player.UniqueMultiplayerID);
-            if (request is null) return;
-            string? recipeId = phase == MachinePhase.Idle ? this.Recipes[i].Id : null;
+            string? recipeId = recipe?.Id;
+            Request? request = this.Session.Acquire(state, Game1.player.UniqueMultiplayerID, recipeId);
+            if (request is null)
+            {
+                this.Feedback = this.Text.Get("machine.reopen");
+                this.FeedbackColor = Color.DarkRed;
+                return;
+            }
             if (!this.Farmhand)
                 this.ShowResult(this.Service.Execute(this.Machine, Game1.player, request, recipeId), recipeId is not null);
             else if (this.Service.TryQueueLanMenuOperation(this.Machine, request, recipeId, this.IsCurrentInteraction))
@@ -238,8 +276,22 @@ public sealed class MachineMenu : IClickableMenu
 
     public override bool readyToClose() => this.FarmhandRequest is null && base.readyToClose();
 
+    public override void receiveScrollWheelAction(int direction)
+    {
+        this.FitViewport();
+        this.ReadState();
+        if (direction != 0) this.TurnPage(-Math.Sign(direction));
+    }
+
     public override void receiveGamePadButton(Buttons button)
     {
+        if (button is Buttons.LeftShoulder or Buttons.RightShoulder)
+        {
+            this.FitViewport();
+            this.ReadState();
+            this.TurnPage(button == Buttons.LeftShoulder ? -1 : 1);
+            return;
+        }
         if (button == Buttons.B && this.FarmhandRequest is not null)
         {
             if (this.GuideOpen) this.SetGuideOpen(false);
@@ -297,6 +349,7 @@ public sealed class MachineMenu : IClickableMenu
     {
         if (key == Keys.None) return;
         this.FitViewport();
+        this.ReadState();
         // 原版先把手柄 A 当作光标处点击，再发送绑定的键。如果绑定 Enter 或 Space，同帧只确认一次。
         if (Game1.options.gamepadControls && this.LastClickTick == Game1.ticks
             && key == Utility.mapGamePadButtonToKey(Buttons.A)) return;
@@ -305,6 +358,11 @@ public sealed class MachineMenu : IClickableMenu
             if (this.GuideOpen) this.SetGuideOpen(false);
             else if (this.FarmhandRequest is not null) this.CloseOrCancel();
             else base.receiveKeyPress(key);
+            return;
+        }
+        if (key is Keys.PageUp or Keys.PageDown)
+        {
+            this.TurnPage(key == Keys.PageUp ? -1 : 1);
             return;
         }
         if (key is Keys.Enter or Keys.Space)
@@ -338,6 +396,12 @@ public sealed class MachineMenu : IClickableMenu
     private void DrawText(SpriteBatch b, string text, SpriteFont font, float x, float y, Color color, float scale = 1f) =>
         Utility.drawTextWithShadow(b, text, font, this.PointAt(x, y), color, scale: scale * this.LayoutScale);
 
+    private void DrawRecipeText(SpriteBatch b, string text, float y, Color color)
+    {
+        float scale = Math.Min(1f, 384 / Math.Max(1f, Game1.smallFont.MeasureString(text).X));
+        this.DrawText(b, text, Game1.smallFont, 44, y, color, scale);
+    }
+
     private string CompletionLabel(long readyAt, int currentDay)
     {
         BatchCompletion completion = BatchCompletion.FromDeadline(readyAt, currentDay);
@@ -357,18 +421,25 @@ public sealed class MachineMenu : IClickableMenu
         this.DrawText(b, this.Text.Get(this.GuidePage == 0 ? "guide.sources-title" : "guide.routes-title"),
             Game1.smallFont, 44, 100, Game1.textColor);
         // 来源说明不复制价格/限量；配方名称、数量与工时直接读当前已加载的登记源生成数据。
-        // 当前只显示P1两条路线，不把planned食品描述成可制作。
-        string[] blocks = this.GuidePage == 0
-            ? new string[] { this.Text.Get("guide.pierre"), this.Text.Get("guide.robin"), this.Text.Get("guide.gus") }
-            : this.Service.Recipes.Select(recipe => this.Text.Get("guide.route", new
-            {
-                station = ItemRegistry.GetDataOrErrorItem("(BC)" + MachineService.Prefix + "_"
-                    + (recipe.Machine == MachineKind.BeanWorkshop ? "BeanWorkshop" : "FermentationCrock")).DisplayName,
-                inputs = string.Join(" + ", recipe.Inputs.Select(input =>
-                    $"{ItemRegistry.GetDataOrErrorItem(input.ItemId).DisplayName} × {input.Quantity}")),
-                output = $"{ItemRegistry.GetDataOrErrorItem(recipe.Output.ItemId).DisplayName} × {recipe.Output.Quantity}",
-                minutes = recipe.Minutes
-            }).ToString()).Concat(new[] { this.Text.Get("guide.kitchen").ToString(), this.Text.Get("guide.operation").ToString() }).ToArray();
+        IEnumerable<string> blocks;
+        if (this.GuidePage == 0)
+            blocks = new string[] { this.Text.Get("guide.pierre"), this.Text.Get("guide.robin"), this.Text.Get("guide.gus") };
+        else
+        {
+            var routes = new MachineRecipePage(this.Service.Recipes.Count, this.GuidePage - 1);
+            blocks = this.Service.Recipes.Skip(routes.FirstRecipe).Take(routes.VisibleCount).Select(recipe =>
+                this.Text.Get("guide.route", new
+                {
+                    station = ItemRegistry.GetDataOrErrorItem("(BC)" + MachineService.Prefix + "_"
+                        + (recipe.Machine == MachineKind.BeanWorkshop ? "BeanWorkshop" : "FermentationCrock")).DisplayName,
+                    inputs = string.Join(" + ", recipe.Inputs.Select(input =>
+                        $"{ItemRegistry.GetDataOrErrorItem(input.ItemId).DisplayName} × {input.Quantity}")),
+                    output = $"{ItemRegistry.GetDataOrErrorItem(recipe.Output.ItemId).DisplayName} × {recipe.Output.Quantity}",
+                    minutes = recipe.Minutes
+                }).ToString());
+            if (this.GuidePage == this.GuidePageCount - 1)
+                blocks = blocks.Concat(new[] { this.Text.Get("guide.kitchen").ToString(), this.Text.Get("guide.operation").ToString() });
+        }
         string[] lines = blocks.Select(text => Game1.parseText(text, Game1.smallFont, PanelWidth - 88)).ToArray();
         float totalHeight = lines.Sum(text => Game1.smallFont.MeasureString(text).Y) + 18 * (lines.Length - 1);
         float scale = Math.Min(1f, (PanelHeight - 214) / Math.Max(1f, totalHeight));
@@ -378,12 +449,18 @@ public sealed class MachineMenu : IClickableMenu
             this.DrawText(b, line, Game1.smallFont, 44, y, Game1.textColor, scale);
             y += (Game1.smallFont.MeasureString(line).Y + 18) * scale;
         }
-        this.Button(b, this.PreviousBounds, this.Text.Get("guide.previous"), this.GuidePage > 0);
-        this.Button(b, this.NextBounds, this.Text.Get("guide.next"), this.GuidePage < 1);
-        string page = this.Text.Get("guide.page", new { current = this.GuidePage + 1, total = 2 });
+        this.DrawPageControls(b);
+    }
+
+    private void DrawPageControls(SpriteBatch b)
+    {
+        this.Button(b, this.PreviousBounds, this.Text.Get("guide.previous"), this.PageIndex > 0);
+        this.Button(b, this.NextBounds, this.Text.Get("guide.next"), this.PageIndex + 1 < this.PageCount);
+        string page = this.Text.Get("guide.page", new { current = this.PageIndex + 1, total = this.PageCount });
         this.DrawText(b, page, Game1.smallFont, (PanelWidth - Game1.smallFont.MeasureString(page).X) / 2f,
             PanelHeight - 62, Game1.textColor);
     }
+
     public override void draw(SpriteBatch b)
     {
         // 游戏内 UI 缩放也会改变逻辑视口，绘制与输入入口都读取最新尺寸。
@@ -393,40 +470,36 @@ public sealed class MachineMenu : IClickableMenu
         if (this.GuideOpen) { this.DrawGuide(b); base.draw(b); this.drawMouse(b); return; }
         this.DrawText(b, this.Machine.DisplayName, Game1.dialogueFont, 44, 36, Game1.textColor);
         this.Button(b, this.GuideBounds, this.Text.Get("guide.open"));
-        if (!MachineService.TryRead(this.Machine, out var state))
+        if (this.ReadState() is not { } state)
             this.DrawText(b, Game1.parseText(this.Text.Get("machine.invalid-state"), Game1.smallFont, 600), Game1.smallFont, 44, 121, Color.DarkRed);
         else
         {
             long now = MachineService.Now();
             int today = Game1.Date.TotalDays;
-            MachinePhase phase = state!.PhaseAt(now);
+            MachinePhase phase = state.PhaseAt(now);
             string status = this.Text.Get("phase." + phase);
             if (phase == MachinePhase.Processing) status += " · " + this.Text.Get("machine.minutes", new { minutes = state.Batch!.ReadyAt - now });
             this.DrawText(b, status, Game1.smallFont, 44, 100, Game1.textColor);
-            for (int i = 0; i < this.Recipes.Count; i++)
+            for (int i = 0; i < this.VisibleActionCount; i++)
             {
-                MachineRecipe recipe = this.Recipes[i];
-                bool missing = phase == MachinePhase.Idle && this.Missing(recipe).Count > 0;
-                Product product = state.Batch?.Output ?? recipe.Output;
+                MachineRecipe? recipe = this.GetRecipe(i);
+                bool missing = recipe is not null && this.Missing(recipe).Count > 0;
+                Product product = recipe is null ? state.Batch!.Output : recipe.Output;
                 string name = ItemRegistry.GetDataOrErrorItem(product.ItemId).DisplayName;
                 int rowY = 148 + i * 120;
-                this.DrawText(b, $"{name} × {product.Quantity}", Game1.smallFont, 44, rowY, Game1.textColor);
-                string inputs = string.Join("  ", recipe.Inputs.Select(input =>
-                    $"{ItemRegistry.GetDataOrErrorItem(input.ItemId).DisplayName} {Game1.player.Items.CountId(input.ItemId)}/{input.Quantity}"));
-                this.DrawText(b, inputs, Game1.smallFont, 44, rowY + 32, missing ? Color.DarkRed : Game1.textColor);
-                Rectangle bounds = this.ActionBounds(i);
-                string timing = phase switch
+                this.DrawRecipeText(b, $"{name} × {product.Quantity}", rowY, Game1.textColor);
+                if (recipe is not null)
                 {
-                    MachinePhase.Idle => this.Text.Get("machine.unlocked-time", new { minutes = recipe.Minutes }) + " · "
-                        + this.CompletionLabel(now + recipe.Minutes, today),
-                    MachinePhase.Processing => this.CompletionLabel(state.Batch!.ReadyAt, today),
-                    _ => ""
-                };
-                if (timing.Length > 0)
-                {
-                    float scale = Math.Min(1f, 384 / Math.Max(1f, Game1.smallFont.MeasureString(timing).X));
-                    this.DrawText(b, timing, Game1.smallFont, 44, rowY + 64, Game1.textColor, scale);
+                    string inputs = string.Join("  ", recipe.Inputs.Select(input =>
+                        $"{ItemRegistry.GetDataOrErrorItem(input.ItemId).DisplayName} {Game1.player.Items.CountId(input.ItemId)}/{input.Quantity}"));
+                    this.DrawRecipeText(b, inputs, rowY + 32, missing ? Color.DarkRed : Game1.textColor);
+                    string timing = this.Text.Get("machine.unlocked-time", new { minutes = recipe.Minutes }) + " · "
+                        + this.CompletionLabel(now + recipe.Minutes, today);
+                    this.DrawRecipeText(b, timing, rowY + 64, Game1.textColor);
                 }
+                else if (phase == MachinePhase.Processing)
+                    this.DrawRecipeText(b, this.CompletionLabel(state.Batch!.ReadyAt, today), rowY + 64, Game1.textColor);
+                Rectangle bounds = this.ActionBounds(i);
                 this.Button(b, bounds, this.Text.Get(this.Session.IsComplete ? "machine.done"
                     : this.FarmhandRequest is not null ? "machine.network-pending" : phase == MachinePhase.Ready ? "machine.collect"
                     : phase == MachinePhase.Processing ? "phase.Processing" : missing ? "machine.materials-missing" : "machine.start"),
@@ -434,8 +507,13 @@ public sealed class MachineMenu : IClickableMenu
                     && phase != MachinePhase.Processing && !missing);
             }
         }
-        if (this.Feedback.Length > 0) this.DrawText(b, Game1.parseText(this.Feedback, Game1.smallFont, 630), Game1.smallFont,
-            44, 356, this.FeedbackColor);
+        if (this.Feedback.Length > 0)
+        {
+            string feedback = Game1.parseText(this.Feedback, Game1.smallFont, 630);
+            float scale = this.HasMultipleRecipePages ? Math.Min(1f, 30 / Math.Max(1f, Game1.smallFont.MeasureString(feedback).Y)) : 1f;
+            this.DrawText(b, feedback, Game1.smallFont, 44, 356, this.FeedbackColor, scale);
+        }
+        if (this.HasMultipleRecipePages) this.DrawPageControls(b);
         base.draw(b);
         this.drawMouse(b);
     }

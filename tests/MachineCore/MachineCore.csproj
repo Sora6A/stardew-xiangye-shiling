@@ -15,6 +15,7 @@
     <!-- Exercise protocol intent and read-only routing boundaries without loading SMAPI or game assemblies. -->
     <Compile Include="../../src/XiangyeShiling/Networking/*.cs" Link="Networking/%(Filename)%(Extension)" />
     <Compile Include="../../src/XiangyeShiling/Menus/MenuActionSession.cs" Link="Menus/MenuActionSession.cs" />
+    <Compile Include="../../src/XiangyeShiling/Menus/MachineRecipePage.cs" Link="Menus/MachineRecipePage.cs" />
     <Compile Include="../../src/XiangyeShiling/Menus/BatchCompletion.cs" Link="Menus/BatchCompletion.cs" />
     <!-- Exercise the actual local harness acceptance gate without loading game assemblies. -->
     <Compile Include="../GameHarness/WorldToolProof.cs" Link="Harness/WorldToolProof.cs" />

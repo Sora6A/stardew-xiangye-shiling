@@ -9,9 +9,25 @@ namespace XiangyeShiling.Menus;
 public sealed class MenuActionSession
 {
     private Request? Pending;
+    private string? PendingRecipe;
     public bool IsComplete { get; private set; }
-    public Request? Acquire(MachineState state, long actorId) => this.IsComplete ? null :
-        this.Pending ??= new(Guid.NewGuid(), state.InstanceId, state.Revision, actorId);
+    public Request? Acquire(MachineState state, long actorId) => this.Acquire(state, actorId, null);
+
+    internal Request? Acquire(MachineState state, long actorId, string? recipeId)
+    {
+        if (this.IsComplete) return null;
+        if (this.Pending is { } previous)
+        {
+            if (this.PendingRecipe == recipeId) return previous;
+            // 只有显式点击同一修订上的另一配方才创建新意图，避免将旧请求 ID 改发为不同操作。
+            if (previous.InstanceId != state.InstanceId || previous.ExpectedRevision != state.Revision
+                || previous.ActorId != actorId)
+                return null;
+        }
+        this.PendingRecipe = recipeId;
+        return this.Pending = new(Guid.NewGuid(), state.InstanceId, state.Revision, actorId);
+    }
+
     internal void ReleaseRefusedRequest() => this.Pending = null;
     public void Complete(bool applied)
     {
