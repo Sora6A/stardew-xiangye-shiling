@@ -143,6 +143,7 @@ class CatalogTests(unittest.TestCase):
         crops = next(change["Entries"] for change in changes if change["Target"] == "Data/Crops")
         pierre = {stock["ItemId"]: stock for change in changes if change.get("TargetField") == ["SeedShop", "Items"]
                   for stock in change["Entries"].values()}
+        self.assertNotIn("(O)262", pierre)
         for key, growth, seed_condition, restock_condition, limit in (
             ("Soybean", 8, "SEASON summer fall", "SEASON spring winter", 10),
             ("NapaCabbage", 9, "SEASON fall", "SEASON spring summer winter", 5),

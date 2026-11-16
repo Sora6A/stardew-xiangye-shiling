@@ -102,8 +102,9 @@ def generate(catalog):
             entries[stock_id] = {"Id": stock_id, **value, "IgnoreShopPriceModifiers": True}
             if value.get("IsRecipe"):
                 legacy_unlocks.add(value["ItemId"])
-        changes.append({"Action": "EditData", "Target": "Data/Shops", "TargetField": [shop, "Items"],
-                        "Entries": entries, "LogName": "P1 prototype stock - " + shop})
+        if entries:
+            changes.append({"Action": "EditData", "Target": "Data/Shops", "TargetField": [shop, "Items"],
+                            "Entries": entries, "LogName": "Legacy recipe stock - " + shop})
     for shop, sources in source_shops.items():
         entries = {}
         for item_id, source in sources.items():

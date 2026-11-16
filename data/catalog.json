@@ -8,7 +8,7 @@
     "Null numeric values require P1/P2 balancing; they are never executable recipe values.",
     "The added Fish Smoker rules use the native one-coal fuel policy; verify that original fish keep their native output.",
     "Kitchen egg recipes use the vanilla egg category so common color and size variants work.",
-    "Formal sources supersede overlapping prototype stock after activation. Pierre's limited purchase of vanilla wheat remains an interim P1 supply."
+    "Formal sources supersede prototype ingredient stock. Wheat uses its original acquisition routes."
   ],
   "vanillaItems": [
     {
@@ -2917,11 +2917,6 @@
       {
         "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
         "Price": 60,
-        "AvailableStock": 10
-      },
-      {
-        "ItemId": "(O)262",
-        "Price": 25,
         "AvailableStock": 10
       }
     ],

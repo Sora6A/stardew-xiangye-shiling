@@ -1,7 +1,7 @@
 {
   "Name": "Xiangye Shiling",
   "Author": "Sora6A",
-  "Version": "0.1.0-alpha.2",
+  "Version": "1.0.0",
   "Description": "Shared Bean Workshop and Fermentation Crock menus, batch processing and multiplayer synchronization.",
   "UniqueID": "Sora6A.XiangyeShiling",
   "EntryDll": "XiangyeShiling.dll",

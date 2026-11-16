@@ -781,24 +781,6 @@
       "Action": "EditData",
       "Target": "Data/Shops",
       "TargetField": [
-        "SeedShop",
-        "Items"
-      ],
-      "Entries": {
-        "Sora6A.XiangyeShiling_P1_SeedShop_1": {
-          "Id": "Sora6A.XiangyeShiling_P1_SeedShop_1",
-          "ItemId": "(O)262",
-          "Price": 25,
-          "AvailableStock": 10,
-          "IgnoreShopPriceModifiers": true
-        }
-      },
-      "LogName": "P1 prototype stock - SeedShop"
-    },
-    {
-      "Action": "EditData",
-      "Target": "Data/Shops",
-      "TargetField": [
         "Saloon",
         "Items"
       ],
@@ -811,7 +793,7 @@
           "IgnoreShopPriceModifiers": true
         }
       },
-      "LogName": "P1 prototype stock - Saloon"
+      "LogName": "Legacy recipe stock - Saloon"
     },
     {
       "Action": "EditData",
@@ -836,7 +818,7 @@
           "IgnoreShopPriceModifiers": true
         }
       },
-      "LogName": "P1 prototype stock - Carpenter"
+      "LogName": "Legacy recipe stock - Carpenter"
     },
     {
       "Action": "EditData",

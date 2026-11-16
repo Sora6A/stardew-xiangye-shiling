@@ -94,6 +94,8 @@ C#场景直接编译规则/提交/菜单/世界判据、Networking及GameHarness
 python tools/build.py --game-path "D:\SteamLibrary\steamapps\common\Stardew Valley"
 ```
 
+发布候选的两个 manifest 与程序集设为同一稳定版本后，用 `python tools/build.py --release --game-path <游戏目录>` 生成 `artifacts/XiangyeShiling-<版本>.zip`。发行包只收录两个模组的运行时文件和安装说明，必须按计划在干净的 Mods 目录安装并实测，发布时上传该实测包并核对 SHA-256。
+
 也可单独编译：
 
 ```powershell

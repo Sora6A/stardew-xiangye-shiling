@@ -300,7 +300,7 @@ def generated_files(catalog: dict) -> dict[Path, str]:
               "- 生长天数、补货数量、价格、食用恢复量、每批产出与耗时。",
               "- 厨房的原版蛋类用料规则和熏鱼机追加规则，核对原版鱼类加工。", ""]
     lines += ["## 商店与地图数据", "", "正式来源按各条目的季节和库存生成。启用作物季外供给和野菜拾取后，重叠的原型库存退出。",
-              "原型小麦补给和既有图纸、菜谱仍按 `prototypeShops` 的登记生成。地图权重与店铺数值留待整版平衡。", ""]
+              "小麦沿用原版获取。既有图纸和菜谱的购买身份保持稳定。", ""]
     files[Path("docs/CONTENT_CATALOG.md")] = "\n".join(lines)
     files.update(generate_content(catalog))
     return files
