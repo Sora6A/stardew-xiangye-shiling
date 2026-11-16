@@ -78,6 +78,36 @@ public sealed class ModEntry : Mod
             helper.Events.GameLoop.ReturnedToTitle += (_, _) => crops.OnReturnedToTitle();
             return;
         }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2RecipesScenario.Scenario)
+        {
+            var recipes = new P2RecipesScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => recipes.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => recipes.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => recipes.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => recipes.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => recipes.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2FishSmokerScenario.Scenario)
+        {
+            var smoker = new P2FishSmokerScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => smoker.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => smoker.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => smoker.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => smoker.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => smoker.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2KitchenScenario.Scenario)
+        {
+            var kitchen = new P2KitchenScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => kitchen.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => kitchen.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => kitchen.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => kitchen.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => kitchen.OnReturnedToTitle();
+            return;
+        }
         bool boundMemory = this.Settings.VerifyOwnerInventoryFingerprints || this.Settings.VerifyHostReservationStore;
         if (this.Settings.Enabled && boundMemory
             && (this.Settings.Scenario != "Memory" || this.Settings.OpenPreview

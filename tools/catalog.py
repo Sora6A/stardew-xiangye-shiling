@@ -295,11 +295,10 @@ def generated_files(catalog: dict) -> dict[Path, str]:
     for recipe in recipes:
         unlock = recipe["unlock"]
         lines.append(f"| `{recipe['id'].split('_Recipe_')[1]}` | {recipe['station']} | {'＋'.join(name(e['item']) for e in recipe['inputs'])} | {name(recipe['output']['item'])} | {unlock.get('shop', '随设备可用')} | {recipe['implementation']} |")
-    lines += ["", "## 未锁定项", "", "- 新美术、作物阶段、机器状态图；P0 黄豆暂用原版绿豆图标（仅资源引用，不分发原版图片）。",
-              "- 分类/职业加成、赠礼、收集与完成度行为须在 P3 核查；P0 黄豆暂不计入出货收集。",
+    lines += ["", "## 发布前核查", "", "- 图像在地图、商店、料理和设备界面的实际显示。",
+              "- 分类、职业加成、赠礼、收集与完成度行为。",
               "- 生长天数、补货数量、价格、食用恢复量、每批产出与耗时。",
-              "- 鸡蛋暂以原版普通白鸡蛋 ID 登记，P1 核查大小/颜色替代规则。",
-              "- 熏鱼机煤炭耗用、正常鱼类加工回归；实际补丁只能追加规则。", ""]
+              "- 厨房的原版蛋类用料规则和熏鱼机追加规则，核对原版鱼类加工。", ""]
     lines += ["## 商店与地图数据", "", "正式来源按各条目的季节和库存生成。启用作物季外供给和野菜拾取后，重叠的原型库存退出。",
               "原型小麦补给和既有图纸、菜谱仍按 `prototypeShops` 的登记生成。地图权重与店铺数值留待整版平衡。", ""]
     files[Path("docs/CONTENT_CATALOG.md")] = "\n".join(lines)

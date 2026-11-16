@@ -1,5 +1,13 @@
 # 当前开发交接
 
+## 2026-11-16 P2 全量数据启用
+
+分支 `codex/first-stable-release`，来源提交 `615d4ad396824aed9dd768ca1ba5b401c1c526fd`。登记 40 物品/30 配方全部启用。新增 8 条自建设备规则、原版熏鱼机两条加煤的原生配方、15 条其余厨房菜谱与原创食品/设备图集。Python 125、MachineCore 144、GameAdapter 26 与生产/夹具 Release 通过。验证脚本 `.local/p2-native/run.ps1` 准备独立 Mods 与冻结哈希。工作区包含全量生成数据、三类集成夹具、文档与图像。
+
+冻结 ZIP `A76436B9…AB85`，生产 `D8D12D4A…9C2D2`。`.local/p2-native/recipes-v1` 验证原版设备菜单十条，95 文件一致。`.local/p2-native/smoker-v1` 22736 通过原版三机自然烟熏，`.local/p2-native/kitchen-id-v2` 31228 通过全部 16 条购买和烹饪。厨房首轮 `kitchen-v1` 12480 的蓝图带后缀显示名导致夹具断言失败，修订已核对显示名和内部 ID。采集 `.local/p2-native/forage-full-package-v2` 33588 通过三图四种野菜、原版大葱及三图夏季正向对照。最后两轮各 99 个文件一致，零保存零错误，所有测试进程退出且禁用。较早 `forage-two-springs` 的部署 manifest 已纠正，失败记录保留。见[来源记录](validation/P2-sources-2026-11-16.md)与[设备厨房记录](validation/P2-production-2026-11-16.md)。
+
+额度接近短窗口限制时保存本轮，未推送或发布。下次从 P3 开始。先按 `docs/DEVELOPMENT_PLAN.md` 第 6、7 节建立经济和兼容性矩阵，豆坊当前基础机会利润 24–30g/游戏小时，检查缺季购买、煤炭与烟熏、油价和麻婆豆腐整链、品质及职业增益。用新候选补真实跨季、多人末页加工、全量存读档、赠礼/食用/售出、动静态美术与手柄界面。候选生产包仍标 alpha.2。全部发布验收通过后才造正式 ZIP，经任务分支 PR 合并并上传 GitHub Release。
+
 ## 2026-11-16 P2 来源与设备开发
 
 分支 `codex/first-stable-release`，数据生成检查点 `0652e2d0ebd35bc4b35d0e070d4aa411ca5679e4`。现有未提交项为 P2 作物、商店和采集数据、图像及夹具、菜单分页及测试，另有独立熏鱼机生成器。运行时用 `.local/p2-native/run.ps1` 对冻结 ZIP、夹具和专用存档核哈希，启动前后检查游戏，核对全部存档和原 Mods 一致并禁用夹具。

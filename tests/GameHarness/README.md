@@ -200,3 +200,16 @@ trace最多256条，增加Evicted/QueueRejected不能通过当前客户端证据
 ## Network schema2 与配对
 
 Schema2带首个Ready Baseline/current指纹/引用一致/burst发送序号；每Processed含实际Quota窗口/计数与连接token。network-probe-result.json保存活动世界，标题另写network-probe-title-result.json；不要用标题报告冒充基础证据。两端归档原文后运行tools/check_network_reports.py，详见 [配对命令](../../docs/NET02_TEST_SETUP.md)。工具核共享身份/请求与各端独立上下文，九发八回需主机同窗口实际八读一未读，不能给未读第九条编ID。schema1/Failure非null/连接变化/失活/丢弃/额外流量拒绝；输出仅Basic/Fullfalse。40人工报告测试不证明SMAPI；首次角色准备尚未核完，旧准备进程已消失，当前无实际网络诊断或pair结果，完整NET02与诊断前后保存hash仍待实测。
+## P2 内容实机夹具
+
+在隔离 Mods 里使用同一个冻结开发包、SMAPI 4.4.0 与 Content Patcher 2.9.0。每个场景单独启动一个游戏进程，测试只在专用副本里执行，结束后禁用 `GameHarness` 并核对存档和常用 Mods 的哈希。复制专用开发档时使用 `tools/prepare_save_copy.py`，为每个场景设置表中的原样 `Scenario`、`FarmName`、`SaveFixtureId`，并设置 `Enabled=true`、`OpenPreview=false`。先退出其他游戏，避免同时运行两个会修改内存或共享偏好的夹具。
+
+| Scenario | FarmName | SaveFixtureId | 报告 |
+|---|---|---|---|
+| P2CropShop | XYSP2Crops | 620261127 | `p2-crop-shop-result.json` |
+| P2Forage | XYSP2Forage | 620261128 | `p2-forage-result.json` |
+| P2FishSmoker | XYSP2Smoker | 620261129 | `p2-fish-smoker-result.json` |
+| P2Recipes | XYSP2Recipes | 620261130 | `p2-recipes-result.json` |
+| P2Kitchen | XYSP2Kitchen | 620261131 | `p2-kitchen-result.json` |
+
+作物、采集、烟熏及设备菜单使用春季第 1 年的单人开发副本。厨房另用已完成第一次农舍升级、冰箱为空、未学会新增菜谱的单人开发副本。夹具可为原版组件准备日历、材料或站位，具体边界和实测结果见 [来源记录](../../docs/validation/P2-sources-2026-11-16.md)与[设备和厨房记录](../../docs/validation/P2-production-2026-11-16.md)。

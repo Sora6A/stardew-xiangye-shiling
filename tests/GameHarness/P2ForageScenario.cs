@@ -15,7 +15,7 @@ internal sealed class P2ForageScenario
     internal const ulong FixtureId = 620261128;
     private const string Prefix = "(O)Sora6A.XiangyeShiling_", Onion = "(O)399";
     private const int SpringCycles = 2, DaysPerSeason = 28, DaysPerYear = DaysPerSeason * 4;
-    private const int SummerSamples = 4, PreparedSlots = 36;
+    private const int SummerSamples = 14, PreparedSlots = 36;
     private static readonly string SaveName = $"{FarmName}_{FixtureId}";
     private static readonly string[] Custom = { Prefix + "BambooShoots", Prefix + "WildScallion", Prefix + "ChineseToon", Prefix + "Mugwort" };
     private static readonly MapProof[] Maps =
@@ -197,7 +197,7 @@ internal sealed class P2ForageScenario
         uint oldDays = Game1.stats.DaysPlayed;
         Season oldSeason = Game1.season;
         int springOrdinal = this.StartDay - 1 + index;
-        int yearOffset = season == Season.Spring ? springOrdinal / DaysPerSeason : SpringCycles - 1;
+        int yearOffset = season == Season.Spring ? springOrdinal / DaysPerSeason : 0;
         int day = season == Season.Spring ? springOrdinal % DaysPerSeason + 1 : 1 + index;
         int year = oldYear + yearOffset;
         int dayOffset = yearOffset * DaysPerYear + (season == Season.Summer ? DaysPerSeason : 0) + day - this.StartDay;

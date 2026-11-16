@@ -68,7 +68,10 @@ class CatalogTests(unittest.TestCase):
         self.assertTrue(any("Broken producer" in e for e in catalog.validate(self.data)))
 
     def test_incomplete_balance_cannot_be_activated(self):
-        self.data["recipes"][0]["implementation"] = "active"
+        incomplete = self.data["recipes"][0]
+        incomplete["implementation"] = "active"
+        incomplete["inputs"][0]["quantity"] = None
+        incomplete["minutes"] = None
         errors = catalog.validate(self.data)
         self.assertTrue(any("unset quantity" in e for e in errors))
         self.assertTrue(any("no duration" in e for e in errors))
@@ -167,6 +170,23 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(expected, set(row["RandomItemId"]))
             self.assertEqual("Spring", row["Season"])
             self.assertNotIn("(O)399", row["RandomItemId"])
+
+    def test_all_frozen_recipes_reach_their_native_or_custom_station(self):
+        files = catalog.generated_files(self.data)
+        changes = catalog.json.loads(files[catalog.PACK / "content.json"])["Changes"]
+        runtime = catalog.json.loads(files[Path("src/XiangyeShiling/assets/machine-recipes.json")])
+        self.assertEqual(6, sum(r["Machine"] == "BeanWorkshop" for r in runtime))
+        self.assertEqual(4, sum(r["Machine"] == "FermentationCrock" for r in runtime))
+        smoker = next(edit for edit in changes if edit["Target"] == "Data/Machines")
+        self.assertEqual(["(BC)FishSmoker", "OutputRules"], smoker["TargetField"])
+        self.assertEqual(2, len(smoker["Entries"]))
+        self.assertNotIn("SmokedFish", smoker["Entries"])
+        cooking = next(edit["Entries"] for edit in changes if edit["Target"] == "Data/CookingRecipes")
+        sold = [stock for edit in changes if edit.get("TargetField") == ["Saloon", "Items"]
+                for stock in edit["Entries"].values() if stock.get("IsRecipe")]
+        self.assertEqual(16, len(cooking))
+        self.assertEqual(16, len({row["ItemId"] for row in sold}))
+        self.assertEqual(3, sum("-5" in row.split("/", 1)[0].split()[::2] for row in cooking.values()))
 
     def test_generated_machine_recipe_matches_catalog_quantities(self):
         files = catalog.generated_files(self.data)
