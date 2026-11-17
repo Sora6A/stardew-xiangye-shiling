@@ -1,4 +1,6 @@
 using XiangyeShiling.Machines;
+using XiangyeShiling.Menus;
+using XiangyeShiling.Networking;
 
 const string Soy = "(O)Sora6A.XiangyeShiling_Soybean";
 const string Wheat = "(O)262";
@@ -26,6 +28,55 @@ void Reject(Decision decision, Rejection expected)
     Assert(!decision.Accepted && decision.Rejection == expected && decision.Transaction is null,
         $"Expected {expected} with no inventory or machine mutation, got {decision.Rejection}.");
 }
+
+Test("native LAN capability binds a canonical world host actor session and hello challenge", () =>
+{
+    var capability = new LanMachineCapability(620261122, -33, -17, Guid.NewGuid(), Guid.NewGuid());
+    string raw = capability.Encode();
+    Assert(LanMachineCapability.TryRead(raw, out var decoded) && decoded == capability
+        && decoded.MatchesWorld(620261122, -33, -17), "The exact host capability did not round-trip.");
+    Assert(!decoded.MatchesWorld(620261121, -33, -17) && !decoded.MatchesWorld(620261122, -34, -17)
+        && !decoded.MatchesWorld(620261122, -33, -33), "A different world, host or actor matched.");
+    foreach (string invalid in new[] { raw + "|x", "2" + raw[1..], raw.Replace("|-17|", "|-33|"),
+        raw.Replace("|-33|", "|-033|"), raw.Replace(capability.Challenge.ToString("D"), Guid.Empty.ToString("D")),
+        new string('x', 145) })
+        Assert(!LanMachineCapability.TryRead(invalid, out _), "Noncanonical or unbound capability was accepted.");
+});
+
+Test("menu completion follows the clock across midnight and the overnight gap", () =>
+{
+    const int day = 27;
+    const long midnight = day * 1440L;
+    Assert(BatchCompletion.FromDeadline(midnight + 13 * 60, day) == new BatchCompletion(0, 1300),
+        "Daytime deadline displayed at the wrong time.");
+    var tonight = BatchCompletion.FromDeadline(midnight + 24 * 60 + 13, day);
+    Assert(tonight.IsTonight && tonight.Clock == 20, "A deadline after midnight needs the next ten-minute tick tonight.");
+    Assert(BatchCompletion.FromDeadline(midnight + 25 * 60 + 51, day) == new BatchCompletion(1, 600)
+        && BatchCompletion.FromDeadline(midnight + 29 * 60 + 50, day) == new BatchCompletion(1, 600),
+        "The menu offered collection before the player could interact again.");
+    Assert(BatchCompletion.FromDeadline(midnight + 30 * 60 + 1, day) == new BatchCompletion(1, 610),
+        "Rounding should continue after the morning begins.");
+    Assert(BatchCompletion.FromDeadline(midnight + 2 * 1440 + 17 * 60, day) == new BatchCompletion(2, 1700)
+        && BatchCompletion.FromDeadline(long.MaxValue, day).DaysAhead > 2, "Stored future deadlines must remain representable.");
+});
+
+Test("machine recipe pages preserve every ordered catalog row and stop at either end", () =>
+{
+    foreach (var (recipeCount, pageCount) in new[] { (0, 1), (1, 1), (3, 2), (4, 2), (6, 3), (10, 5) })
+    {
+        var page = new MachineRecipePage(recipeCount);
+        Assert(page.Count == pageCount && page.Move(-1) == page, "Wrong number of pages or first-page boundary.");
+        var indices = new List<int>();
+        for (int index = 0; index < pageCount; index++)
+        {
+            Assert(page.Index == index && page.VisibleCount <= 2, "A page has too many physical rows or skipped an index.");
+            indices.AddRange(Enumerable.Range(page.FirstRecipe, page.VisibleCount));
+            if (index + 1 < pageCount) page = page.Move(1);
+        }
+        Assert(page.Move(1) == page && page.Move(-pageCount).Index == 0
+            && indices.SequenceEqual(Enumerable.Range(0, recipeCount)), "A recipe was skipped, duplicated, or unreachable.");
+    }
+});
 
 Test("multi-input shortage yields no partial deduction", () =>
 {
@@ -187,6 +238,31 @@ Test("menu failure retains the original request and revision for safe retry", ()
         "A failed click must not silently acquire a request for a new revision.");
 });
 
+Test("menu starts a fresh intent only after an authoritative refusal", () =>
+{
+    var session = new XiangyeShiling.Menus.MenuActionSession();
+    Request first = session.Acquire(empty, 10)!;
+    session.ReleaseRefusedRequest();
+    Request next = session.Acquire(empty with { Revision = 1 }, 10)!;
+    Assert(next.Id != first.Id && next.ExpectedRevision == 1 && next.ActorId == first.ActorId,
+        "An authoritative no-grant or cancellation must release the rejected request ID.");
+    session.Complete(true);
+    Assert(session.Acquire(empty, 10) is null, "A finished menu must stay locked after a successful action.");
+});
+
+Test("menu creates a distinct intent for an explicitly selected recipe on the same revision", () =>
+{
+    var session = new MenuActionSession();
+    Request first = session.Acquire(empty, 10, recipe.Id)!;
+    session.Complete(false);
+    Assert(session.Acquire(empty, 10, recipe.Id) == first, "Retrying one recipe changed its request.");
+    Assert(session.Acquire(empty with { Revision = 1 }, 10, "other") is null,
+        "Selecting another recipe must not silently acquire a newer revision.");
+    Request other = session.Acquire(empty, 10, "other")!;
+    Assert(other.Id != first.Id && other.ExpectedRevision == first.ExpectedRevision && other.ActorId == first.ActorId,
+        "A different recipe must keep the observed revision and use a fresh request ID.");
+});
+
 Test("successful menu action cannot acquire another request until reopened", () =>
 {
     var session = new XiangyeShiling.Menus.MenuActionSession();
@@ -198,6 +274,18 @@ Test("successful menu action cannot acquire another request until reopened", () 
     Request? reopened = new XiangyeShiling.Menus.MenuActionSession().Acquire(next, 10);
     Assert(reopened is not null && reopened.Id != first!.Id && reopened.ExpectedRevision == 1,
         "Explicit reopening must allow a new intent bound to the new revision.");
+});
+
+Test("processing action label describes the batch even after the start click succeeded", () =>
+{
+    var session = new MenuActionSession();
+    session.Complete(true);
+    Assert(session.DisplayActionKey(MachinePhase.Processing, awaitingHost: false, missing: false) == "phase.Processing",
+        "BUG-2026-031: a successful Start does not complete the batch.");
+    Assert(session.DisplayActionKey(MachinePhase.Idle, awaitingHost: false, missing: false) == "machine.done",
+        "The original session remains locked after a successful collection.");
+    Assert(new MenuActionSession().DisplayActionKey(MachinePhase.Ready, awaitingHost: false, missing: false) == "machine.collect",
+        "A fresh menu still offers the ready batch for collection.");
 });
 
 Test("world tool protection rejects unrelated swing followed by ignored target click", () =>
@@ -220,6 +308,12 @@ CommitScenarios.Run(Test);
 ProtocolScenarios.Run(Test);
 LedgerScenarios.Run(Test);
 HostPipelineScenarios.Run(Test);
+OwnerInventoryWriteSetScenarios.Run(Test);
+OwnerCommitRecoveryScenarios.Run(Test);
+OwnerCommitReservationScenarios.Run(Test);
+OwnerIntentRefusalScenarios.Run(Test);
+HostOwnerIntentCapacityScenarios.Run(Test);
+DirectIpMachineIntentScenarios.Run(Test);
 InboxScenarios.Run(Test);
 ReadOnlyCodecScenarios.Run(Test);
 ReadOnlyTransportScenarios.Run(Test);

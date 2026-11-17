@@ -68,7 +68,10 @@ class CatalogTests(unittest.TestCase):
         self.assertTrue(any("Broken producer" in e for e in catalog.validate(self.data)))
 
     def test_incomplete_balance_cannot_be_activated(self):
-        self.data["recipes"][0]["implementation"] = "active"
+        incomplete = self.data["recipes"][0]
+        incomplete["implementation"] = "active"
+        incomplete["inputs"][0]["quantity"] = None
+        incomplete["minutes"] = None
         errors = catalog.validate(self.data)
         self.assertTrue(any("unset quantity" in e for e in errors))
         self.assertTrue(any("no duration" in e for e in errors))
@@ -100,6 +103,91 @@ class CatalogTests(unittest.TestCase):
         item = next(i for i in self.data["items"] if i["key"] == "SoyMilk")
         item["implementation"] = "prototype"
         self.assertIn("P1 prototype item scope changed", catalog.validate(self.data))
+
+    def test_p2_activates_only_ready_recipe_and_items(self):
+        item = next(i for i in self.data["items"] if i["key"] == "SoyMilk")
+        recipe = next(r for r in self.data["recipes"] if r["output"]["item"] == item["qualifiedId"])
+        item["implementation"] = "active"
+        item["balance"].update(price=60, edibility=12)
+        item["prototypeArt"] = {"Texture": "Maps/springobjects", "SpriteIndex": 184}
+        recipe["implementation"] = "active"
+        recipe["inputs"][0]["quantity"] = 2
+        recipe["output"]["quantity"] = 1
+        recipe["minutes"] = 60
+        self.assertEqual([], catalog.validate(self.data))
+        files = catalog.generated_files(self.data)
+        runtime = catalog.json.loads(files[Path("src/XiangyeShiling/assets/machine-recipes.json")])
+        new_recipe = next(r for r in runtime if r["Id"] == recipe["id"])
+        self.assertEqual("BeanWorkshop", new_recipe["Machine"])
+        self.assertEqual(item["qualifiedId"], new_recipe["Output"]["ItemId"])
+        self.data["phase"] = "P1"
+        self.assertTrue(any("P2 content enabled in P1" in e for e in catalog.validate(self.data)))
+        self.data["phase"] = "P2"
+        item["implementation"] = "planned"
+        self.assertTrue(any("Active recipe output is disabled" in e for e in catalog.validate(self.data)))
+
+    def test_p2_smoker_recipe_rejects_different_fuel(self):
+        recipe = next(r for r in self.data["recipes"] if r["station"] == "fish_smoker")
+        recipe["implementation"] = "active"
+        fuel = next(entry for entry in recipe["inputs"] if entry["role"] == "fuel")
+        fuel["quantity"] = 2
+        self.assertTrue(any("one native coal" in e for e in catalog.validate(self.data)))
+
+    def test_original_p1_item_cannot_be_disabled(self):
+        item = next(i for i in self.data["items"] if i["key"] == "Tofu")
+        item["implementation"] = "planned"
+        self.assertIn("P1 entry cannot be disabled: Tofu", catalog.validate(self.data))
+
+    def test_p2_seeds_and_limited_stock_follow_crop_seasons(self):
+        changes = catalog.json.loads(catalog.generated_files(self.data)[catalog.PACK / "content.json"])["Changes"]
+        crops = next(change["Entries"] for change in changes if change["Target"] == "Data/Crops")
+        pierre = {stock["ItemId"]: stock for change in changes if change.get("TargetField") == ["SeedShop", "Items"]
+                  for stock in change["Entries"].values()}
+        self.assertNotIn("(O)262", pierre)
+        for key, growth, seed_condition, restock_condition, limit in (
+            ("Soybean", 8, "SEASON summer fall", "SEASON spring winter", 10),
+            ("NapaCabbage", 9, "SEASON fall", "SEASON spring summer winter", 5),
+        ):
+            item = f"{catalog.NAMESPACE}_{key}"
+            seed = item + "Seeds"
+            self.assertEqual(item, crops[seed]["HarvestItemId"])
+            self.assertEqual(growth, sum(crops[seed]["DaysInPhase"]))
+            self.assertEqual(seed_condition, pierre["(O)" + seed]["Condition"])
+            self.assertEqual(restock_condition, pierre["(O)" + item]["Condition"])
+            self.assertEqual(limit, pierre["(O)" + item]["AvailableStock"])
+            self.assertEqual("Global", pierre["(O)" + item]["AvailableStockLimit"])
+            self.assertEqual(1, sum(stock["ItemId"] == "(O)" + item for change in changes
+                                   if change.get("TargetField") == ["SeedShop", "Items"] for stock in change["Entries"].values()))
+
+    def test_p2_forage_adds_one_group_to_each_vanilla_map(self):
+        changes = catalog.json.loads(catalog.generated_files(self.data)[catalog.PACK / "content.json"])["Changes"]
+        patches = [change for change in changes if change["Target"] == "Data/Locations"]
+        self.assertEqual(set(self.data["springForageChance"]), {patch["TargetField"][0] for patch in patches})
+        expected = {item["qualifiedId"] for item in self.data["items"] if item["group"] == "forage"}
+        for patch in patches:
+            self.assertEqual("Forage", patch["TargetField"][1])
+            self.assertEqual(1, len(patch["Entries"]))
+            row, = patch["Entries"].values()
+            self.assertEqual(expected, set(row["RandomItemId"]))
+            self.assertEqual("Spring", row["Season"])
+            self.assertNotIn("(O)399", row["RandomItemId"])
+
+    def test_all_frozen_recipes_reach_their_native_or_custom_station(self):
+        files = catalog.generated_files(self.data)
+        changes = catalog.json.loads(files[catalog.PACK / "content.json"])["Changes"]
+        runtime = catalog.json.loads(files[Path("src/XiangyeShiling/assets/machine-recipes.json")])
+        self.assertEqual(6, sum(r["Machine"] == "BeanWorkshop" for r in runtime))
+        self.assertEqual(4, sum(r["Machine"] == "FermentationCrock" for r in runtime))
+        smoker = next(edit for edit in changes if edit["Target"] == "Data/Machines")
+        self.assertEqual(["(BC)FishSmoker", "OutputRules"], smoker["TargetField"])
+        self.assertEqual(2, len(smoker["Entries"]))
+        self.assertNotIn("SmokedFish", smoker["Entries"])
+        cooking = next(edit["Entries"] for edit in changes if edit["Target"] == "Data/CookingRecipes")
+        sold = [stock for edit in changes if edit.get("TargetField") == ["Saloon", "Items"]
+                for stock in edit["Entries"].values() if stock.get("IsRecipe")]
+        self.assertEqual(16, len(cooking))
+        self.assertEqual(16, len({row["ItemId"] for row in sold}))
+        self.assertEqual(3, sum("-5" in row.split("/", 1)[0].split()[::2] for row in cooking.values()))
 
     def test_generated_machine_recipe_matches_catalog_quantities(self):
         files = catalog.generated_files(self.data)

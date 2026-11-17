@@ -19,6 +19,17 @@ public sealed class Config
     public string Scenario { get; set; } = "Memory";
     public ulong SaveFixtureId { get; set; }
     public string NetworkRole { get; set; } = "Observe";
+    public bool EnableNativeInventoryOwnership { get; set; }
+    public bool NativeInventoryCommitByOwner { get; set; }
+    public string NativeRecoveryPhase { get; set; } = "";
+    public bool VerifyOwnerInventoryFingerprints { get; set; }
+    public bool VerifyHostReservationStore { get; set; }
+    public bool VerifyLanHostMovement { get; set; }
+    public bool VerifyLanHostCompetition { get; set; }
+    public bool VerifyLanFarmhandMenu { get; set; }
+    public bool VerifyLanLiveReconnect { get; set; }
+    public bool VerifyLanMenuEscape { get; set; }
+    public bool VerifyLanHostFirst { get; set; }
 }
 
 /// <summary>
@@ -27,6 +38,7 @@ public sealed class Config
 /// Interaction 模式为真实界面输入准备并核对内存现场，不保存，也不承诺恢复本次内存。
 /// WorldInteraction 为原生鼠标工具/自然拾取准备现场，同样不保存或恢复本次内存。
 /// InputObservation只被动采样专用主机输入，不加载、不准备、不改变玩家/时间或发送网络探针。
+/// NaturalClock 在专用档准备设备和背包，用生产事务与原生 TimeChanged 验证自然工时，不写时钟或存档。
 /// 模式契约不能混用，配置与复跑步骤见本目录 README；禁止在正式存档启用。
 /// </summary>
 public sealed class ModEntry : Mod
@@ -46,6 +58,241 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.Scenario == P3VisualScenario.Scenario)
+        {
+            var visual = new P3VisualScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => visual.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => visual.OnLoaded();
+            helper.Events.GameLoop.Saving += (_, _) => visual.OnSaving();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => visual.Tick();
+            helper.Events.Display.Rendered += (_, _) => visual.OnRendered();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P3FreshInstallScenario.Scenario)
+        {
+            var fresh = new P3FreshInstallScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => fresh.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => fresh.Tick();
+            helper.Events.GameLoop.SaveCreating += (_, _) => fresh.OnSaveCreating();
+            helper.Events.GameLoop.SaveCreated += (_, _) => fresh.OnSaveCreated();
+            helper.Events.GameLoop.Saving += (_, _) => fresh.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => fresh.OnSaved();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => fresh.OnLoaded();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => fresh.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P3ItemUseScenario.Scenario)
+        {
+            var items = new P3ItemUseScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => items.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => items.OnLoaded();
+            helper.Events.GameLoop.Saving += (_, _) => items.OnSaving();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => items.Tick();
+            helper.Events.Display.Rendered += (_, _) => items.OnRendered();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P3SeasonPersistenceScenario.Scenario)
+        {
+            var season = new P3SeasonPersistenceScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => season.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => season.OnLoaded();
+            helper.Events.GameLoop.Saving += (_, _) => season.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => season.OnSaved();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => season.Tick();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => season.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2ForageScenario.Scenario)
+        {
+            var forage = new P2ForageScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => forage.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => forage.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => forage.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => forage.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => forage.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2CropShopScenario.Scenario)
+        {
+            var crops = new P2CropShopScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => crops.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => crops.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => crops.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => crops.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => crops.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2RecipesScenario.Scenario)
+        {
+            var recipes = new P2RecipesScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => recipes.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => recipes.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => recipes.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => recipes.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => recipes.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2FishSmokerScenario.Scenario)
+        {
+            var smoker = new P2FishSmokerScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => smoker.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => smoker.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => smoker.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => smoker.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => smoker.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == P2KitchenScenario.Scenario)
+        {
+            var kitchen = new P2KitchenScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => kitchen.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => kitchen.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => kitchen.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => kitchen.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => kitchen.OnReturnedToTitle();
+            return;
+        }
+        bool boundMemory = this.Settings.VerifyOwnerInventoryFingerprints || this.Settings.VerifyHostReservationStore;
+        if (this.Settings.Enabled && boundMemory
+            && (this.Settings.Scenario != "Memory" || this.Settings.OpenPreview
+                || this.Settings.FarmName != OwnerInventoryFingerprintScenarios.FarmName
+                || this.Settings.SaveFixtureId != OwnerInventoryFingerprintScenarios.WorldId))
+            throw new InvalidOperationException("Reservation validation requires the exact XYSP1Menu Memory fixture.");
+        if (this.Settings.Enabled && this.Settings.Scenario == "LanMachineRecovery")
+        {
+            var recovery = new LanMachineRecoveryScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => recovery.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += recovery.Tick;
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => recovery.OnMessage(e);
+            helper.Events.Multiplayer.PeerDisconnected += (_, e) => recovery.OnPeerDisconnected(e.Peer.PlayerID);
+            helper.Events.GameLoop.Saving += (_, _) => recovery.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => recovery.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => recovery.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == "LanMachineTransaction")
+        {
+            if (this.Settings.NativeRecoveryPhase == LanMachineReadyHelloFault.Phase)
+            {
+                var fault = new LanMachineReadyHelloFault(helper, this.Settings);
+                helper.Events.GameLoop.GameLaunched += (_, _) => fault.Install();
+                helper.Events.GameLoop.UpdateTicked += (_, _) => fault.Tick();
+                helper.Events.GameLoop.ReturnedToTitle += (_, _) => fault.Remove();
+            }
+            var transaction = new LanMachineTransactionScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => transaction.QueueStart();
+            if (this.Settings.VerifyLanHostCompetition)
+                helper.Events.GameLoop.UpdateTicked += transaction.OnHostCompetitionTick;
+            if (this.Settings.VerifyLanMenuEscape || this.Settings.VerifyLanHostFirst)
+                helper.Events.GameLoop.UpdateTicked += transaction.OnMenuRaceTick;
+            if (this.Settings.VerifyLanLiveReconnect)
+            {
+                helper.Events.GameLoop.UpdateTicked += transaction.OnLiveReconnectTick;
+                helper.Events.GameLoop.UpdateTicked += transaction.OnLiveReconnectExitTick;
+                helper.Events.Multiplayer.PeerDisconnected += (_, e) => transaction.OnLivePeerDisconnected(e.Peer.PlayerID);
+            }
+            helper.Events.GameLoop.UpdateTicked += (_, _) => transaction.Tick();
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => transaction.OnMessage(e);
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => transaction.OnReturnedToTitle();
+            helper.Events.GameLoop.Saving += (_, _) => transaction.OnSaving();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == LanMachineMovePersistence.Scenario)
+        {
+            var movement = new LanMachineMovePersistence(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => movement.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => movement.Tick();
+            helper.Events.GameLoop.Saving += (_, _) => movement.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => movement.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => movement.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == "LanTransportObservation")
+        {
+            var observation = new LanTransportObservationScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => observation.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => observation.Tick();
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => observation.OnMessage(e);
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => observation.OnReturnedToTitle();
+            helper.Events.GameLoop.Saving += (_, _) => observation.OnSaving();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == "NativeInventoryRecovery")
+        {
+            var recovery = new NativeInventoryRecoveryScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => recovery.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => recovery.Tick();
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => recovery.OnMessage(e);
+            helper.Events.Multiplayer.PeerDisconnected += (_, e) => recovery.OnPeerDisconnected(e.Peer.PlayerID);
+            helper.Events.GameLoop.Saving += (_, _) => recovery.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => recovery.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => recovery.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == NativeFarmhouseUpgradeScenario.Scenario)
+        {
+            var upgrade = new NativeFarmhouseUpgradeScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => upgrade.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => upgrade.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => upgrade.Tick();
+            helper.Events.GameLoop.TimeChanged += (_, _) => upgrade.OnTimeChanged();
+            helper.Events.GameLoop.Saving += (_, _) => upgrade.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => upgrade.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => upgrade.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario is "NativeShopWalk" or AutomatedRouteScenario.PurchasedRouteScenario
+            or NativeShopRoutePersistence.Scenario)
+        {
+            var walk = new NativeShopWalkScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => walk.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => walk.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => walk.Tick();
+            helper.Events.GameLoop.TimeChanged += (_, e) => walk.OnTimeChanged(e.OldTime, e.NewTime);
+            helper.Events.Player.Warped += (_, e) => { if (e.IsLocalPlayer) walk.OnWarped(e.OldLocation, e.NewLocation); };
+            helper.Events.GameLoop.Saving += (_, _) => walk.OnSaving();
+            helper.Events.GameLoop.Saved += (_, _) => walk.OnSaved();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => walk.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == "NativeInventoryOwnership")
+        {
+            var bootstrap = new NativeNetworkBootstrap(this.Monitor, this.Settings);
+            var ownership = new NativeInventoryOwnershipScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => bootstrap.QueueStart();
+            helper.Events.GameLoop.UpdateTicked += (_, _) =>
+            {
+                bootstrap.Tick();
+                if (bootstrap.Failure is string failure) ownership.OnBootstrapFailed(failure);
+                else ownership.Tick(bootstrap.Ready);
+                if (ownership.Completed || ownership.Failure is not null) bootstrap.RestoreOptions();
+            };
+            helper.Events.Multiplayer.ModMessageReceived += (_, e) => ownership.OnMessageReceived(e);
+            helper.Events.GameLoop.Saving += (_, _) => ownership.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => { ownership.OnReturnedToTitle(); bootstrap.RestoreOptions(); };
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == "AutomatedRoute")
+        {
+            var route = new AutomatedRouteScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => route.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => route.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => route.Tick();
+            helper.Events.GameLoop.TimeChanged += (_, e) => route.OnTimeChanged(e.OldTime, e.NewTime);
+            helper.Events.GameLoop.Saving += (_, _) => route.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => route.OnReturnedToTitle();
+            return;
+        }
+        if (this.Settings.Enabled && this.Settings.Scenario == "NaturalClock")
+        {
+            var clock = new NaturalClockScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.SaveLoaded += (_, _) => clock.OnLoaded();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => clock.Tick();
+            helper.Events.GameLoop.TimeChanged += (_, e) => clock.OnTimeChanged(e.OldTime, e.NewTime);
+            helper.Events.GameLoop.Saving += (_, _) => clock.OnSaving();
+            helper.Events.GameLoop.ReturnedToTitle += (_, _) => clock.OnReturnedToTitle();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == "WorldShopInteraction")
         {
             this.WorldShops = new(helper, this.Monitor, this.Settings);
@@ -147,6 +394,14 @@ public sealed class ModEntry : Mod
             if (!this.Pending || !Context.IsWorldReady) return;
             this.Pending = false;
             if (!this.Settings.Enabled || Context.IsMultiplayer || Game1.player.farmName.Value != this.Settings.FarmName) return;
+            if (boundMemory
+                && (!Context.IsMainPlayer || Context.IsSplitScreen || Context.ScreenId != 0
+                    || Game1.uniqueIDForThisGame != OwnerInventoryFingerprintScenarios.WorldId
+                    || Constants.SaveFolderName != OwnerInventoryFingerprintScenarios.SaveFolder))
+            {
+                this.Monitor.Log("Reservation validation refused the loaded world.", LogLevel.Error);
+                return;
+            }
             this.Run();
         };
     }
@@ -173,6 +428,12 @@ public sealed class ModEntry : Mod
         string recipe = Id + "_Recipe_SoySauce";
         void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
         void Test(string name, Action action) { action(); passed.Add(name); this.Monitor.Log("PASS " + name, LogLevel.Info); }
+        Rectangle RecipeActionBounds(MachineMenu menu) => this.Helper.Reflection.GetMethod(menu, "ActionBounds").Invoke<Rectangle>(0);
+        void ClickRecipe(MachineMenu menu)
+        {
+            Point center = RecipeActionBounds(menu).Center;
+            menu.receiveLeftClick(center.X, center.Y);
+        }
         void Stock(params Item[] items)
         {
             var slots = new Item[player.MaxItems];
@@ -277,9 +538,8 @@ public sealed class ModEntry : Mod
                     var menu = Game1.activeClickableMenu as XiangyeShiling.Menus.MachineMenu;
                     Check(menu is not null, "Machine menu wasn't opened");
                     // BUG-2026-007：同一按钮坐标上的第二个鼠标点击仍属于领取意图，不能成为新开工。
-                    int x = menu!.xPositionOnScreen + 500, y = menu.yPositionOnScreen + 170;
-                    menu.receiveLeftClick(x, y);
-                    menu.receiveLeftClick(x, y);
+                    ClickRecipe(menu!);
+                    ClickRecipe(menu!);
                     Check(State().CanMove && player.Items.CountId(Soy) == 3 && player.Items.CountId(Tofu) == 2,
                         "Collection double click unexpectedly consumed the next batch");
                 }
@@ -306,18 +566,18 @@ public sealed class ModEntry : Mod
                     bool Open() => this.Helper.Reflection.GetField<bool>(menu, "GuideOpen").GetValue();
                     int Page() => this.Helper.Reflection.GetField<int>(menu, "GuidePage").GetValue();
                     Click("GuideBounds"); Check(Open() && Page() == 0, "Guide did not open at sources");
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     Click("NextBounds"); Check(Open() && Page() == 1, "Recipe guide page missing");
                     Click("PreviousBounds"); Check(Page() == 0, "Guide back navigation failed");
                     Click("GuideBounds"); Check(!Open() && ReferenceEquals(Game1.activeClickableMenu, menu), "Guide replaced the operation session");
                     Check(Raw() == before && player.Items.SequenceEqual(items) && player.Items.CountId(Soy) == 6
                         && this.Helper.Reflection.GetField<Request?>(session, "Pending").GetValue() is null,
                         "Guide navigation acquired a request or changed inventory/state");
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     string started = Raw(); Check(session.IsComplete && player.Items.CountId(Soy) == 3, "Normal start after guide failed");
                     Click("GuideBounds"); Check(Open(), "Completed menu cannot read guide");
                     Click("NextBounds"); Click("GuideBounds");
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     Check(session.IsComplete && Raw() == started && player.Items.CountId(Soy) == 3, "Guide return unlocked a second operation");
                 }
                 finally { Game1.activeClickableMenu = previousMenu; }
@@ -332,18 +592,77 @@ public sealed class ModEntry : Mod
                     var menu = Game1.activeClickableMenu as MachineMenu
                         ?? throw new InvalidOperationException("Native interaction did not create the production menu.");
                     var session = this.Helper.Reflection.GetField<MenuActionSession>(menu, "Session").GetValue();
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     string feedback = this.Helper.Reflection.GetField<string>(menu, "Feedback").GetValue();
                     Check(feedback.Contains(ItemRegistry.GetDataOrErrorItem(Soy).DisplayName) && feedback.Contains("3")
                         && Raw() == before && player.Items.SequenceEqual(items) && !session.IsComplete
                         && this.Helper.Reflection.GetField<Request?>(session, "Pending").GetValue() is null,
                         "Missing preview omitted the actual deficit or acquired/mutated an operation");
                     Stock(ItemRegistry.Create(Soy, 3));
-                    menu.receiveLeftClick(menu.xPositionOnScreen + 500, menu.yPositionOnScreen + 170);
+                    ClickRecipe(menu);
                     Check(session.IsComplete && player.Items.CountId(Soy) == 0 && Raw() != before,
                         "A read-only shortage preview prevented same-menu retry");
                 }
                 finally { Game1.activeClickableMenu = previousMenu; }
+            });
+            Test("machine menu fits a narrow UI viewport and preserves its open session on resize", () =>
+            {
+                Fresh("BeanWorkshop"); Stock(ItemRegistry.Create(Soy, 3));
+                var previousMenu = Game1.activeClickableMenu;
+                var viewport = Game1.uiViewport;
+                Game1.activeClickableMenu = null;
+                try
+                {
+                    void SetViewport(int width, int height)
+                    {
+                        var resized = viewport;
+                        resized.Width = width;
+                        resized.Height = height;
+                        Game1.uiViewport = resized;
+                    }
+                    SetViewport(1000, 680);
+                    machine!.checkForAction(player);
+                    var menu = Game1.activeClickableMenu as MachineMenu
+                        ?? throw new InvalidOperationException("Native interaction did not create the production menu.");
+                    Rectangle Bounds(string name) => this.Helper.Reflection.GetProperty<Rectangle>(menu, name).GetValue();
+                    void Click(Rectangle bounds) => menu.receiveLeftClick(bounds.Center.X, bounds.Center.Y);
+                    void Resize(Rectangle oldBounds, Rectangle newBounds)
+                    {
+                        SetViewport(newBounds.Width, newBounds.Height);
+                        menu.gameWindowSizeChanged(oldBounds, newBounds);
+                        var panel = new Rectangle(menu.xPositionOnScreen, menu.yPositionOnScreen, menu.width, menu.height);
+                        foreach (Rectangle control in new[] { panel, menu.upperRightCloseButton.bounds, Bounds("GuideBounds"),
+                            Bounds("PreviousBounds"), Bounds("NextBounds"), RecipeActionBounds(menu) })
+                            Check(control.Width > 0 && control.Height > 0 && newBounds.Contains(control),
+                                $"Machine menu or control {control} lies outside the UI viewport {newBounds}.");
+                    }
+                    Click(Bounds("GuideBounds"));
+                    Click(Bounds("NextBounds"));
+                    var normal = new Rectangle(0, 0, 1000, 680);
+                    var small = new Rectangle(0, 0, 540, 300);
+                    var narrow = new Rectangle(0, 0, 480, 440);
+                    Resize(normal, small);
+                    Check(this.Helper.Reflection.GetField<bool>(menu, "GuideOpen").GetValue()
+                        && this.Helper.Reflection.GetField<int>(menu, "GuidePage").GetValue() == 1,
+                        "Resize reset the open guide page.");
+                    Click(Bounds("PreviousBounds"));
+                    Check(this.Helper.Reflection.GetField<int>(menu, "GuidePage").GetValue() == 0,
+                        "The visible guide navigation button missed after resize.");
+                    Click(Bounds("GuideBounds"));
+                    ClickRecipe(menu);
+                    Check(State().Batch is not null && player.Items.CountId(Soy) == 0, "Scaled start button missed or did not debit the input.");
+                    string started = Raw();
+                    Game1.timeOfDay += 200;
+                    Resize(small, narrow);
+                    ClickRecipe(menu);
+                    Check(Raw() == started && player.Items.CountId(Tofu) == 0, "Resize unlocked a second operation in the same menu.");
+                    Resize(narrow, normal);
+                    Check(menu.width == 720 && menu.height == 460, "Returning to a large viewport did not restore full menu size.");
+                    Resize(normal, small);
+                    Click(menu.upperRightCloseButton.bounds);
+                    Check(Game1.activeClickableMenu is null, "The visible close button missed after resize.");
+                }
+                finally { Game1.uiViewport = viewport; Game1.activeClickableMenu = previousMenu; }
             });
             Test("full inventory collection retries in the same menu and locks after success", () =>
             {
@@ -357,33 +676,43 @@ public sealed class ModEntry : Mod
                 string before = Raw(); Item[] fullBefore = player.Items.ToArray();
                 int[] quantitiesBefore = fullBefore.Select(i => i.Stack).ToArray();
                 var previousMenu = Game1.activeClickableMenu;
+                var viewport = Game1.uiViewport;
                 Game1.activeClickableMenu = null;
                 try
                 {
                     machine!.checkForAction(player);
-                    var menu = Game1.activeClickableMenu as XiangyeShiling.Menus.MachineMenu;
-                    Check(menu is not null, "Retry machine menu wasn't opened");
-                    int x = menu!.xPositionOnScreen + 500, y = menu.yPositionOnScreen + 170;
-                    menu.receiveLeftClick(x, y);
+                    var menu = Game1.activeClickableMenu as MachineMenu
+                        ?? throw new InvalidOperationException("Retry machine menu wasn't opened.");
+                    ClickRecipe(menu);
                     Check(Raw() == before && State().PhaseAt(MachineService.Now()) == MachinePhase.Ready
                         && player.Items.SequenceEqual(fullBefore) && player.Items.Select(i => i.Stack).SequenceEqual(quantitiesBefore)
                         && player.Items.CountId(Tofu) == 0, "Full inventory menu click changed the batch or inventory");
-                    // 模拟玩家释放一个槽位；保持同一菜单和原请求，不能用重新打开掩盖永久锁定。
+                    var session = this.Helper.Reflection.GetField<MenuActionSession>(menu, "Session").GetValue();
+                    var pending = this.Helper.Reflection.GetField<Request?>(session, "Pending");
+                    var request = pending.GetValue() ?? throw new InvalidOperationException("Rejected collection lost its request.");
+                    var compact = viewport;
+                    compact.Width = 540;
+                    compact.Height = 300;
+                    Game1.uiViewport = compact;
+                    menu.gameWindowSizeChanged(new Rectangle(0, 0, viewport.Width, viewport.Height), new Rectangle(0, 0, 540, 300));
+                    Check(ReferenceEquals(request, pending.GetValue()) && Raw() == before && !session.IsComplete,
+                        "Resize changed the rejected collection request or batch.");
+                    // 模拟玩家释放一个槽位；调整尺寸后仍在同一菜单提交原请求。
                     player.Items[player.MaxItems - 1] = null!;
                     Check(ReferenceEquals(Game1.activeClickableMenu, menu), "Failed collection replaced the menu");
-                    menu.receiveLeftClick(x, y);
+                    ClickRecipe(menu);
                     Check(State().CanMove && player.Items.CountId(Tofu) == 2 && player.Items.CountId(Soy) == 3
-                        && player.Items.CountId("(O)388") == (player.MaxItems - 2) * 999,
+                        && player.Items.CountId("(O)388") == (player.MaxItems - 2) * 999 && State().LastRequestId == request.Id,
                         "Same-menu retry didn't collect the whole batch exactly once");
                     string collected = Raw(); Item[] after = player.Items.ToArray();
                     int[] quantitiesAfter = after.Select(i => i.Stack).ToArray();
-                    menu.receiveLeftClick(x, y);
+                    ClickRecipe(menu);
                     Check(Raw() == collected && State().CanMove && player.Items.SequenceEqual(after)
                         && player.Items.Select(i => i.Stack).SequenceEqual(quantitiesAfter)
                         && player.Items.CountId(Soy) == 3 && player.Items.CountId(Tofu) == 2,
                         "Successful retry allowed another debit or collection in the same menu");
                 }
-                finally { Game1.activeClickableMenu = previousMenu; }
+                finally { Game1.uiViewport = viewport; Game1.activeClickableMenu = previousMenu; }
             });
             Test("real inventory callback failure compensates both sides", () =>
             {
@@ -445,6 +774,24 @@ public sealed class ModEntry : Mod
             });
             PlacementScenarios.Run(player, location, tile, service, Test);
             ToolRemovalScenarios.Run(player, location, tile, service, Test);
+            Test("machine menu supports keyboard and gamepad navigation without a second transaction", () =>
+            {
+                Fresh("BeanWorkshop");
+                Stock(ItemRegistry.Create(Soy, 6));
+                MachineMenuNavigationScenarios.Run(this.Helper, player, machine!);
+            });
+            if (this.Settings.VerifyOwnerInventoryFingerprints)
+                Test("live owner fingerprints survive native Farmer XML", () =>
+                {
+                    Stock(ItemRegistry.Create(Soy, 3, 2), ItemRegistry.Create("(O)262", 2));
+                    OwnerInventoryFingerprintScenarios.Run(player);
+                });
+            if (this.Settings.VerifyHostReservationStore)
+                Test("host reservation protects native removal and survives Farmer XML", () =>
+                {
+                    Fresh("BeanWorkshop");
+                    HostReservationStoreScenarios.Run(player, machine!, service);
+                });
         }
         catch (Exception error) { failure = error.ToString(); this.Monitor.Log(failure, LogLevel.Error); }
         finally

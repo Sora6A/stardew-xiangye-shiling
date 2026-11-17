@@ -11,7 +11,7 @@ namespace XiangyeShiling.GameIntegration;
 public sealed record OperationResult(bool Applied, string Message);
 
 /// <summary>
-/// P1 单人主机适配器。输入来自当前主线程的真实对象；尚未验证远端背包协议，联机一律拒绝。
+/// P1 本地库存适配器。输入来自游戏主线程的真实对象；联机主机操作自身库存，农工走独立原生授权。
 /// 单笔提交前准备所有克隆与 JSON，最后核对原快照；失败恢复两侧，恢复失败隔离整个会话。
 /// </summary>
 public sealed class MachineService
@@ -22,6 +22,7 @@ public sealed class MachineService
     private readonly ITranslationHelper Text;
     private CommitCoordinator Coordinator = new();
     private readonly int MainThread = Environment.CurrentManagedThreadId;
+    internal HostReservationStore Reservations { get; }
     public IReadOnlyList<MachineRecipe> Recipes { get; }
     private ReadOnlyProtocolService? Network;
 
@@ -30,8 +31,22 @@ public sealed class MachineService
     /// <summary>仅本地主线程诊断快照，不提供库存授权；未绑定时抛错，不伪造“零错误”报告。</summary>
     public ProtocolDiagnosticSnapshot ReadNetworkDiagnostics() => this.Network?.ReadDiagnostics()
         ?? throw new InvalidOperationException("Read-only protocol diagnostics are unavailable.");
+    /// <summary>本地主线程上的已配置 LAN 来源观测。独立于原只读协议报告，不授权联机事务。</summary>
+    public LanTransportDiagnosticSnapshot ReadLanTransportDiagnostics() => this.Network?.ReadLanTransportDiagnostics()
+        ?? throw new InvalidOperationException("LAN transport diagnostics are unavailable.");
     /// <summary>固定合成只读probe，另需主模块显式配置及专用世界；不委托Execute，true不表示对端收到。</summary>
     public bool TrySendNetworkProbe(ProtocolProbeKind kind, Guid requestId) => this.Network?.TrySendProbe(kind, requestId) ?? false;
+    internal bool TryQueueLanFixtureOperation(SObject machine, Request request, string? recipeId)
+        => this.Network?.TryQueueFixtureOperation(machine, request, recipeId) ?? false;
+    internal bool TryCancelLanFixtureOperation(Guid requestId) => this.Network?.TryCancelFixtureOperation(requestId) ?? false;
+    internal bool AllowsLocalHostOperations() => Context.IsWorldReady && Context.IsMainPlayer
+        && (!Context.IsMultiplayer || this.Network?.AllowsHostOperations() == true);
+    internal bool AllowsFarmhandMenu() => this.Network?.AllowsFarmhandOperations() == true;
+    internal bool TryQueueLanMenuOperation(SObject machine, Request request, string? recipeId, Func<bool> interaction)
+        => this.Network?.TryQueueFixtureOperation(machine, request, recipeId, interaction) ?? false;
+    internal FarmhandRequestStatus ReadLanMenuStatus(Guid requestId)
+        => this.Network?.ReadFarmhandStatus(requestId) ?? FarmhandRequestStatus.Unconfirmed;
+    internal void CaptureLoadedReservation() => this.Network?.CaptureLoadedReservation();
     /// <summary>默认禁用、主线程、专用世界的固定旧Welcome重放；不能传入载荷或目标，true不表示对端拒绝。</summary>
     public bool TryReplayPreviousNetworkWelcome(Guid expectedConnectionId) => this.Network?.TryReplayPreviousWelcome(expectedConnectionId) ?? false;
 
@@ -40,9 +55,14 @@ public sealed class MachineService
         this.Monitor = monitor;
         this.Text = text;
         this.Recipes = recipes;
+        this.Reservations = new(monitor);
     }
 
-    public void ResetSession() => this.Coordinator = new();
+    public void ResetSession()
+    {
+        this.Coordinator = new();
+        this.Reservations.Reset();
+    }
     /// <summary>
     /// 只识别本模块两种设备；原生 NPC 清路会将空格查询得到的 null 传到移除补丁。
     /// 空对象/其他物品返回 false 且不写状态，成功时才保证 item 非空；失败的 kind 不可使用。
@@ -87,13 +107,14 @@ public sealed class MachineService
         OperationResult Fail(string key) => new(false, this.Text.Get(key));
         if (Environment.CurrentManagedThreadId != this.MainThread)
             return new(false, "Machine operations must run on the game thread.");
-        if (!Context.IsWorldReady || !Context.IsMainPlayer || Context.IsMultiplayer || actor != Game1.player)
+        if (!this.AllowsLocalHostOperations() || actor != Game1.player)
             return Fail("machine.single-player-only");
         if (Game1.eventUp || actor.UsingTool || request.ActorId != actor.UniqueMultiplayerID
             || !actor.currentLocation.objects.TryGetValue(machine.TileLocation, out SObject current) || !ReferenceEquals(current, machine)
             || Math.Abs(actor.Tile.X - machine.TileLocation.X) > 1 || Math.Abs(actor.Tile.Y - machine.TileLocation.Y) > 1)
             return Fail("machine.out-of-range");
-        if (!TryRead(machine, out MachineState? state)) return Fail("machine.invalid-state");
+        if (this.Reservations.BlocksMachine(machine) || !TryRead(machine, out MachineState? state))
+            return Fail("machine.invalid-state");
 
         string beforeJson = machine.modData[StateKey];
         MachineRecipe? recipe = recipeId is null ? null : this.Recipes.SingleOrDefault(r => r.Id == recipeId);

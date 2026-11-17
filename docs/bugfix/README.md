@@ -28,5 +28,12 @@
 | [BUG-2026-022](BUG-2026-022-harness-menu-translation-context.md) | 新菜单组件测试将夹具翻译器传给生产菜单，错误阻断缺料提示回归 | 实际SDK先红后绿；修后18项/库存恢复/八save及禁用收尾通过，待审查/提交/合并 | GameHarness缺料差额/补料重试与指南导航/完成锁场景；真实设备互动取得生产菜单 |
 | [BUG-2026-023](BUG-2026-023-harness-kitchen-action-source.md) | 新厨房场景把GrabTile当原生最终Action格，漏记有效灶台入口 | 两轮原生失败/共享旧判据先红后绿，115核心与修后同次厨房烹饪赠礼/停止审计通过，待提交/合并 | KitchenEntryScenarios三项；真实Action(3,4)/Grab(3,5)、菜单/原料守恒与成品赠礼 |
 | [BUG-2026-024](BUG-2026-024-world-movement-investigation.md) | 世界输入场景操作者D移动无响应、Esc菜单可用 | 旧根因调查中；新9004人工四方向/菜单正常并完整20项通过、已退出审计；只读诊断不等于移动修复 | 原失败/新输入报告独立保留；根因回归未编写，不将新进程正常回填旧失败 |
+| [BUG-2026-025](BUG-2026-025-machine-menu-small-viewport.md) | 设备菜单在小逻辑视口裁切 | 旧包实机失败，新包 19 项通过，中文窗口最大化和还原实测通过 | GameHarness 缩放命中、指南和操作锁，满包请求保留 |
+| [BUG-2026-026](BUG-2026-026-machine-menu-navigation.md) | 设备菜单缺少键盘和手柄焦点 | 旧包实机复现，新包 20 项后台游戏回归通过 | GameHarness 键盘与原版手柄菜单回调、缩放、指南和操作锁 |
+| [BUG-2026-027](BUG-2026-027-native-wheat-fingerprint.md) | 普通小麦的库存格指纹不可用 | SDK 先红后绿，实机 21 项通过，双端同步待验 | GameAdapter 两种朝向与改价拒绝，GameHarness 原版 Farmer XML 往返 |
+| [BUG-2026-028](BUG-2026-028-host-owner-intent-capacity.md) | 专用联机会话到达容量时农工菜单持续等待 | 旧判据失败、MachineCore 136 通过，双端容量实测待验 | 不同请求计数、现有授权优先、精确拒绝溢出 |
+| [BUG-2026-029](BUG-2026-029-live-reconnect-reservation.md) | 同进程重连后未扣料预留无法结束 | 旧组件失败、修后通过，原生双端重连与后续事务通过 | 新可信连接、无扣料撤销、共同原生回执、真实菜单继续生产 |
+| [BUG-2026-030](BUG-2026-030-direct-ip-ready-hello.md) | 只读 Welcome 收到后直连设备权限未建立 | 旧谓词失败，MachineCore 142 与普通直连原生故障注入通过 | 同一挑战、五秒间隔、三次上限，保留现有连接序号 |
+| [BUG-2026-031](BUG-2026-031-processing-action-label.md) | 成功开工后灰色按钮显示已完成 | 旧断言失败，MachineCore 145 和两设备实际画面通过 | 提示按批次阶段展示，原菜单操作锁保留 |
 
 状态为“待验证”的记录必须说明缺少什么证据；已合并记录附真实PR/提交，不以计划分支代替。索引保留历史，不将开发审查发现的缺陷包装成线上事故。

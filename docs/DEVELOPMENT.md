@@ -11,7 +11,9 @@
 11-03当前新增单人获取/制作指南和缺料反馈；玩家入口见[PLAYER_GUIDE](PLAYER_GUIDE.md)，实现/验收矩阵见[P1_SINGLEPLAYER_STATUS](P1_SINGLEPLAYER_STATUS.md)。目录16、生产/夹具构建及实际SDK18通过，中文UI已查看，最终路线纯文案包核对通过；本轮没有重复无关112核心/116Python或联机矩阵，证据/源码入口/回退见[本轮验证](validation/P1-singleplayer-guide-2026-11-02.md)。
 
 当前交付为 **P1 单人机器原型 / 0.1.0-alpha.2 开发包**。设计基线仍为 0.4，两者含义不同。
-已接入7个物品、5个配方、有限商店、共享菜单与单人事务，以及只读联机握手/拒绝和默认禁用的诊断。种植、采集、远端库存/可写提交未实现；planned不注入，真实双端未验收。
+已接入 7 个物品、5 个配方、有限商店、共享菜单与单人事务。种植、采集及其余计划内容尚未激活。
+
+普通存档的设备直连是默认关闭的 P1 候选。仅隔离测试环境可在主机和农工两端的模组 `config.json` 设置 `EnableLanMachineOperations: true`，以已核对的 Windows 游戏 1.6.15.24356、SMAPI 4.4.0 和原版直接 IP 运行。测试该入口时保持 `EnableLanTransactionFixture` 和只读诊断关闭，权限由真实连接及原生主机能力决定。已通过和待验证范围见 [主机协议](P1_HOST_PROTOCOL.md)。
 
 接手前先读 [当前交接](HANDOFF.md)、[开发维护规范](../CONTRIBUTING.md) 和 [架构入口](ARCHITECTURE.md)。本页负责工具链与运行命令；分支/提交/bugfix/中断记录的要求统一放在贡献规范，避免多处版本漂移。
 
@@ -38,6 +40,14 @@
 
 ## 工具链
 
+在 Windows 使用工作区内的 SDK 时，把 SDK 6.0.408 和 7.0.302 放到同一个 `.local/dotnet-sdk` 目录。SDK 7.0.302 用于构建；SDK 6.0.408 提供离线还原所需的 **6.0.16** 引用包和运行时。较新的 6.0 SDK 可以提供运行时，但其引用包不一定是 7.0.302 所请求的版本。可以使用 [Microsoft 的 dotnet-install 脚本](https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script)，分别指定 `-Version`、`-InstallDir .local/dotnet-sdk` 和 `-NoPath`，先安装 6，再安装 7。确保 PATH 中有 Python 3.10+；入口也可复用 Codex 已安装的 Python。
+
+```powershell
+. ./tools/enter-dev.ps1
+```
+
+在每个需要开发工具的新 PowerShell 会话中运行一次。入口仅设置当前会话的 PATH 和缓存位置，并用工作区 `.local/tmp` 避开 Windows 用户临时目录的 8.3 短路径别名。裸命令受系统 PATH 和 TEMP 影响。
+
 - 目标验证基线：Windows x64、游戏 1.6.15、SMAPI 4.4.0、Content Patcher 2.9.0。
 - C# 项目目标 `net6.0` / x64，SDK 本次实际使用 7.0.302；`global.json` 允许较新 SDK。须有 .NET 6 targeting pack。
 - Python 3.10+，只用标准库。
@@ -62,6 +72,10 @@ dotnet build tools/NetworkWelcomeReplayCheck/NetworkWelcomeReplayCheck.csproj -c
 ```
 
 修改清单后执行 `python tools/catalog.py --write`，提交源 JSON、生成的 CP content.json/i18n、src/XiangyeShiling/assets/machine-recipes.json 和 `docs/CONTENT_CATALOG.md`。检查器会拒绝未同步生成文件、重复 JSON 键、超出冻结数量、未知原料及不可获得的生产闭环。
+
+P2 内容从 `planned` 按批改为 `active`，沿用的 P1 条目标为 `prototype`。启用配方时，其自定义原料、产物和自建设备须已启用。自绘图像在条目的 `art.file` 中登记，生成器将它加载到命名空间资产，验收仍需检查游戏内实际渲染。
+
+作物和季节商店以条目的活动 `sources` 生成。`daysInPhase` 是原版生长各阶段的天数，成长季与种子货架须一致。季外原料使用共享的原版日库存。春季采集增量修改三张地图各自的 `Forage` 列表，每图仅加一个四选一条目。开发包包含内容包实际引用的 PNG，避免遗漏作物和物品纹理。
 `null` 表示尚未确定的平衡值；带有待定数量或工时的配方不得标为已实现。
 
 C#场景直接编译规则/提交/菜单/世界判据、Networking及GameHarness实际共享网络证据源码，不引用游戏。2026-10-02前轮85项通过（此前81＋4实际quota观测），Python77项通过（此前37＋40人工报告配对）；见 [前轮配对验证](validation/P1-network-pair-2026-10-02.md)。身份绑定工具的专项与本机审计见 [本轮验证](validation/P1-network-fixture-2026-10-02.md)。纯会话接收观测与委托读取测试不等于真实SMAPI事件/双端网络或库存验证。旧45/68和游戏组件/UI结果保留，不作为新DLL实机通过。
@@ -79,6 +93,8 @@ C#场景直接编译规则/提交/菜单/世界判据、Networking及GameHarness
 ```powershell
 python tools/build.py --game-path "D:\SteamLibrary\steamapps\common\Stardew Valley"
 ```
+
+发布候选的两个 manifest 与程序集设为同一稳定版本后，用 `python tools/build.py --release --game-path <游戏目录>` 生成 `artifacts/XiangyeShiling-<版本>.zip`。发行包只收录两个模组的运行时文件和安装说明，必须按计划在干净的 Mods 目录安装并实测，发布时上传该实测包并核对 SHA-256。
 
 也可单独编译：
 

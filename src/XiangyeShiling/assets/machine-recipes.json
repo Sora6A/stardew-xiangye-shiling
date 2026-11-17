@@ -1,5 +1,39 @@
 [
   {
+    "Id": "Sora6A.XiangyeShiling_Recipe_SoyMilk",
+    "Machine": "BeanWorkshop",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 2
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_SoyMilk",
+      "Quantity": 2,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 60
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_TofuPudding",
+    "Machine": "BeanWorkshop",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 3
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_TofuPudding",
+      "Quantity": 2,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 90
+  },
+  {
     "Id": "Sora6A.XiangyeShiling_Recipe_Tofu",
     "Machine": "BeanWorkshop",
     "Inputs": [
@@ -15,6 +49,57 @@
       "MaxStack": 999
     },
     "Minutes": 120
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_Yuba",
+    "Machine": "BeanWorkshop",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 3
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_Yuba",
+      "Quantity": 2,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 160
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_TofuSheets",
+    "Machine": "BeanWorkshop",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 4
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_TofuSheets",
+      "Quantity": 2,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 190
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_DriedTofu",
+    "Machine": "BeanWorkshop",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 4
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_DriedTofu",
+      "Quantity": 2,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 220
   },
   {
     "Id": "Sora6A.XiangyeShiling_Recipe_SoySauce",
@@ -36,5 +121,60 @@
       "MaxStack": 999
     },
     "Minutes": 240
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_SoybeanPaste",
+    "Machine": "FermentationCrock",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+        "Quantity": 4
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_SoybeanPaste",
+      "Quantity": 5,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 300
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_SichuanDouban",
+    "Machine": "FermentationCrock",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_BroadBeans",
+        "Quantity": 2
+      },
+      {
+        "ItemId": "(O)260",
+        "Quantity": 2
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_SichuanDouban",
+      "Quantity": 5,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 360
+  },
+  {
+    "Id": "Sora6A.XiangyeShiling_Recipe_SourCabbage",
+    "Machine": "FermentationCrock",
+    "Inputs": [
+      {
+        "ItemId": "(O)Sora6A.XiangyeShiling_NapaCabbage",
+        "Quantity": 2
+      }
+    ],
+    "Output": {
+      "ItemId": "(O)Sora6A.XiangyeShiling_SourCabbage",
+      "Quantity": 3,
+      "Quality": 0,
+      "MaxStack": 999
+    },
+    "Minutes": 300
   }
 ]

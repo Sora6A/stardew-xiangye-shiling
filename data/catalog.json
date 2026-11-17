@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "designVersion": "0.4",
   "namespace": "Sora6A.XiangyeShiling",
-  "phase": "P1",
+  "phase": "P2",
   "notes": [
-    "P1 single-player prototype only: seven items, five recipes; remaining content stays planned.",
+    "P2 enables frozen content in reviewed groups. P1 items and recipes stay available while later entries are planned.",
     "Null numeric values require P1/P2 balancing; they are never executable recipe values.",
-    "Coal is a proposed reuse of vanilla smoker fuel and must be checked in P2.",
-    "Machine crafting inputs are provisional; Egg currently reserves the normal white egg ID, with category/large-egg support pending P1.",
-    "P1 prototype shops provide soybean/wheat at Pierre and Chinese toon at Gus year-round in limited quantities. Final crops/forage/restock rules await P2; these supplies are for the two P1 routes."
+    "The added Fish Smoker rules use the native one-coal fuel policy; verify that original fish keep their native output.",
+    "Kitchen egg recipes use the vanilla egg category so common color and size variants work.",
+    "Formal sources supersede prototype ingredient stock. Wheat uses its original acquisition routes."
   ],
   "vanillaItems": [
     {
@@ -21,7 +21,7 @@
     },
     {
       "key": "Egg",
-      "item": "(O)176"
+      "item": "-5"
     },
     {
       "key": "Rice",
@@ -79,7 +79,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -92,16 +93,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 45,
+        "edibility": 7
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "WildScallion",
@@ -129,7 +131,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -142,16 +145,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 30,
+        "edibility": 5
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "ChineseToon",
@@ -163,11 +167,11 @@
       "text": {
         "en": {
           "name": "Chinese Toon",
-          "description": "Fragrant toon shoots for Toon Tofu Salad. Limited supplies are sold by Gus at the Stardrop Saloon."
+          "description": "Fragrant toon shoots for Toon Tofu Salad. Look for them in the Forest, Mountain, and Bus Stop in spring."
         },
         "zh": {
           "name": "香椿",
-          "description": "鲜香椿可用于香椿拌豆腐。格斯的星之果实餐吧有少量出售。"
+          "description": "鲜香椿可做香椿拌豆腐。春天可在森林、山区和巴士站拾取。"
         }
       },
       "nameKey": "item.ChineseToon.name",
@@ -179,7 +183,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -192,16 +197,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "prototype",
+        "status": "provisional",
         "price": 65,
         "edibility": 5
       },
-      "implementation": "prototype",
+      "implementation": "active",
       "prototypeArt": {
         "Texture": "Maps/springobjects",
         "SpriteIndex": 20
@@ -233,7 +239,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -246,16 +253,17 @@
             "Mountain",
             "BusStop"
           ],
-          "validation": "pending-map-check"
+          "validation": "pending-map-check",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 25,
+        "edibility": 4
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "Soybean",
@@ -267,11 +275,11 @@
       "text": {
         "en": {
           "name": "Soybean",
-          "description": "Plump soybeans for tofu and soy sauce. Limited supplies are sold at Pierre's General Store."
+          "description": "Plump soybeans for tofu and soy sauce. Grow them in summer or fall, or buy limited spring and winter stock from Pierre."
         },
         "zh": {
           "name": "黄豆",
-          "description": "饱满的黄豆，可加工豆腐或酱油。皮埃尔的杂货店有少量出售。"
+          "description": "饱满的黄豆，可加工豆腐或酱油。夏秋种植，春冬可向皮埃尔少量购买。"
         }
       },
       "nameKey": "item.Soybean.name",
@@ -283,7 +291,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -293,7 +302,19 @@
             "summer",
             "fall"
           ],
-          "growthDays": null
+          "implementation": "active",
+          "daysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            1
+          ],
+          "art": {
+            "asset": "Mods/Sora6A.XiangyeShiling/Crops",
+            "file": "assets/crops.png",
+            "spriteIndex": 0
+          }
         },
         {
           "kind": "shop",
@@ -302,18 +323,19 @@
             "spring",
             "winter"
           ],
-          "dailyStock": null,
-          "price": null,
-          "role": "limited-off-season-restock"
+          "dailyStock": 10,
+          "price": 60,
+          "role": "limited-off-season-restock",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "prototype",
+        "status": "provisional",
         "price": 40,
         "edibility": -300
       },
-      "implementation": "prototype",
+      "implementation": "active",
       "prototypeArt": {
         "Texture": "Maps/springobjects",
         "SpriteIndex": 188
@@ -329,11 +351,11 @@
       "text": {
         "en": {
           "name": "Napa Cabbage",
-          "description": "Sweet napa cabbage for fermenting into sour cabbage."
+          "description": "Sweet napa cabbage for fermenting. Grow it in fall, or buy a limited supply from Pierre out of season."
         },
         "zh": {
           "name": "大白菜",
-          "description": "清甜的大白菜，可在发酵缸腌成酸白菜。"
+          "description": "清甜的大白菜，可腌成酸白菜。秋季种植，季外可向皮埃尔少量购买。"
         }
       },
       "nameKey": "item.NapaCabbage.name",
@@ -345,7 +367,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -354,7 +377,19 @@
           "seasons": [
             "fall"
           ],
-          "growthDays": null
+          "implementation": "active",
+          "daysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            2
+          ],
+          "art": {
+            "asset": "Mods/Sora6A.XiangyeShiling/Crops",
+            "file": "assets/crops.png",
+            "spriteIndex": 1
+          }
         },
         {
           "kind": "shop",
@@ -364,18 +399,19 @@
             "summer",
             "winter"
           ],
-          "dailyStock": null,
-          "price": null,
-          "role": "limited-off-season-restock"
+          "dailyStock": 5,
+          "price": 100,
+          "role": "limited-off-season-restock",
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 65,
+        "edibility": 12
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "Pork",
@@ -403,7 +439,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -416,16 +453,17 @@
             "winter"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 110,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 45,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "BroadBeans",
@@ -453,7 +491,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -466,16 +505,17 @@
             "winter"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 55,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 28,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "SoyMilk",
@@ -503,7 +543,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -517,11 +558,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 52,
+        "edibility": 12
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "TofuPudding",
@@ -549,7 +590,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -563,11 +605,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 82,
+        "edibility": 23
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "Tofu",
@@ -595,7 +637,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -645,7 +688,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -659,11 +703,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 100,
+        "edibility": 16
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "TofuSheets",
@@ -691,7 +735,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -705,11 +750,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 121,
+        "edibility": 19
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "DriedTofu",
@@ -737,7 +782,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -751,11 +797,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 130,
+        "edibility": 22
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "VegetarianChicken",
@@ -783,7 +829,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -797,11 +844,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 230,
+        "edibility": 45
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_VegetarianChicken"
     },
     {
       "key": "FriedTofu",
@@ -829,7 +877,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -843,11 +892,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 162,
+        "edibility": 40
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_FriedTofu"
     },
     {
       "key": "OrchidTofu",
@@ -875,7 +925,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -889,11 +940,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 245,
+        "edibility": 50
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_OrchidTofu"
     },
     {
       "key": "SoySauce",
@@ -921,7 +973,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -971,7 +1024,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -985,11 +1039,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 56,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "SichuanDouban",
@@ -1017,7 +1071,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1031,11 +1086,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 55,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "SourCabbage",
@@ -1063,7 +1118,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1077,11 +1133,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 63,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "SmokedPork",
@@ -1109,7 +1165,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1123,11 +1180,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 185,
+        "edibility": 20
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "SmokedTofu",
@@ -1155,7 +1212,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1169,11 +1227,11 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 180,
+        "edibility": 19
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "StirFriedBamboo",
@@ -1201,7 +1259,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1215,11 +1274,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 153,
+        "edibility": 40
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo"
     },
     {
       "key": "ScallionEggs",
@@ -1247,7 +1307,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1261,11 +1322,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 119,
+        "edibility": 34
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_ScallionEggs"
     },
     {
       "key": "ToonEggs",
@@ -1293,7 +1355,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1307,11 +1370,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 154,
+        "edibility": 39
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_ToonEggs"
     },
     {
       "key": "MugwortRiceCake",
@@ -1339,7 +1403,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1353,11 +1418,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 180,
+        "edibility": 43
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake"
     },
     {
       "key": "ToonTofu",
@@ -1385,7 +1451,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1436,7 +1503,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1450,11 +1518,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 280,
+        "edibility": 67
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork"
     },
     {
       "key": "ScallionSmokedTofu",
@@ -1482,7 +1551,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1496,11 +1566,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 272,
+        "edibility": 63
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu"
     },
     {
       "key": "SourCabbageTofu",
@@ -1528,7 +1599,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1542,11 +1614,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 224,
+        "edibility": 58
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu"
     },
     {
       "key": "BraisedBamboo",
@@ -1574,7 +1647,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1588,11 +1662,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 190,
+        "edibility": 50
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_BraisedBamboo"
     },
     {
       "key": "SaucedTofu",
@@ -1620,7 +1695,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1634,11 +1710,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 225,
+        "edibility": 53
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_SaucedTofu"
     },
     {
       "key": "MapoTofu",
@@ -1666,7 +1743,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1680,11 +1758,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 345,
+        "edibility": 72
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_MapoTofu"
     },
     {
       "key": "TofuPorkRoll",
@@ -1712,7 +1791,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1726,11 +1806,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 315,
+        "edibility": 70
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll"
     },
     {
       "key": "YubaSoup",
@@ -1758,7 +1839,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1772,11 +1854,12 @@
         "sell"
       ],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 181,
+        "edibility": 48
       },
-      "implementation": "planned"
+      "implementation": "active",
+      "internalName": "Sora6A.XiangyeShiling_Recipe_YubaSoup"
     },
     {
       "key": "SoybeanSeeds",
@@ -1788,11 +1871,11 @@
       "text": {
         "en": {
           "name": "Soybean Seeds",
-          "description": "Soybean seeds for summer and fall; growth time is provisional."
+          "description": "Plant in summer or fall. Takes 8 days to mature."
         },
         "zh": {
           "name": "黄豆种子",
-          "description": "夏秋播种的黄豆种子，生长天数待平衡。"
+          "description": "夏秋播种，8 天成熟。"
         }
       },
       "nameKey": "item.SoybeanSeeds.name",
@@ -1804,7 +1887,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1815,16 +1899,17 @@
             "fall"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 35,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 17,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "NapaCabbageSeeds",
@@ -1836,11 +1921,11 @@
       "text": {
         "en": {
           "name": "Napa Cabbage Seeds",
-          "description": "Napa cabbage seeds for fall; growth time is provisional."
+          "description": "Plant in fall. Takes 9 days to mature."
         },
         "zh": {
           "name": "大白菜种子",
-          "description": "秋季播种的大白菜种子，生长天数待平衡。"
+          "description": "秋季播种，9 天成熟。"
         }
       },
       "nameKey": "item.NapaCabbageSeeds.name",
@@ -1852,7 +1937,8 @@
           16,
           16
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/objects.png"
       },
       "sources": [
         {
@@ -1862,16 +1948,17 @@
             "fall"
           ],
           "dailyStock": -1,
-          "price": null
+          "price": 42,
+          "implementation": "active"
         }
       ],
       "terminalUses": [],
       "balance": {
-        "status": "unbalanced",
-        "price": null,
-        "edibility": null
+        "status": "provisional",
+        "price": 21,
+        "edibility": -300
       },
-      "implementation": "planned"
+      "implementation": "active"
     },
     {
       "key": "BeanWorkshop",
@@ -1899,7 +1986,8 @@
           16,
           32
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/machines.png"
       },
       "sources": [
         {
@@ -1946,7 +2034,8 @@
           16,
           32
         ],
-        "status": "planned"
+        "status": "ready",
+        "file": "assets/machines.png"
       },
       "sources": [
         {
@@ -1976,21 +2065,21 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Soybean",
-          "quantity": null,
+          "quantity": 2,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SoyMilk",
-        "quantity": null
+        "quantity": 2
       },
-      "minutes": null,
+      "minutes": 60,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_TofuPudding",
@@ -1999,21 +2088,21 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Soybean",
-          "quantity": null,
+          "quantity": 3,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_TofuPudding",
-        "quantity": null
+        "quantity": 2
       },
-      "minutes": null,
+      "minutes": 90,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_Tofu",
@@ -2045,21 +2134,21 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Soybean",
-          "quantity": null,
+          "quantity": 3,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_Yuba",
-        "quantity": null
+        "quantity": 2
       },
-      "minutes": null,
+      "minutes": 160,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_TofuSheets",
@@ -2068,21 +2157,21 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Soybean",
-          "quantity": null,
+          "quantity": 4,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_TofuSheets",
-        "quantity": null
+        "quantity": 2
       },
-      "minutes": null,
+      "minutes": 190,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_DriedTofu",
@@ -2091,21 +2180,21 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Soybean",
-          "quantity": null,
+          "quantity": 4,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
-        "quantity": null
+        "quantity": 2
       },
-      "minutes": null,
+      "minutes": 220,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_BeanWorkshop"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_SoySauce",
@@ -2142,21 +2231,21 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Soybean",
-          "quantity": null,
+          "quantity": 4,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SoybeanPaste",
-        "quantity": null
+        "quantity": 5
       },
-      "minutes": null,
+      "minutes": 300,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_SichuanDouban",
@@ -2165,26 +2254,26 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_BroadBeans",
-          "quantity": null,
+          "quantity": 2,
           "role": "ingredient"
         },
         {
           "item": "(O)260",
-          "quantity": null,
+          "quantity": 2,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SichuanDouban",
-        "quantity": null
+        "quantity": 5
       },
-      "minutes": null,
+      "minutes": 360,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_SourCabbage",
@@ -2193,21 +2282,21 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_NapaCabbage",
-          "quantity": null,
+          "quantity": 2,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SourCabbage",
-        "quantity": null
+        "quantity": 3
       },
-      "minutes": null,
+      "minutes": 300,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)Sora6A.XiangyeShiling_FermentationCrock"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_SmokedPork",
@@ -2216,26 +2305,26 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Pork",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)382",
-          "quantity": null,
+          "quantity": 1,
           "role": "fuel"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SmokedPork",
-        "quantity": null
+        "quantity": 1
       },
-      "minutes": null,
+      "minutes": 90,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)FishSmoker"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_SmokedTofu",
@@ -2244,26 +2333,26 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)382",
-          "quantity": null,
+          "quantity": 1,
           "role": "fuel"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SmokedTofu",
-        "quantity": null
+        "quantity": 1
       },
-      "minutes": null,
+      "minutes": 80,
       "unlock": {
         "kind": "machine-available",
         "machine": "(BC)FishSmoker"
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_VegetarianChicken",
@@ -2272,32 +2361,32 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_TofuSheets",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SoySauce",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)247",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_VegetarianChicken",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 850
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_FriedTofu",
@@ -2306,27 +2395,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Tofu",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)247",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_FriedTofu",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 550
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_OrchidTofu",
@@ -2335,32 +2424,32 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SoySauce",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)247",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_OrchidTofu",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 1100
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo",
@@ -2369,27 +2458,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_BambooShoots",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)247",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_StirFriedBamboo",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 500
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_ScallionEggs",
@@ -2398,27 +2487,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_WildScallion",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
-          "item": "(O)176",
-          "quantity": null,
+          "item": "-5",
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_ScallionEggs",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 400
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_ToonEggs",
@@ -2427,27 +2516,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_ChineseToon",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
-          "item": "(O)176",
-          "quantity": null,
+          "item": "-5",
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_ToonEggs",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 500
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake",
@@ -2456,32 +2545,32 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Mugwort",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)423",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)245",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_MugwortRiceCake",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 625
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_ToonTofu",
@@ -2519,27 +2608,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_BambooShoots",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SmokedPork",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_BambooSmokedPork",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 1100
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu",
@@ -2548,27 +2637,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_WildScallion",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SmokedTofu",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_ScallionSmokedTofu",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 950
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu",
@@ -2577,27 +2666,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_SourCabbage",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_Tofu",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SourCabbageTofu",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 950
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_BraisedBamboo",
@@ -2606,32 +2695,32 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_BambooShoots",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SoySauce",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)247",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_BraisedBamboo",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 800
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_SaucedTofu",
@@ -2640,27 +2729,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_DriedTofu",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SoybeanPaste",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_SaucedTofu",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 850
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_MapoTofu",
@@ -2669,32 +2758,32 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Tofu",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SichuanDouban",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_Pork",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_MapoTofu",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 1250
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll",
@@ -2703,32 +2792,32 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_TofuSheets",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_Pork",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
           "item": "(O)Sora6A.XiangyeShiling_SoySauce",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_TofuPorkRoll",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 1150
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_YubaSoup",
@@ -2737,27 +2826,27 @@
       "inputs": [
         {
           "item": "(O)Sora6A.XiangyeShiling_Yuba",
-          "quantity": null,
+          "quantity": 1,
           "role": "ingredient"
         },
         {
-          "item": "(O)176",
-          "quantity": null,
+          "item": "-5",
+          "quantity": 1,
           "role": "ingredient"
         }
       ],
       "output": {
         "item": "(O)Sora6A.XiangyeShiling_YubaSoup",
-        "quantity": null
+        "quantity": 1
       },
       "minutes": 0,
       "unlock": {
         "kind": "shop-recipe",
         "shop": "Saloon",
-        "price": null
+        "price": 650
       },
-      "balanceStatus": "unbalanced",
-      "implementation": "planned"
+      "balanceStatus": "provisional",
+      "implementation": "active"
     },
     {
       "id": "Sora6A.XiangyeShiling_Recipe_BeanWorkshop",
@@ -2829,11 +2918,6 @@
         "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
         "Price": 60,
         "AvailableStock": 10
-      },
-      {
-        "ItemId": "(O)262",
-        "Price": 25,
-        "AvailableStock": 10
       }
     ],
     "Saloon": [
@@ -2860,5 +2944,10 @@
         "Price": 1500
       }
     ]
+  },
+  "springForageChance": {
+    "Forest": 0.32,
+    "Mountain": 0.21,
+    "BusStop": 0.35
   }
 }

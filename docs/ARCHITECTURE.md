@@ -16,18 +16,19 @@ alpha.2单人P1原型已接入两设备菜单/背包、7物品5配方及有限�
 
 | 模块 | 输入与职责 | 维护约束 |
 |---|---|---|
-| data/catalog.json | 40 物品/30 配方冻结源；仅 prototype 激活 | planned 的 null 数值不能运行 |
-| tools/catalog.py、prototype.py | 生成 CP 数据/i18n、登记表和机器配方 JSON | --write 更新全部生成物 |
-| CP 内容包 | 增量修改 Objects/BigCraftables/CraftingRecipes/CookingRecipes/Shops | 不整表覆盖，不分发原版图像 |
+| data/catalog.json | 40 物品/30 配方冻结源；P1 原型和按批启用的 P2 数据共用稳定 ID | `planned` 仅登记，启用后须给出数值、图像和所依赖的物品 |
+| tools/catalog.py、prototype.py | 生成 CP 数据/i18n、登记表和两台自建设备的配方 JSON | `--write` 更新全部生成物；新增厨房解锁从配方生成商店条目，原版熏鱼机规则单独接入 |
+| CP 内容包 | 增量修改 Objects、BigCraftables、配方、Shops、Crops 和 Locations | 商店按原生季节条件与全农场日库存，采集沿用原版地图容量和拾取。完整原版表和素材留在游戏内 |
 | ModEntry | 配方、补丁、读档/换场景/新增设备初始化、会话重置 | 加载诊断不是完整验收 |
 | Machines | 无游戏依赖的规则、模型、schema 1 JSON | Accepted 只意味着计划有效 |
 | Networking | 严格请求/可信快照准入/lease与回执，以及只读握手/限流/邮箱 | 无游戏依赖；只读分支不调用准入/账本/提交，不操作库存；见 P1_HOST_PROTOCOL |
 | Transactions/CommitCoordinator | 准备、核对、防重入、提交/补偿与隔离 | 不是联机事务协议 |
 | GameIntegration/MachineService | 身份/范围检查，真实快照、克隆、库存/modData 适配 | 保留游戏线程/单人限制 |
-| GameIntegration/ReadOnlyProtocolService | SMAPI事件→连接/世界标识邮箱→UpdateTicked→定向握手/拒绝 | 只读；元数据不是强认证；128排队/16每帧/32peer/每peer每秒8条 |
-| GameIntegration/MachinePatches | 两设备 ID 的菜单、投料、放置和移除路径 | Harmony 来自完整 SMAPI 安装 |
-| Menus/MachineMenu | 显示原料/产量/时间，发送绑定 revision 的请求 | 不自行扣料 |
-| Menus/MenuActionSession | 绑定一次菜单打开期间的请求和操作完成状态 | 成功后锁定，失败重试保留原请求；重开才产生新意图 |
+| GameIntegration/ReadOnlyProtocolService | SMAPI 事件、有界邮箱、定向握手与独立设备意图 | 旧协议只读；显式直连操作需要当前原生连接、实际农工和主机 Farmer 的会话挑战标记；128 排队、每帧 16、32 peer、每 peer 每秒 8 条 |
+| GameIntegration/MachinePatches | 两设备 ID 的菜单、投料、放置和移除路径 | Harmony 来自完整 SMAPI 安装；专用 LAN 主机放置同时验证原版克隆与手持扣除，手工具移除绑定实际主机和空闲实例 |
+| GameIntegration/ReadyMachineMarker | 原版地图对象绘制后提示已完成批次的成品 | 限当前单人地图上的两种设备，读取已校验的批次与同一游戏时钟。原始状态变动时刷新弱引用缓存，不写库存、`modData` 或原版机器字段 |
+| Menus/MachineMenu | 显示原料/产量/时间，发送绑定 revision 的请求，专用 LAN 农工显示原生授权与回执状态 | 扣料由本地事务服务执行；网络请求绑定同一活跃连接及发起菜单，待确认期间锁定动作 |
+| Menus/MenuActionSession | 绑定一次菜单打开期间的请求和操作完成状态 | 成功后锁定；普通失败重试保留原请求，专用农工收到确切取消或无授权时可请求新操作 |
 | MachineCore 与 Python tests | 无游戏规则/补偿/菜单会话、内容与维护检查 | 不能代替实机 |
 | tests/GameAdapter | 引用真实生产适配器和本机 SDK 的独立 CLI 回归 | 所有引用不复制；局部 Harmony 测试 finally 撤销，不打开游戏/存档；不加入无游戏 CI |
 | tests/GameHarness | 默认禁用的本地集成夹具 | 不进开发ZIP；Memory恢复不保存，Persistence保存独立副本，Interaction/WorldInteraction不保存不恢复；Network只读观察/固定探针，须双开关与专用非零ID/角色；InputObservation限定专用主玩家、只读输入/门禁，不加载/准备/保存/模拟输入/发包，见夹具README |

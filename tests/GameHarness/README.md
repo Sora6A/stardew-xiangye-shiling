@@ -4,7 +4,27 @@
 
 此目录单独构建，**不进入开发 ZIP，也不在普通 CI 运行**。需要完整合法的游戏和 SMAPI 安装；仅在有备份的专用测试档启用。默认 Enabled=false，各模式分别核对农场、世界ID及单人/主机/客户端身份，不能混用。
 
-十一种模式有不同的恢复/保存契约：Memory恢复不保存，Persistence保存显式独立ID，Interaction/WorldInteraction/GiftInteraction/KitchenGiftInteraction/WorldShopInteraction不保存不恢复，Network只读观察/固定探针；InputObservation被动读取主玩家输入及门禁；NetworkLifecycle被动记录同进程重连；NetworkWelcomeReplay在重连后仅主机发送一次内存中的真实旧Welcome。三种网络模式均不自动加载/创建/保存/备料，另需主模块开关、XYSNET专用非零世界ID和Host/Client角色；默认所有开关禁用。旧模式通过不能代替本轮网络，完整入口与停止步骤见下文。
+各模式有不同的恢复/保存契约：Memory 恢复不保存，NaturalClock 恢复临时背包和设备、不还原自然经过的时间，Persistence 保存显式独立 ID。Interaction/WorldInteraction/GiftInteraction/KitchenGiftInteraction/WorldShopInteraction 不保存不恢复。Network 只读观察/固定探针，InputObservation 被动读取主玩家输入及门禁，NetworkLifecycle 被动记录同进程重连，NetworkWelcomeReplay 在重连后仅主机发送一次内存中的真实旧 Welcome。三种网络模式均不自动加载/创建/保存/备料，另需主模块开关、XYSNET 专用非零世界 ID 和 Host/Client 角色。默认所有开关禁用。
+
+## AutomatedRoute · 无人值守单人链
+
+入口 [AutomatedRouteScenario](AutomatedRouteScenario.cs)。使用有厨房、未学模组配方且没有本模组设备的专用单人副本。可以用 `tools/prepare_save_copy.py --label XYSP1Route --source <测试源档>` 生成独立副本。按该副本的实际非零 ID 配置 `Enabled=true`、`Scenario=AutomatedRoute`、`FarmName=XYSP1Route`、`SaveFixtureId=<实际 ID>`、`OpenPreview=false`。仅在单独 Mods 中启用。启动后自动加载绑定副本，运行结束时退出该进程。
+
+夹具准备木材、石头和铜锭，保留起始资金，布置角色站位。通过原版商店交易购买食材与三份配方，用原版制作及放置 API 取得两台实际设备。生产菜单开工后观察连续 24 次原版十分钟变化，按 120 和 240 分钟的期限领取。原版灶台打开真实料理页，制作并食用同一份成品。商店菜单由夹具构造，所以营业时间、地图步行和实体输入沿用各自用例的覆盖范围。
+
+后台运行时临时关闭失焦暂停，退出前恢复原值。报告 `automated-route-result.json` 记录进程和副本身份、九项检查、工时时钟和最终数量。验收要求 `Completed=true`、`Failure=null`、`SavingObserved=false`、`ClockTicks=24`、余豆腐 1 和酱油 4，且原生日志零次保存。结束后归档日志，禁用隔离夹具，核对旧存档及新副本的前后哈希。
+
+## NaturalClock：两设备自然工时
+
+入口 [NaturalClockScenario](NaturalClockScenario.cs)。在隔离 Mods 中部署当前生产包、Content Patcher 和 Release 夹具。仅允许名为 `XYSP1Menu` 的专用单人副本，实际非零世界 ID 和保存目录须与配置一致。例：
+
+```json
+{"Enabled":true,"Scenario":"NaturalClock","FarmName":"XYSP1Menu","SaveFixtureId":1288856040646931861,"OpenPreview":false}
+```
+
+从标题页加载对应专用档，保持游戏窗口激活、菜单关闭，等待日志出现完成或失败。夹具只在临时背包准备黄豆 6 和小麦 2、在相邻空格布置两台设备，使用生产 `MachineService` 开工和领取。原版 `TimeChanged` 必须连续产生 24 个十分钟刻度，分别在第 12 和第 24 个刻度首次可领。到期前一刻拒绝且不改背包和批次，到期时整批领豆腐 2、酱油 4，再次请求不会重复入包。等待不改写时钟、不加速、不调原生推进函数；六分钟超时、提前退出或观察到保存均不得记为通过。
+
+归档 `natural-clock-result.json` 和本轮 SMAPI 日志。最终要求 `Completed=true`、`Restored=true`、`SavingObserved=false`、`Failure=null`、24 条连续时钟事件、5 项通过。结束后不保存退出、禁用夹具，并核对前后存档哈希。该模式验证自然工时和实际事务，采购、手工制作/放置、普通菜单操作和厨房不在本场景内。
 
 ## WorldShopInteraction：三家真实地图柜台购买
 
@@ -180,3 +200,24 @@ trace最多256条，增加Evicted/QueueRejected不能通过当前客户端证据
 ## Network schema2 与配对
 
 Schema2带首个Ready Baseline/current指纹/引用一致/burst发送序号；每Processed含实际Quota窗口/计数与连接token。network-probe-result.json保存活动世界，标题另写network-probe-title-result.json；不要用标题报告冒充基础证据。两端归档原文后运行tools/check_network_reports.py，详见 [配对命令](../../docs/NET02_TEST_SETUP.md)。工具核共享身份/请求与各端独立上下文，九发八回需主机同窗口实际八读一未读，不能给未读第九条编ID。schema1/Failure非null/连接变化/失活/丢弃/额外流量拒绝；输出仅Basic/Fullfalse。40人工报告测试不证明SMAPI；首次角色准备尚未核完，旧准备进程已消失，当前无实际网络诊断或pair结果，完整NET02与诊断前后保存hash仍待实测。
+## P2 内容实机夹具
+
+在隔离 Mods 里使用同一个冻结开发包、SMAPI 4.4.0 与 Content Patcher 2.9.0。每个场景单独启动一个游戏进程，测试只在专用副本里执行，结束后禁用 `GameHarness` 并核对存档和常用 Mods 的哈希。复制专用开发档时使用 `tools/prepare_save_copy.py`，为每个场景设置表中的原样 `Scenario`、`FarmName`、`SaveFixtureId`，并设置 `Enabled=true`、`OpenPreview=false`。先退出其他游戏，避免同时运行两个会修改内存或共享偏好的夹具。
+
+| Scenario | FarmName | SaveFixtureId | 报告 |
+|---|---|---|---|
+| P2CropShop | XYSP2Crops | 620261127 | `p2-crop-shop-result.json` |
+| P2Forage | XYSP2Forage | 620261128 | `p2-forage-result.json` |
+| P2FishSmoker | XYSP2Smoker | 620261129 | `p2-fish-smoker-result.json` |
+| P2Recipes | XYSP2Recipes | 620261130 | `p2-recipes-result.json` |
+| P2Kitchen | XYSP2Kitchen | 620261131 | `p2-kitchen-result.json` |
+
+作物、采集、烟熏及设备菜单使用春季第 1 年的单人开发副本。厨房另用已完成第一次农舍升级、冰箱为空、未学会新增菜谱的单人开发副本。夹具可为原版组件准备日历、材料或站位，具体边界和实测结果见 [来源记录](../../docs/validation/P2-sources-2026-11-16.md)与[设备和厨房记录](../../docs/validation/P2-production-2026-11-16.md)。
+
+## P3 发行候选实机夹具
+
+使用同一固定发行 ZIP 和独立 Mods。`P3ItemUse` 绑定 `XYSP3ItemUse_620261134`，原版商店成交、食用、NPC 赠礼及实际纹理登记，零保存。`P3SeasonPersistence` 的 `NativeRecoveryPhase` 依次为 `Write`、`Verify`、`VerifyCollected`，绑定 `XYSP3Season_620261132`。前两轮原版就寝写盘，最后一轮冷读及重复领取拒绝。`Legacy` 绑定独立旧档 `XYSP3Legacy_620261133`，零保存。用发行包测试新档时配置 `P3FreshInstall`、`XYSP3Fresh`、`SaveFixtureId=0`，存档目录须没有同名前缀。新档通过实际原版角色创建写一份初始存档，随后用独立资金和铜锭准备原生购买、制作、自然加工与领取，最后核对初始存档哈希。
+
+普通直连仍使用 XYSNET08 的精确绑定。`LanMachineTransaction` 的 `NativeRecoveryPhase=P3LatePage` 和 `VerifyLanFarmhandMenu=true` 走原版第三页豆干、主机原版时钟及双端回执。单机执行器须在退出并禁用当前场景后再启动另一轮。全部证据、靠近发布时的实际候选哈希和覆盖范围见 [发行候选验收](../../docs/validation/P3-release-2026-11-16.md)。
+
+`P3Visual` 绑定 `XYSP3Visual_620261135`，从已通过秋 2 冷读的季节测试副本复制。捕获原版农场、两台设备出货前后和实际活动菜单。图像留在独立 `GameHarness` 目录，零保存。回归入口见 [BUG-2026-031](../../docs/bugfix/BUG-2026-031-processing-action-label.md)。

@@ -2,19 +2,76 @@
   "Format": "2.9.0",
   "Changes": [
     {
+      "Action": "Load",
+      "Target": "Mods/Sora6A.XiangyeShiling/Objects",
+      "FromFile": "assets/objects.png"
+    },
+    {
+      "Action": "Load",
+      "Target": "Mods/Sora6A.XiangyeShiling/Crops",
+      "FromFile": "assets/crops.png"
+    },
+    {
+      "Action": "Load",
+      "Target": "Mods/Sora6A.XiangyeShiling/Machines",
+      "FromFile": "assets/machines.png"
+    },
+    {
       "Action": "EditData",
       "Target": "Data/Objects",
       "Entries": {
+        "Sora6A.XiangyeShiling_BambooShoots": {
+          "Name": "Sora6A.XiangyeShiling_BambooShoots",
+          "DisplayName": "{{i18n: item.BambooShoots.name}}",
+          "Description": "{{i18n: item.BambooShoots.description}}",
+          "Price": 45,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 0,
+          "Type": "Basic",
+          "Category": -81,
+          "Edibility": 7,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_WildScallion": {
+          "Name": "Sora6A.XiangyeShiling_WildScallion",
+          "DisplayName": "{{i18n: item.WildScallion.name}}",
+          "Description": "{{i18n: item.WildScallion.description}}",
+          "Price": 30,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 1,
+          "Type": "Basic",
+          "Category": -81,
+          "Edibility": 5,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
         "Sora6A.XiangyeShiling_ChineseToon": {
           "Name": "Sora6A.XiangyeShiling_ChineseToon",
           "DisplayName": "{{i18n: item.ChineseToon.name}}",
           "Description": "{{i18n: item.ChineseToon.description}}",
           "Price": 65,
-          "Texture": "Maps/springobjects",
-          "SpriteIndex": 20,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 2,
           "Type": "Basic",
           "Category": -81,
           "Edibility": 5,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_Mugwort": {
+          "Name": "Sora6A.XiangyeShiling_Mugwort",
+          "DisplayName": "{{i18n: item.Mugwort.name}}",
+          "Description": "{{i18n: item.Mugwort.description}}",
+          "Price": 25,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 3,
+          "Type": "Basic",
+          "Category": -81,
+          "Edibility": 4,
           "CanBeGivenAsGift": true,
           "ExcludeFromShippingCollection": true,
           "ExcludeFromRandomSale": true
@@ -24,11 +81,81 @@
           "DisplayName": "{{i18n: item.Soybean.name}}",
           "Description": "{{i18n: item.Soybean.description}}",
           "Price": 40,
-          "Texture": "Maps/springobjects",
-          "SpriteIndex": 188,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 4,
           "Type": "Basic",
           "Category": -75,
           "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_NapaCabbage": {
+          "Name": "Sora6A.XiangyeShiling_NapaCabbage",
+          "DisplayName": "{{i18n: item.NapaCabbage.name}}",
+          "Description": "{{i18n: item.NapaCabbage.description}}",
+          "Price": 65,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 5,
+          "Type": "Basic",
+          "Category": -75,
+          "Edibility": 12,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_Pork": {
+          "Name": "Sora6A.XiangyeShiling_Pork",
+          "DisplayName": "{{i18n: item.Pork.name}}",
+          "Description": "{{i18n: item.Pork.description}}",
+          "Price": 45,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 6,
+          "Type": "Basic",
+          "Category": -14,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_BroadBeans": {
+          "Name": "Sora6A.XiangyeShiling_BroadBeans",
+          "DisplayName": "{{i18n: item.BroadBeans.name}}",
+          "Description": "{{i18n: item.BroadBeans.description}}",
+          "Price": 28,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 7,
+          "Type": "Basic",
+          "Category": -75,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SoyMilk": {
+          "Name": "Sora6A.XiangyeShiling_SoyMilk",
+          "DisplayName": "{{i18n: item.SoyMilk.name}}",
+          "Description": "{{i18n: item.SoyMilk.description}}",
+          "Price": 52,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 8,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 12,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_TofuPudding": {
+          "Name": "Sora6A.XiangyeShiling_TofuPudding",
+          "DisplayName": "{{i18n: item.TofuPudding.name}}",
+          "Description": "{{i18n: item.TofuPudding.description}}",
+          "Price": 82,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 9,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 23,
           "CanBeGivenAsGift": true,
           "ExcludeFromShippingCollection": true,
           "ExcludeFromRandomSale": true
@@ -38,11 +165,95 @@
           "DisplayName": "{{i18n: item.Tofu.name}}",
           "Description": "{{i18n: item.Tofu.description}}",
           "Price": 90,
-          "Texture": "Maps/springobjects",
-          "SpriteIndex": 424,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 10,
           "Type": "Basic",
           "Category": -26,
           "Edibility": 20,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_Yuba": {
+          "Name": "Sora6A.XiangyeShiling_Yuba",
+          "DisplayName": "{{i18n: item.Yuba.name}}",
+          "Description": "{{i18n: item.Yuba.description}}",
+          "Price": 100,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 11,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 16,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_TofuSheets": {
+          "Name": "Sora6A.XiangyeShiling_TofuSheets",
+          "DisplayName": "{{i18n: item.TofuSheets.name}}",
+          "Description": "{{i18n: item.TofuSheets.description}}",
+          "Price": 121,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 12,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 19,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_DriedTofu": {
+          "Name": "Sora6A.XiangyeShiling_DriedTofu",
+          "DisplayName": "{{i18n: item.DriedTofu.name}}",
+          "Description": "{{i18n: item.DriedTofu.description}}",
+          "Price": 130,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 13,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 22,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_VegetarianChicken": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_VegetarianChicken",
+          "DisplayName": "{{i18n: item.VegetarianChicken.name}}",
+          "Description": "{{i18n: item.VegetarianChicken.description}}",
+          "Price": 230,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 14,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 45,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_FriedTofu": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_FriedTofu",
+          "DisplayName": "{{i18n: item.FriedTofu.name}}",
+          "Description": "{{i18n: item.FriedTofu.description}}",
+          "Price": 162,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 15,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 40,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_OrchidTofu": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_OrchidTofu",
+          "DisplayName": "{{i18n: item.OrchidTofu.name}}",
+          "Description": "{{i18n: item.OrchidTofu.description}}",
+          "Price": 245,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 16,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 50,
           "CanBeGivenAsGift": true,
           "ExcludeFromShippingCollection": true,
           "ExcludeFromRandomSale": true
@@ -52,11 +263,137 @@
           "DisplayName": "{{i18n: item.SoySauce.name}}",
           "Description": "{{i18n: item.SoySauce.description}}",
           "Price": 60,
-          "Texture": "Maps/springobjects",
-          "SpriteIndex": 247,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 17,
           "Type": "Basic",
           "Category": -26,
           "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SoybeanPaste": {
+          "Name": "Sora6A.XiangyeShiling_SoybeanPaste",
+          "DisplayName": "{{i18n: item.SoybeanPaste.name}}",
+          "Description": "{{i18n: item.SoybeanPaste.description}}",
+          "Price": 56,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 18,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SichuanDouban": {
+          "Name": "Sora6A.XiangyeShiling_SichuanDouban",
+          "DisplayName": "{{i18n: item.SichuanDouban.name}}",
+          "Description": "{{i18n: item.SichuanDouban.description}}",
+          "Price": 55,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 19,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SourCabbage": {
+          "Name": "Sora6A.XiangyeShiling_SourCabbage",
+          "DisplayName": "{{i18n: item.SourCabbage.name}}",
+          "Description": "{{i18n: item.SourCabbage.description}}",
+          "Price": 63,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 20,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SmokedPork": {
+          "Name": "Sora6A.XiangyeShiling_SmokedPork",
+          "DisplayName": "{{i18n: item.SmokedPork.name}}",
+          "Description": "{{i18n: item.SmokedPork.description}}",
+          "Price": 185,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 21,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 20,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SmokedTofu": {
+          "Name": "Sora6A.XiangyeShiling_SmokedTofu",
+          "DisplayName": "{{i18n: item.SmokedTofu.name}}",
+          "Description": "{{i18n: item.SmokedTofu.description}}",
+          "Price": 180,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 22,
+          "Type": "Basic",
+          "Category": -26,
+          "Edibility": 19,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_StirFriedBamboo": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo",
+          "DisplayName": "{{i18n: item.StirFriedBamboo.name}}",
+          "Description": "{{i18n: item.StirFriedBamboo.description}}",
+          "Price": 153,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 23,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 40,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_ScallionEggs": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_ScallionEggs",
+          "DisplayName": "{{i18n: item.ScallionEggs.name}}",
+          "Description": "{{i18n: item.ScallionEggs.description}}",
+          "Price": 119,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 24,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 34,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_ToonEggs": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_ToonEggs",
+          "DisplayName": "{{i18n: item.ToonEggs.name}}",
+          "Description": "{{i18n: item.ToonEggs.description}}",
+          "Price": 154,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 25,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 39,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_MugwortRiceCake": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake",
+          "DisplayName": "{{i18n: item.MugwortRiceCake.name}}",
+          "Description": "{{i18n: item.MugwortRiceCake.description}}",
+          "Price": 180,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 26,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 43,
           "CanBeGivenAsGift": true,
           "ExcludeFromShippingCollection": true,
           "ExcludeFromRandomSale": true
@@ -66,11 +403,151 @@
           "DisplayName": "{{i18n: item.ToonTofu.name}}",
           "Description": "{{i18n: item.ToonTofu.description}}",
           "Price": 240,
-          "Texture": "Maps/springobjects",
-          "SpriteIndex": 196,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 27,
           "Type": "Cooking",
           "Category": -7,
           "Edibility": 70,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_BambooSmokedPork": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork",
+          "DisplayName": "{{i18n: item.BambooSmokedPork.name}}",
+          "Description": "{{i18n: item.BambooSmokedPork.description}}",
+          "Price": 280,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 28,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 67,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_ScallionSmokedTofu": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu",
+          "DisplayName": "{{i18n: item.ScallionSmokedTofu.name}}",
+          "Description": "{{i18n: item.ScallionSmokedTofu.description}}",
+          "Price": 272,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 29,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 63,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SourCabbageTofu": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu",
+          "DisplayName": "{{i18n: item.SourCabbageTofu.name}}",
+          "Description": "{{i18n: item.SourCabbageTofu.description}}",
+          "Price": 224,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 30,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 58,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_BraisedBamboo": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_BraisedBamboo",
+          "DisplayName": "{{i18n: item.BraisedBamboo.name}}",
+          "Description": "{{i18n: item.BraisedBamboo.description}}",
+          "Price": 190,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 31,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 50,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SaucedTofu": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_SaucedTofu",
+          "DisplayName": "{{i18n: item.SaucedTofu.name}}",
+          "Description": "{{i18n: item.SaucedTofu.description}}",
+          "Price": 225,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 32,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 53,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_MapoTofu": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_MapoTofu",
+          "DisplayName": "{{i18n: item.MapoTofu.name}}",
+          "Description": "{{i18n: item.MapoTofu.description}}",
+          "Price": 345,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 33,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 72,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_TofuPorkRoll": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll",
+          "DisplayName": "{{i18n: item.TofuPorkRoll.name}}",
+          "Description": "{{i18n: item.TofuPorkRoll.description}}",
+          "Price": 315,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 34,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 70,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_YubaSoup": {
+          "Name": "Sora6A.XiangyeShiling_Recipe_YubaSoup",
+          "DisplayName": "{{i18n: item.YubaSoup.name}}",
+          "Description": "{{i18n: item.YubaSoup.description}}",
+          "Price": 181,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 35,
+          "Type": "Cooking",
+          "Category": -7,
+          "Edibility": 48,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_SoybeanSeeds": {
+          "Name": "Sora6A.XiangyeShiling_SoybeanSeeds",
+          "DisplayName": "{{i18n: item.SoybeanSeeds.name}}",
+          "Description": "{{i18n: item.SoybeanSeeds.description}}",
+          "Price": 17,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 36,
+          "Type": "Seeds",
+          "Category": -74,
+          "Edibility": -300,
+          "CanBeGivenAsGift": true,
+          "ExcludeFromShippingCollection": true,
+          "ExcludeFromRandomSale": true
+        },
+        "Sora6A.XiangyeShiling_NapaCabbageSeeds": {
+          "Name": "Sora6A.XiangyeShiling_NapaCabbageSeeds",
+          "DisplayName": "{{i18n: item.NapaCabbageSeeds.name}}",
+          "Description": "{{i18n: item.NapaCabbageSeeds.description}}",
+          "Price": 21,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Objects",
+          "SpriteIndex": 37,
+          "Type": "Seeds",
+          "Category": -74,
+          "Edibility": -300,
           "CanBeGivenAsGift": true,
           "ExcludeFromShippingCollection": true,
           "ExcludeFromRandomSale": true
@@ -87,8 +564,8 @@
           "DisplayName": "{{i18n: item.BeanWorkshop.name}}",
           "Description": "{{i18n: item.BeanWorkshop.description}}",
           "Price": 500,
-          "Texture": "TileSheets/Craftables",
-          "SpriteIndex": 16,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Machines",
+          "SpriteIndex": 0,
           "Fragility": 0,
           "CanBePlacedOutdoors": true,
           "CanBePlacedIndoors": true
@@ -98,8 +575,8 @@
           "DisplayName": "{{i18n: item.FermentationCrock.name}}",
           "Description": "{{i18n: item.FermentationCrock.description}}",
           "Price": 500,
-          "Texture": "TileSheets/Craftables",
-          "SpriteIndex": 12,
+          "Texture": "Mods/Sora6A.XiangyeShiling/Machines",
+          "SpriteIndex": 1,
           "Fragility": 0,
           "CanBePlacedOutdoors": true,
           "CanBePlacedIndoors": true
@@ -120,34 +597,185 @@
       "Action": "EditData",
       "Target": "Data/CookingRecipes",
       "Entries": {
-        "Sora6A.XiangyeShiling_Recipe_ToonTofu": "(O)Sora6A.XiangyeShiling_ChineseToon 1 (O)Sora6A.XiangyeShiling_Tofu 1/1 10/(O)Sora6A.XiangyeShiling_ToonTofu 1/null/{{i18n: item.ToonTofu.name}}"
+        "Sora6A.XiangyeShiling_Recipe_VegetarianChicken": "(O)Sora6A.XiangyeShiling_TofuSheets 1 (O)Sora6A.XiangyeShiling_SoySauce 1 (O)247 1/1 10/(O)Sora6A.XiangyeShiling_VegetarianChicken 1/null/{{i18n: item.VegetarianChicken.name}}",
+        "Sora6A.XiangyeShiling_Recipe_FriedTofu": "(O)Sora6A.XiangyeShiling_Tofu 1 (O)247 1/1 10/(O)Sora6A.XiangyeShiling_FriedTofu 1/null/{{i18n: item.FriedTofu.name}}",
+        "Sora6A.XiangyeShiling_Recipe_OrchidTofu": "(O)Sora6A.XiangyeShiling_DriedTofu 1 (O)Sora6A.XiangyeShiling_SoySauce 1 (O)247 1/1 10/(O)Sora6A.XiangyeShiling_OrchidTofu 1/null/{{i18n: item.OrchidTofu.name}}",
+        "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo": "(O)Sora6A.XiangyeShiling_BambooShoots 1 (O)247 1/1 10/(O)Sora6A.XiangyeShiling_StirFriedBamboo 1/null/{{i18n: item.StirFriedBamboo.name}}",
+        "Sora6A.XiangyeShiling_Recipe_ScallionEggs": "(O)Sora6A.XiangyeShiling_WildScallion 1 -5 1/1 10/(O)Sora6A.XiangyeShiling_ScallionEggs 1/null/{{i18n: item.ScallionEggs.name}}",
+        "Sora6A.XiangyeShiling_Recipe_ToonEggs": "(O)Sora6A.XiangyeShiling_ChineseToon 1 -5 1/1 10/(O)Sora6A.XiangyeShiling_ToonEggs 1/null/{{i18n: item.ToonEggs.name}}",
+        "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake": "(O)Sora6A.XiangyeShiling_Mugwort 1 (O)423 1 (O)245 1/1 10/(O)Sora6A.XiangyeShiling_MugwortRiceCake 1/null/{{i18n: item.MugwortRiceCake.name}}",
+        "Sora6A.XiangyeShiling_Recipe_ToonTofu": "(O)Sora6A.XiangyeShiling_ChineseToon 1 (O)Sora6A.XiangyeShiling_Tofu 1/1 10/(O)Sora6A.XiangyeShiling_ToonTofu 1/null/{{i18n: item.ToonTofu.name}}",
+        "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork": "(O)Sora6A.XiangyeShiling_BambooShoots 1 (O)Sora6A.XiangyeShiling_SmokedPork 1/1 10/(O)Sora6A.XiangyeShiling_BambooSmokedPork 1/null/{{i18n: item.BambooSmokedPork.name}}",
+        "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu": "(O)Sora6A.XiangyeShiling_WildScallion 1 (O)Sora6A.XiangyeShiling_SmokedTofu 1/1 10/(O)Sora6A.XiangyeShiling_ScallionSmokedTofu 1/null/{{i18n: item.ScallionSmokedTofu.name}}",
+        "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu": "(O)Sora6A.XiangyeShiling_SourCabbage 1 (O)Sora6A.XiangyeShiling_Tofu 1/1 10/(O)Sora6A.XiangyeShiling_SourCabbageTofu 1/null/{{i18n: item.SourCabbageTofu.name}}",
+        "Sora6A.XiangyeShiling_Recipe_BraisedBamboo": "(O)Sora6A.XiangyeShiling_BambooShoots 1 (O)Sora6A.XiangyeShiling_SoySauce 1 (O)247 1/1 10/(O)Sora6A.XiangyeShiling_BraisedBamboo 1/null/{{i18n: item.BraisedBamboo.name}}",
+        "Sora6A.XiangyeShiling_Recipe_SaucedTofu": "(O)Sora6A.XiangyeShiling_DriedTofu 1 (O)Sora6A.XiangyeShiling_SoybeanPaste 1/1 10/(O)Sora6A.XiangyeShiling_SaucedTofu 1/null/{{i18n: item.SaucedTofu.name}}",
+        "Sora6A.XiangyeShiling_Recipe_MapoTofu": "(O)Sora6A.XiangyeShiling_Tofu 1 (O)Sora6A.XiangyeShiling_SichuanDouban 1 (O)Sora6A.XiangyeShiling_Pork 1/1 10/(O)Sora6A.XiangyeShiling_MapoTofu 1/null/{{i18n: item.MapoTofu.name}}",
+        "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll": "(O)Sora6A.XiangyeShiling_TofuSheets 1 (O)Sora6A.XiangyeShiling_Pork 1 (O)Sora6A.XiangyeShiling_SoySauce 1/1 10/(O)Sora6A.XiangyeShiling_TofuPorkRoll 1/null/{{i18n: item.TofuPorkRoll.name}}",
+        "Sora6A.XiangyeShiling_Recipe_YubaSoup": "(O)Sora6A.XiangyeShiling_Yuba 1 -5 1/1 10/(O)Sora6A.XiangyeShiling_YubaSoup 1/null/{{i18n: item.YubaSoup.name}}"
       },
       "LogName": "P1 prototype - Data/CookingRecipes"
     },
     {
       "Action": "EditData",
-      "Target": "Data/Shops",
+      "Target": "Data/Crops",
+      "Entries": {
+        "Sora6A.XiangyeShiling_SoybeanSeeds": {
+          "Seasons": [
+            "Summer",
+            "Fall"
+          ],
+          "DaysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            1
+          ],
+          "RegrowDays": -1,
+          "HarvestItemId": "Sora6A.XiangyeShiling_Soybean",
+          "Texture": "Mods/Sora6A.XiangyeShiling/Crops",
+          "SpriteIndex": 0,
+          "CountForMonoculture": false,
+          "CountForPolyculture": false
+        },
+        "Sora6A.XiangyeShiling_NapaCabbageSeeds": {
+          "Seasons": [
+            "Fall"
+          ],
+          "DaysInPhase": [
+            1,
+            2,
+            2,
+            2,
+            2
+          ],
+          "RegrowDays": -1,
+          "HarvestItemId": "Sora6A.XiangyeShiling_NapaCabbage",
+          "Texture": "Mods/Sora6A.XiangyeShiling/Crops",
+          "SpriteIndex": 1,
+          "CountForMonoculture": false,
+          "CountForPolyculture": false
+        }
+      }
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Machines",
       "TargetField": [
-        "SeedShop",
-        "Items"
+        "(BC)FishSmoker",
+        "OutputRules"
       ],
       "Entries": {
-        "Sora6A.XiangyeShiling_P1_SeedShop_0": {
-          "Id": "Sora6A.XiangyeShiling_P1_SeedShop_0",
-          "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
-          "Price": 60,
-          "AvailableStock": 10,
-          "IgnoreShopPriceModifiers": true
+        "Sora6A.XiangyeShiling_Recipe_SmokedPork": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_SmokedPork",
+          "Triggers": [
+            {
+              "Id": "ItemPlacedInMachine",
+              "Trigger": "ItemPlacedInMachine",
+              "RequiredItemId": "(O)Sora6A.XiangyeShiling_Pork",
+              "RequiredCount": 1
+            }
+          ],
+          "OutputItem": [
+            {
+              "Id": "(O)Sora6A.XiangyeShiling_SmokedPork",
+              "ItemId": "(O)Sora6A.XiangyeShiling_SmokedPork",
+              "MinStack": 1,
+              "MaxStack": 1,
+              "Quality": 0
+            }
+          ],
+          "MinutesUntilReady": 90
         },
-        "Sora6A.XiangyeShiling_P1_SeedShop_1": {
-          "Id": "Sora6A.XiangyeShiling_P1_SeedShop_1",
-          "ItemId": "(O)262",
-          "Price": 25,
-          "AvailableStock": 10,
-          "IgnoreShopPriceModifiers": true
+        "Sora6A.XiangyeShiling_Recipe_SmokedTofu": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_SmokedTofu",
+          "Triggers": [
+            {
+              "Id": "ItemPlacedInMachine",
+              "Trigger": "ItemPlacedInMachine",
+              "RequiredItemId": "(O)Sora6A.XiangyeShiling_DriedTofu",
+              "RequiredCount": 1
+            }
+          ],
+          "OutputItem": [
+            {
+              "Id": "(O)Sora6A.XiangyeShiling_SmokedTofu",
+              "ItemId": "(O)Sora6A.XiangyeShiling_SmokedTofu",
+              "MinStack": 1,
+              "MaxStack": 1,
+              "Quality": 0
+            }
+          ],
+          "MinutesUntilReady": 80
+        }
+      }
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Locations",
+      "TargetField": [
+        "Forest",
+        "Forage"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_SpringForage": {
+          "Id": "Sora6A.XiangyeShiling_SpringForage",
+          "Season": "Spring",
+          "RandomItemId": [
+            "(O)Sora6A.XiangyeShiling_BambooShoots",
+            "(O)Sora6A.XiangyeShiling_WildScallion",
+            "(O)Sora6A.XiangyeShiling_ChineseToon",
+            "(O)Sora6A.XiangyeShiling_Mugwort"
+          ],
+          "Chance": 0.32
         }
       },
-      "LogName": "P1 prototype stock - SeedShop"
+      "LogName": "Sora6A.XiangyeShiling_SpringForage - Forest"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Locations",
+      "TargetField": [
+        "Mountain",
+        "Forage"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_SpringForage": {
+          "Id": "Sora6A.XiangyeShiling_SpringForage",
+          "Season": "Spring",
+          "RandomItemId": [
+            "(O)Sora6A.XiangyeShiling_BambooShoots",
+            "(O)Sora6A.XiangyeShiling_WildScallion",
+            "(O)Sora6A.XiangyeShiling_ChineseToon",
+            "(O)Sora6A.XiangyeShiling_Mugwort"
+          ],
+          "Chance": 0.21
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_SpringForage - Mountain"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Locations",
+      "TargetField": [
+        "BusStop",
+        "Forage"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_SpringForage": {
+          "Id": "Sora6A.XiangyeShiling_SpringForage",
+          "Season": "Spring",
+          "RandomItemId": [
+            "(O)Sora6A.XiangyeShiling_BambooShoots",
+            "(O)Sora6A.XiangyeShiling_WildScallion",
+            "(O)Sora6A.XiangyeShiling_ChineseToon",
+            "(O)Sora6A.XiangyeShiling_Mugwort"
+          ],
+          "Chance": 0.35
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_SpringForage - BusStop"
     },
     {
       "Action": "EditData",
@@ -157,13 +785,6 @@
         "Items"
       ],
       "Entries": {
-        "Sora6A.XiangyeShiling_P1_Saloon_0": {
-          "Id": "Sora6A.XiangyeShiling_P1_Saloon_0",
-          "ItemId": "(O)Sora6A.XiangyeShiling_ChineseToon",
-          "Price": 100,
-          "AvailableStock": 5,
-          "IgnoreShopPriceModifiers": true
-        },
         "Sora6A.XiangyeShiling_P1_Saloon_1": {
           "Id": "Sora6A.XiangyeShiling_P1_Saloon_1",
           "ItemId": "(O)Sora6A.XiangyeShiling_ToonTofu",
@@ -172,7 +793,7 @@
           "IgnoreShopPriceModifiers": true
         }
       },
-      "LogName": "P1 prototype stock - Saloon"
+      "LogName": "Legacy recipe stock - Saloon"
     },
     {
       "Action": "EditData",
@@ -197,7 +818,347 @@
           "IgnoreShopPriceModifiers": true
         }
       },
-      "LogName": "P1 prototype stock - Carpenter"
+      "LogName": "Legacy recipe stock - Carpenter"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "SeedShop",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Soybean_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_Soybean_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_Soybean",
+          "Price": 60,
+          "AvailableStock": 10,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON spring winter",
+          "AvailableStockLimit": "Global"
+        },
+        "Sora6A.XiangyeShiling_NapaCabbage_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_NapaCabbage_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_NapaCabbage",
+          "Price": 100,
+          "AvailableStock": 5,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON spring summer winter",
+          "AvailableStockLimit": "Global"
+        },
+        "Sora6A.XiangyeShiling_SoybeanSeeds_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_SoybeanSeeds_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_SoybeanSeeds",
+          "Price": 35,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON summer fall"
+        },
+        "Sora6A.XiangyeShiling_NapaCabbageSeeds_SeedShop": {
+          "Id": "Sora6A.XiangyeShiling_NapaCabbageSeeds_SeedShop",
+          "ItemId": "(O)Sora6A.XiangyeShiling_NapaCabbageSeeds",
+          "Price": 42,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true,
+          "Condition": "SEASON fall"
+        }
+      },
+      "LogName": "Catalog stock - SeedShop"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Pork_Saloon": {
+          "Id": "Sora6A.XiangyeShiling_Pork_Saloon",
+          "ItemId": "(O)Sora6A.XiangyeShiling_Pork",
+          "Price": 110,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true
+        },
+        "Sora6A.XiangyeShiling_BroadBeans_Saloon": {
+          "Id": "Sora6A.XiangyeShiling_BroadBeans_Saloon",
+          "ItemId": "(O)Sora6A.XiangyeShiling_BroadBeans",
+          "Price": 55,
+          "AvailableStock": -1,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Catalog stock - Saloon"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_VegetarianChicken": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_VegetarianChicken",
+          "ItemId": "(O)Sora6A.XiangyeShiling_VegetarianChicken",
+          "IsRecipe": true,
+          "Price": 850,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_VegetarianChicken"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_FriedTofu": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_FriedTofu",
+          "ItemId": "(O)Sora6A.XiangyeShiling_FriedTofu",
+          "IsRecipe": true,
+          "Price": 550,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_FriedTofu"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_OrchidTofu": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_OrchidTofu",
+          "ItemId": "(O)Sora6A.XiangyeShiling_OrchidTofu",
+          "IsRecipe": true,
+          "Price": 1100,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_OrchidTofu"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo",
+          "ItemId": "(O)Sora6A.XiangyeShiling_StirFriedBamboo",
+          "IsRecipe": true,
+          "Price": 500,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_StirFriedBamboo"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_ScallionEggs": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_ScallionEggs",
+          "ItemId": "(O)Sora6A.XiangyeShiling_ScallionEggs",
+          "IsRecipe": true,
+          "Price": 400,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_ScallionEggs"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_ToonEggs": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_ToonEggs",
+          "ItemId": "(O)Sora6A.XiangyeShiling_ToonEggs",
+          "IsRecipe": true,
+          "Price": 500,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_ToonEggs"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake",
+          "ItemId": "(O)Sora6A.XiangyeShiling_MugwortRiceCake",
+          "IsRecipe": true,
+          "Price": 625,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_MugwortRiceCake"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork",
+          "ItemId": "(O)Sora6A.XiangyeShiling_BambooSmokedPork",
+          "IsRecipe": true,
+          "Price": 1100,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_BambooSmokedPork"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu",
+          "ItemId": "(O)Sora6A.XiangyeShiling_ScallionSmokedTofu",
+          "IsRecipe": true,
+          "Price": 950,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_ScallionSmokedTofu"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu",
+          "ItemId": "(O)Sora6A.XiangyeShiling_SourCabbageTofu",
+          "IsRecipe": true,
+          "Price": 950,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_SourCabbageTofu"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_BraisedBamboo": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_BraisedBamboo",
+          "ItemId": "(O)Sora6A.XiangyeShiling_BraisedBamboo",
+          "IsRecipe": true,
+          "Price": 800,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_BraisedBamboo"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_SaucedTofu": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_SaucedTofu",
+          "ItemId": "(O)Sora6A.XiangyeShiling_SaucedTofu",
+          "IsRecipe": true,
+          "Price": 850,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_SaucedTofu"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_MapoTofu": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_MapoTofu",
+          "ItemId": "(O)Sora6A.XiangyeShiling_MapoTofu",
+          "IsRecipe": true,
+          "Price": 1250,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_MapoTofu"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll",
+          "ItemId": "(O)Sora6A.XiangyeShiling_TofuPorkRoll",
+          "IsRecipe": true,
+          "Price": 1150,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_TofuPorkRoll"
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Shops",
+      "TargetField": [
+        "Saloon",
+        "Items"
+      ],
+      "Entries": {
+        "Sora6A.XiangyeShiling_Recipe_YubaSoup": {
+          "Id": "Sora6A.XiangyeShiling_Recipe_YubaSoup",
+          "ItemId": "(O)Sora6A.XiangyeShiling_YubaSoup",
+          "IsRecipe": true,
+          "Price": 650,
+          "IgnoreShopPriceModifiers": true
+        }
+      },
+      "LogName": "Sora6A.XiangyeShiling_Recipe_YubaSoup"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "Name": "Xiangye Shiling - Content",
   "Author": "Sora6A",
-  "Version": "0.1.0-alpha.2",
-  "Description": "P1 prototype items, shared machines, blueprints and limited shop supplies; vanilla placeholder sprites.",
+  "Version": "1.0.0",
+  "Description": "Seasonal forage, crops, food, cooking recipes and machine data for Xiangye Shiling.",
   "UniqueID": "Sora6A.XiangyeShiling.Content",
   "MinimumApiVersion": "4.4.0",
   "ContentPackFor": {
@@ -12,7 +12,7 @@
   "Dependencies": [
     {
       "UniqueID": "Sora6A.XiangyeShiling",
-      "MinimumVersion": "0.1.0-alpha.2",
+      "MinimumVersion": "1.0.0",
       "IsRequired": true
     }
   ],
