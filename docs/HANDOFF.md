@@ -4,7 +4,7 @@
 
 分支 `codex/first-stable-release`，基线 `c143790f01563675a7cc81906b6f1bfeb28f8e37`。旧档、秋 2 冷读和初版候选双人末页已通过。发行画面发现 [BUG-2026-031](bugfix/BUG-2026-031-processing-action-label.md)，先红后绿共 145 项。最终 `.local/p3-release-candidate-final/XiangyeShiling-1.0.0.zip` SHA-256 `C79B0B67C9D80A61FCC51D962C958720F25C18EAD96A323613F8F6690A3F048E`。生产 DLL `0CDA20A8…CF16`，同版候选仅改菜单标签和指南标题。最终包 11 张实际画面 PID 28572、新装创建与同档自然豆腐 PID 30752 已通过。见 [发行验收](validation/P3-release-2026-11-16.md)。
 
-最终包独立双人末页 `.local/p1-net08-normal-lan/p3-late-page-final` 主机 24444、农工 16880 开工通过，等待原版时钟和领取。测试结束后查 `audit.json` 和游戏/UDP，再按 [贡献规范](../CONTRIBUTING.md) 校验全部提交正文、推送任务分支、创建到 main 的 PR、等四项实际 CI、用 merge commit 合并，再等 main CI 与正式 GitHub Release。`.local/release-1.0.0/operator.ps1` 有各阶段的读写操作和哈希校验，先核对实际输出，避免重复发布。远程尚未推送、合并或发布。
+最终包独立双人末页 `.local/p1-net08-normal-lan/p3-late-page-final/audit.json` 主机 24444、农工 16880 通过。实际 220 分钟后收获豆干 2，两个回执与主机背包审计通过，111 个文件保留，游戏和端口清理完成。全部设计矩阵已核对。远程交付按 [贡献规范](../CONTRIBUTING.md) 走任务分支 PR 和 merge commit，验证当次 PR 与 main 的四项检查，再以同一哈希发布 [GitHub Release](https://github.com/Sora6A/stardew-xiangye-shiling/releases/tag/v1.0.0)。`.local/release-1.0.0/operator.ps1` 有各阶段操作和哈希校验，实际交付凭证保存在 `artifacts/1.0.0-delivery.txt` 与 `.local/release-1.0.0`，接续先核对 GitHub 实际状态，避免重复发布。
 
 ## 2026-11-16 P3 经济与发行候选
 

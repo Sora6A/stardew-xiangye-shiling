@@ -4,7 +4,7 @@
 
 出门采野菜，在农场种黄豆和白菜，回家用少量设备加工，再做成能吃、能送、能出售的中式食物。
 
-> 《乡野时令》在原版农场加入季节野菜、两种作物、豆坊和发酵缸，以及烟熏和烹饪配方。设计基线为 **0.4 收敛版**，当前候选版本为 `1.0.0`。联机设备操作在显式启用的 Windows 原版环回直连上验证。见 [安装与更新](docs/INSTALL.md)、[上手指南](docs/PLAYER_GUIDE.md)和[开发计划](docs/DEVELOPMENT_PLAN.md)。
+> 《乡野时令》在原版农场加入季节野菜、两种作物、豆坊和发酵缸，以及烟熏和烹饪配方。版本 `1.0.0` 对应 **0.4 收敛版**设计。联机设备操作在显式启用的 Windows 原版环回直连上验证。见 [发行包](https://github.com/Sora6A/stardew-xiangye-shiling/releases/tag/v1.0.0)、[安装与更新](docs/INSTALL.md)和[上手指南](docs/PLAYER_GUIDE.md)。
 
 ## 文档
 

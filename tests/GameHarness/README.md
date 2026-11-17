@@ -219,3 +219,5 @@ Schema2带首个Ready Baseline/current指纹/引用一致/burst发送序号；�
 使用同一固定发行 ZIP 和独立 Mods。`P3ItemUse` 绑定 `XYSP3ItemUse_620261134`，原版商店成交、食用、NPC 赠礼及实际纹理登记，零保存。`P3SeasonPersistence` 的 `NativeRecoveryPhase` 依次为 `Write`、`Verify`、`VerifyCollected`，绑定 `XYSP3Season_620261132`。前两轮原版就寝写盘，最后一轮冷读及重复领取拒绝。`Legacy` 绑定独立旧档 `XYSP3Legacy_620261133`，零保存。用发行包测试新档时配置 `P3FreshInstall`、`XYSP3Fresh`、`SaveFixtureId=0`，存档目录须没有同名前缀。新档通过实际原版角色创建写一份初始存档，随后用独立资金和铜锭准备原生购买、制作、自然加工与领取，最后核对初始存档哈希。
 
 普通直连仍使用 XYSNET08 的精确绑定。`LanMachineTransaction` 的 `NativeRecoveryPhase=P3LatePage` 和 `VerifyLanFarmhandMenu=true` 走原版第三页豆干、主机原版时钟及双端回执。单机执行器须在退出并禁用当前场景后再启动另一轮。全部证据、靠近发布时的实际候选哈希和覆盖范围见 [发行候选验收](../../docs/validation/P3-release-2026-11-16.md)。
+
+`P3Visual` 绑定 `XYSP3Visual_620261135`，从已通过秋 2 冷读的季节测试副本复制。捕获原版农场、两台设备出货前后和实际活动菜单。图像留在独立 `GameHarness` 目录，零保存。回归入口见 [BUG-2026-031](../../docs/bugfix/BUG-2026-031-processing-action-label.md)。
