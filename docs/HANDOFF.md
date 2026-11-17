@@ -1,5 +1,11 @@
 # 当前开发交接
 
+## 2026-11-17 最终 1.0.0 包与发布准备
+
+分支 `codex/first-stable-release`，基线 `c143790f01563675a7cc81906b6f1bfeb28f8e37`。旧档、秋 2 冷读和初版候选双人末页已通过。发行画面发现 [BUG-2026-031](bugfix/BUG-2026-031-processing-action-label.md)，先红后绿共 145 项。最终 `.local/p3-release-candidate-final/XiangyeShiling-1.0.0.zip` SHA-256 `C79B0B67C9D80A61FCC51D962C958720F25C18EAD96A323613F8F6690A3F048E`。生产 DLL `0CDA20A8…CF16`，同版候选仅改菜单标签和指南标题。最终包 11 张实际画面 PID 28572、新装创建与同档自然豆腐 PID 30752 已通过。见 [发行验收](validation/P3-release-2026-11-16.md)。
+
+最终包独立双人末页 `.local/p1-net08-normal-lan/p3-late-page-final` 主机 24444、农工 16880 开工通过，等待原版时钟和领取。测试结束后查 `audit.json` 和游戏/UDP，再按 [贡献规范](../CONTRIBUTING.md) 校验全部提交正文、推送任务分支、创建到 main 的 PR、等四项实际 CI、用 merge commit 合并，再等 main CI 与正式 GitHub Release。`.local/release-1.0.0/operator.ps1` 有各阶段的读写操作和哈希校验，先核对实际输出，避免重复发布。远程尚未推送、合并或发布。
+
 ## 2026-11-16 P3 经济与发行候选
 
 分支 `codex/first-stable-release`，P2 全量提交 `780eeda413023a7caaaa668d73e985114628a88a`。40 物品和 30 配方、P2 原生证据均已提交。P3 新增 [经济核算](P3_ECONOMY.md) 与 [安装说明](INSTALL.md)，保留首轮平衡数值，去掉 P1 小麦临时货架，原版小麦照常夏秋种。两份 manifest 与程序集版本设为 1.0.0。正式格式候选 `.local/p3-release-candidate-v1/XiangyeShiling-1.0.0.zip` SHA-256 `B7D212224E0F60CF9A2BA80787D7AA7A566D5D57C9849B82E61F38D58F380A65`，生产 DLL `5671EFD4…CC44`。ZIP 内容、CRC、稳定版本及隔离文件排除通过，生产与夹具编译零警告零错误。远程 main 只读核实 `e3b2d575d21094750592531c9ee7dc6d100acff8`，无 `v1.0.0` 标签。尚未推送、合并或发布。

@@ -29,6 +29,12 @@ public sealed class MenuActionSession
     }
 
     internal void ReleaseRefusedRequest() => this.Pending = null;
+
+    // 一次已提交的开工只锁住菜单操作，批次仍按自己的时钟加工。
+    internal string DisplayActionKey(MachinePhase phase, bool awaitingHost, bool missing) => awaitingHost ? "machine.network-pending"
+        : phase == MachinePhase.Processing ? "phase.Processing" : this.IsComplete ? "machine.done"
+        : phase == MachinePhase.Ready ? "machine.collect" : missing ? "machine.materials-missing" : "machine.start";
+
     public void Complete(bool applied)
     {
         // BUG-2026-007：领取后的同位置连点不能被重新解释为开工；新意图须重新打开菜单。

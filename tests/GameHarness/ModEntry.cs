@@ -58,6 +58,16 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.Settings = helper.ReadConfig<Config>();
+        if (this.Settings.Enabled && this.Settings.Scenario == P3VisualScenario.Scenario)
+        {
+            var visual = new P3VisualScenario(helper, this.Monitor, this.Settings);
+            helper.Events.GameLoop.GameLaunched += (_, _) => visual.QueueLoad();
+            helper.Events.GameLoop.SaveLoaded += (_, _) => visual.OnLoaded();
+            helper.Events.GameLoop.Saving += (_, _) => visual.OnSaving();
+            helper.Events.GameLoop.UpdateTicked += (_, _) => visual.Tick();
+            helper.Events.Display.Rendered += (_, _) => visual.OnRendered();
+            return;
+        }
         if (this.Settings.Enabled && this.Settings.Scenario == P3FreshInstallScenario.Scenario)
         {
             var fresh = new P3FreshInstallScenario(helper, this.Monitor, this.Settings);

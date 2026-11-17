@@ -276,6 +276,18 @@ Test("successful menu action cannot acquire another request until reopened", () 
         "Explicit reopening must allow a new intent bound to the new revision.");
 });
 
+Test("processing action label describes the batch even after the start click succeeded", () =>
+{
+    var session = new MenuActionSession();
+    session.Complete(true);
+    Assert(session.DisplayActionKey(MachinePhase.Processing, awaitingHost: false, missing: false) == "phase.Processing",
+        "BUG-2026-031: a successful Start does not complete the batch.");
+    Assert(session.DisplayActionKey(MachinePhase.Idle, awaitingHost: false, missing: false) == "machine.done",
+        "The original session remains locked after a successful collection.");
+    Assert(new MenuActionSession().DisplayActionKey(MachinePhase.Ready, awaitingHost: false, missing: false) == "machine.collect",
+        "A fresh menu still offers the ready batch for collection.");
+});
+
 Test("world tool protection rejects unrelated swing followed by ignored target click", () =>
 {
     // Real swing on empty ground costs stamina; a target click during that animation is ignored by the game.

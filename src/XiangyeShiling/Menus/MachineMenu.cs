@@ -500,9 +500,7 @@ public sealed class MachineMenu : IClickableMenu
                 else if (phase == MachinePhase.Processing)
                     this.DrawRecipeText(b, this.CompletionLabel(state.Batch!.ReadyAt, today), rowY + 64, Game1.textColor);
                 Rectangle bounds = this.ActionBounds(i);
-                this.Button(b, bounds, this.Text.Get(this.Session.IsComplete ? "machine.done"
-                    : this.FarmhandRequest is not null ? "machine.network-pending" : phase == MachinePhase.Ready ? "machine.collect"
-                    : phase == MachinePhase.Processing ? "phase.Processing" : missing ? "machine.materials-missing" : "machine.start"),
+                this.Button(b, bounds, this.Text.Get(this.Session.DisplayActionKey(phase, this.FarmhandRequest is not null, missing)),
                     !this.Session.IsComplete && this.FarmhandRequest is null && !this.FarmhandFenced
                     && phase != MachinePhase.Processing && !missing);
             }
